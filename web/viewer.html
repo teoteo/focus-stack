@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visualizzatore</title>
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  body { display: grid; grid-template-rows: auto 1fr auto; }
+  .vbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--card);
+    border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .vbar .group { display: flex; align-items: center; gap: 6px; }
+  .vbar .sep { width: 1px; height: 26px; background: var(--line); margin: 0 4px; }
+  .vtitle { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
+  .vtitle b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vtitle span { font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .zoom-val { min-width: 64px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 15px; }
+  .btn.vb { min-width: 40px; padding: 6px 12px; }
+  .btn.vb[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+
+  .stage { position: relative; overflow: hidden; background: #0a0b0d; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+  :root[data-theme="light"] .stage { background: #2a2d33; }
+  .stage.dragging { cursor: grabbing; }
+  .stage img { position: absolute; left: 0; top: 0; transform-origin: 0 0; max-width: none; will-change: transform;
+    -webkit-user-drag: none; image-rendering: auto; }
+  .stage img.pixelated { image-rendering: pixelated; }
+  .stage .msg { position: absolute; inset: 0; display: grid; place-items: center; color: #9aa4b2; font-size: 15px; pointer-events: none; }
+  .loading { position: absolute; top: 12px; right: 12px; font-size: 13px; padding: 5px 10px; border-radius: 8px;
+    background: rgba(0,0,0,.6); color: #fff; pointer-events: none; }
+  .help { position: absolute; left: 12px; bottom: 12px; font-size: 12.5px; color: #c9d1dc; background: rgba(0,0,0,.55);
+    padding: 6px 10px; border-radius: 8px; pointer-events: none; }
+
+  .strip { display: flex; gap: 6px; overflow-x: auto; padding: 8px 10px; background: var(--card); border-top: 1px solid var(--line); }
+  .strip button { flex: none; width: 92px; height: 62px; padding: 0; border-radius: 6px; border: 2px solid transparent;
+    background: #000; cursor: pointer; position: relative; overflow: hidden; }
+  .strip button img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .strip button.active { border-color: var(--accent); }
+  .strip button span { position: absolute; left: 3px; bottom: 2px; font-size: 11px; font-weight: 700; color: #fff;
+    text-shadow: 0 1px 2px #000; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="vbar">
+  <div class="group">
+    <button class="btn ghost vb" id="prev" title="Scatto precedente (←)">◀</button>
+    <button class="btn ghost vb" id="next" title="Scatto successivo (→)">▶</button>
+  </div>
+  <div class="vtitle">
+    <b id="v-name">Nessuno scatto</b>
+    <span id="v-meta"></span>
+  </div>
+  <div class="group">
+    <button class="btn ghost vb" id="z-out" title="Zoom − (tasto −)">−</button>
+    <span class="zoom-val" id="z-val">—</span>
+    <button class="btn ghost vb" id="z-in" title="Zoom + (tasto +)">+</button>
+  </div>
+  <span class="sep"></span>
+  <div class="group">
+    <button class="btn ghost vb" id="z-fit" title="Adatta alla finestra (0)">Adatta</button>
+    <button class="btn ghost vb" id="z-100" title="1 pixel immagine = 1 pixel schermo (1)">100%</button>
+    <button class="btn ghost vb" id="z-reset" title="Reset vista (R)">Reset</button>
+  </div>
+  <span class="sep"></span>
+  <div class="group">
+    <button class="btn ghost vb" id="live" aria-pressed="true" title="Mostra automaticamente ogni nuovo scatto (L)">● Segui ultimo</button>
+    <button class="btn ghost vb" id="lock" aria-pressed="true" title="Mantieni zoom e posizione cambiando scatto (K)">Blocca vista</button>
+    <button class="btn ghost vb" id="reveal" title="Mostra il file nel Finder">Finder</button>
+    <button class="btn ghost vb" id="fs" title="Schermo intero (F)">⛶</button>
+  </div>
+</div>
+
+<div class="stage" id="stage">
+  <img id="img" alt="" draggable="false">
+  <div class="msg" id="msg">In attesa del primo scatto…</div>
+  <div class="loading hidden" id="loading">Caricamento piena risoluzione…</div>
+  <div class="help">Trascina per spostare · rotella o pinch per lo zoom · doppio clic: adatta ↔ 100%</div>
+</div>
+
+<div class="strip" id="strip"></div>
+
+<script src="/viewer.js"></script>
+</body>
+</html>

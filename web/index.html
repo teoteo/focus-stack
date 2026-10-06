@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Focus Stack</title>
+<meta name="description" content="Controllo focheggiatore myFocuserPro2 e fotocamera per focus stacking al microscopio">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Focus Stack">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-512.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <img src="/icon.svg" alt="" width="30" height="30">
+    <span>Focus Stack</span>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="session" aria-selected="true">Sessione</button>
+    <button role="tab" data-tab="config">Configurazione</button>
+    <button role="tab" data-tab="log">Registro</button>
+  </nav>
+  <div class="status">
+    <span class="dot-label" id="st-link"><i></i>Server</span>
+    <span class="dot-label" id="st-focuser"><i></i>Focheggiatore</span>
+    <span class="dot-label" id="st-camera"><i></i>Fotocamera</span>
+    <span class="temp-chip hidden" id="st-temp" title="Temperatura dalla sonda del focheggiatore"></span>
+    <button class="icon-btn" id="theme-btn" title="Tema chiaro/scuro" aria-label="Cambia tema">◐</button>
+  </div>
+</header>
+
+<div class="update-bar hidden" id="update-bar" role="status">
+  <span id="update-text"></span>
+  <span class="grow"></span>
+  <button class="btn primary small" id="update-btn"></button>
+</div>
+
+<div class="alarm hidden" id="alarm" role="alert">
+  <strong>Attenzione</strong> <span id="alarm-text"></span>
+</div>
+
+<!-- =============================== SESSIONE =============================== -->
+<main class="view grid-session" id="view-session">
+
+  <!-- ---------- Focheggiatore ---------- -->
+  <section class="card" id="card-focuser">
+    <header class="card-head">
+      <h2>Focheggiatore</h2>
+      <span class="chip" id="f-chip">Disconnesso</span>
+    </header>
+
+    <div class="connect" id="f-connect-box">
+      <div class="row">
+        <select id="f-port" aria-label="Porta seriale"></select>
+        <button class="btn ghost square" id="f-refresh" title="Aggiorna porte">⟳</button>
+      </div>
+      <div class="row">
+        <label class="check"><input type="checkbox" id="f-sim"> Simulatore</label>
+        <span class="grow"></span>
+        <button class="btn primary" id="f-connect">Connetti</button>
+      </div>
+    </div>
+    <div class="connected-line hidden" id="f-connected-line">
+      <span id="f-info"></span>
+      <button class="btn ghost small" id="f-disconnect">Disconnetti</button>
+    </div>
+
+    <div class="position">
+      <div class="pos-main">
+        <span class="label">Posizione</span>
+        <span class="pos-value" id="f-pos">—</span>
+        <span class="pos-sub" id="f-pos-um">&nbsp;</span>
+      </div>
+      <div class="pos-side">
+        <span class="label">Fine corsa</span>
+        <span class="limits-val" id="f-limits">—</span>
+        <span class="pos-sub" id="f-range-left">&nbsp;</span>
+      </div>
+    </div>
+
+    <div class="rail" id="rail" aria-hidden="true">
+      <div class="rail-track">
+        <div class="rail-forbidden left" id="rail-forb-l"></div>
+        <div class="rail-forbidden right" id="rail-forb-r"></div>
+        <div class="rail-seq" id="rail-seq"></div>
+        <div class="rail-ticks" id="rail-ticks"></div>
+        <div class="rail-pos" id="rail-pos"></div>
+      </div>
+      <div class="rail-labels"><span id="rail-lo"></span><span id="rail-dir"></span><span id="rail-hi"></span></div>
+    </div>
+
+    <div class="jog">
+      <div class="seg" id="jog-size" role="radiogroup" aria-label="Ampiezza passo">
+        <button data-size="1">1</button>
+        <button data-size="10">10</button>
+        <button data-size="100" aria-checked="true">100</button>
+        <button data-size="1000">1000</button>
+      </div>
+      <div class="jog-hint" id="jog-um">&nbsp;</div>
+      <div class="jog-buttons">
+        <button class="btn jog-btn" id="jog-away"><span class="arrow">▲</span><span id="jog-away-label">Allontana</span></button>
+        <button class="btn jog-btn" id="jog-toward"><span class="arrow">▼</span><span id="jog-toward-label">Avvicina</span></button>
+      </div>
+      <p class="hint">Tastiera: ↑ ↓ muovi · ⇧ ×10 · 1–4 ampiezza · <kbd>Esc</kbd> stop</p>
+    </div>
+
+    <div class="row goto">
+      <input type="number" id="f-goto" placeholder="Vai alla posizione…" min="0" inputmode="numeric">
+      <button class="btn ghost" id="f-goto-btn">Vai</button>
+    </div>
+    <button class="btn stop" id="f-halt">STOP</button>
+  </section>
+
+  <!-- ---------- Sequenza ---------- -->
+  <section class="card" id="card-seq">
+    <header class="card-head">
+      <h2>Sequenza di stacking</h2>
+      <span class="chip" id="s-chip">Pronta</span>
+    </header>
+
+    <div class="fields two">
+      <label>Inizio
+        <span class="field-with-btn"><input type="number" id="s-start" min="0"><button class="btn ghost small" data-mark="start" title="Usa la posizione attuale">⌖ qui</button></span>
+      </label>
+      <label>Fine
+        <span class="field-with-btn"><input type="number" id="s-end" min="0"><button class="btn ghost small" data-mark="end" title="Usa la posizione attuale">⌖ qui</button></span>
+      </label>
+      <label>Passo (passi motore)<input type="number" id="s-step" min="1"></label>
+      <label>Numero di scatti<input type="number" id="s-count" min="2" title="Modifica per ricalcolare il passo"></label>
+    </div>
+
+    <div class="summary" id="s-summary"></div>
+
+    <div class="folder-row" id="s-folder">
+      <span class="folder-icon" aria-hidden="true">📁</span>
+      <div class="folder-text">
+        <span class="label">Salva in</span>
+        <span class="folder-path" id="s-root-label">—</span>
+      </div>
+      <button class="btn ghost small" id="s-root-choose" title="Scegli la cartella con il Finder">Scegli…</button>
+      <button class="btn ghost small" id="s-open" title="Apri nel Finder">Apri</button>
+    </div>
+
+    <details class="more" id="s-more">
+      <summary>Tempi, gioco e nome della sessione</summary>
+      <div class="fields two">
+        <label>Attesa dopo il movimento (ms)<input type="number" id="s-settle" min="0" step="100"></label>
+        <label>Pausa dopo lo scatto (ms)<input type="number" id="s-post" min="0" step="100"></label>
+        <label>Compensazione gioco (passi)<input type="number" id="s-backlash" min="0"></label>
+        <label>Modalità di scatto
+          <select id="s-mode">
+            <option value="download">Scarica sul Mac</option>
+            <option value="card">Solo sulla scheda</option>
+            <option value="trigger">Solo trigger (veloce)</option>
+          </select>
+        </label>
+        <label class="span-all">Nome sessione (sottocartella: nome_data-ora)<input type="text" id="s-name" autocomplete="off"></label>
+      </div>
+      <label class="check"><input type="checkbox" id="s-return"> Torna all'inizio a fine sequenza</label>
+      <div class="row preset">
+        <select id="s-preset" aria-label="Preset"><option value="">Preset…</option></select>
+        <button class="btn ghost small" id="s-preset-save">Salva preset</button>
+        <button class="btn ghost small" id="s-preset-del">Elimina</button>
+      </div>
+    </details>
+
+    <div class="progress-box">
+      <div class="progress-head">
+        <span class="progress-count" id="s-count-label">0 / 0</span>
+        <span class="progress-eta" id="s-eta"></span>
+      </div>
+      <div class="progress"><div id="s-bar"></div></div>
+      <div class="progress-text" id="s-progress"></div>
+    </div>
+
+    <div class="seq-actions">
+      <button class="btn primary big" id="s-start-btn">▶  Avvia sequenza</button>
+      <button class="btn ghost big" id="s-pause-btn">❚❚  Pausa</button>
+      <button class="btn danger big" id="s-stop-btn">■  Interrompi</button>
+    </div>
+    <div class="row">
+      <button class="btn ghost small" id="s-helicon">Apri in Helicon Focus</button>
+    </div>
+  </section>
+
+  <!-- ---------- Fotocamera + ultimo scatto ---------- -->
+  <div class="col">
+    <section class="card" id="card-camera">
+      <header class="card-head">
+        <h2>Fotocamera</h2>
+        <span class="chip" id="c-chip">Disconnessa</span>
+      </header>
+      <div class="warn hidden" id="gp-missing">Libreria gphoto2 mancante: esegui <code>.venv/bin/pip install gphoto2</code></div>
+
+      <div class="connect" id="c-connect-box">
+        <div class="row">
+          <select id="c-model" aria-label="Fotocamera"><option value="">Rilevamento automatico</option></select>
+          <button class="btn ghost square" id="c-detect" title="Rileva fotocamere">⟳</button>
+        </div>
+        <div class="row">
+          <label class="check"><input type="checkbox" id="c-sim"> Simulatore</label>
+          <span class="grow"></span>
+          <button class="btn primary" id="c-connect">Connetti</button>
+        </div>
+        <p class="hint">Sony: USB “PC Remote”. Tutte: modo M. Chiudi Foto e Acquisizione Immagine.</p>
+      </div>
+      <div class="connected-line hidden" id="c-connected-line">
+        <span id="c-info"></span>
+        <button class="btn ghost small" id="c-disconnect">Disconnetti</button>
+      </div>
+
+      <div class="fields two">
+        <label>Tempo di posa<select id="c-shutter"></select></label>
+        <label>ISO<select id="c-iso"></select></label>
+        <label>Diaframma<select id="c-aperture"></select></label>
+        <label>Formato<select id="c-format"></select></label>
+        <label>Destinazione<select id="c-target"></select></label>
+        <label>Posa B (secondi)<input type="number" id="c-bulb" min="0" step="0.5" value="0" title="0 = usa il tempo di posa. Maggiore di 0 = posa B dal computer"></label>
+      </div>
+      <div class="row">
+        <button class="btn ghost small" id="c-reload">Rileggi</button>
+        <span class="grow"></span>
+        <button class="btn primary" id="c-test">◉  Scatto di prova</button>
+      </div>
+    </section>
+
+    <section class="card" id="card-last">
+      <header class="card-head">
+        <h2>Ultimo scatto</h2>
+        <button class="btn ghost small" id="v-open">Apri visualizzatore ↗</button>
+      </header>
+      <button class="thumb empty" id="last-thumb" title="Apri nel visualizzatore (zoom e pan)">
+        <img id="last-img" alt="">
+        <span class="thumb-empty">Nessuno scatto</span>
+      </button>
+      <div class="last-meta" id="last-meta"></div>
+    </section>
+  </div>
+</main>
+
+<!-- ============================ CONFIGURAZIONE ============================ -->
+<main class="view grid-config hidden" id="view-config">
+
+  <section class="card span2" id="card-limits">
+    <header class="card-head">
+      <h2>Fine corsa di sicurezza</h2>
+      <span class="chip" id="lim-chip"></span>
+    </header>
+    <p class="lead">Impediscono che l'obiettivo tocchi il vetrino o che la meccanica arrivi a battuta.
+      Tutti i movimenti comandati dall'app (anche la sequenza e la compensazione del gioco) vengono verificati prima di partire.</p>
+
+    <div class="limits-grid">
+      <div class="limit-box">
+        <span class="label">Fine corsa inferiore</span>
+        <input type="number" id="lim-min" min="0" class="big-input">
+        <button class="btn ghost small" data-limit-here="min">⌖ Usa posizione attuale</button>
+      </div>
+      <div class="limit-box">
+        <span class="label">Fine corsa superiore</span>
+        <input type="number" id="lim-max" min="1" class="big-input" placeholder="max firmware">
+        <button class="btn ghost small" data-limit-here="max">⌖ Usa posizione attuale</button>
+      </div>
+      <div class="limit-box">
+        <span class="label">Verso il campione (si avvicina) con</span>
+        <select id="lim-dir">
+          <option value="decreasing">Passi decrescenti ▼</option>
+          <option value="increasing">Passi crescenti ▲</option>
+        </select>
+        <span class="hint">Serve a etichettare correttamente i pulsanti Avvicina/Allontana.</span>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="lim-save">Salva fine corsa</button>
+    </div>
+
+    <div class="callout">
+      <h3>Pulsanti fisici del focheggiatore</h3>
+      <p>I pulsanti sul focheggiatore muovono il motore senza passare dall'app, quindi i limiti software non possono fermarli in anticipo.
+        Il server li sorveglia: se la posizione esce dai fine corsa invia <b>STOP</b> e mostra un allarme. Tra una lettura e l'altra il motore può però superare il limite di qualche decina di passi.</p>
+      <p><b>Protezione consigliata</b>: fai rispettare i limiti direttamente al firmware, che li applica anche ai pulsanti.</p>
+      <ol>
+        <li>Porta l'obiettivo alla posizione più bassa sicura e premi <b>Imposta qui lo zero</b>: il firmware non scende mai sotto 0.</li>
+        <li>Porta l'obiettivo alla posizione più alta sicura, usala come fine corsa superiore e premi <b>Scrivi il massimo nel firmware</b>.</li>
+      </ol>
+      <div class="row">
+        <button class="btn ghost" id="lim-zero">Imposta qui lo zero</button>
+        <button class="btn ghost" id="lim-fw">Scrivi il massimo nel firmware</button>
+        <span class="hint" id="lim-fw-info"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="card-mech">
+    <header class="card-head"><h2>Configurazione meccanica</h2></header>
+    <div class="seg wide" id="mech-mode" role="radiogroup">
+      <button data-mode="computed">Calcola dalla meccanica</button>
+      <button data-mode="manual">Inserisci µm/passo</button>
+    </div>
+    <div class="fields two" id="mech-computed">
+      <label>Passi motore per giro<input type="number" id="m-spr" min="1" step="1"></label>
+      <label>Microstep (dal firmware)<input type="text" id="m-micro" readonly></label>
+      <label>Rapporto di riduzione<input type="number" id="m-gear" min="0.01" step="0.01" title="Giri del motore per un giro della manopola"></label>
+      <label>Corsa per giro manopola (µm)<input type="number" id="m-umrev" min="0.1" step="0.1" title="Per molti microscopi la micrometrica sposta 100 o 200 µm per giro"></label>
+    </div>
+    <div class="fields two hidden" id="mech-manual">
+      <label>µm per passo<input type="number" id="m-umstep" min="0" step="0.0001"></label>
+    </div>
+    <p class="result" id="m-result"></p>
+    <p class="hint">Per misurare: muovi di 1000 passi e leggi lo spostamento sul nonio della micrometrica, oppure metti a fuoco un micrometro oggetto inclinato.</p>
+    <button class="btn primary" id="m-save">Salva meccanica</button>
+  </section>
+
+  <section class="card" id="card-motor">
+    <header class="card-head">
+      <h2>Motore (firmware)</h2>
+      <button class="btn ghost small" id="mo-reload">Rileggi</button>
+    </header>
+    <div class="fields two">
+      <label>Microstep
+        <select id="mo-step_mode">
+          <option value="1">Passo intero</option><option value="2">1/2</option><option value="4">1/4</option>
+          <option value="8">1/8</option><option value="16">1/16</option><option value="32">1/32</option>
+        </select>
+      </label>
+      <label>Velocità
+        <select id="mo-speed"><option value="0">Lenta</option><option value="1">Media</option><option value="2">Veloce</option></select>
+      </label>
+    </div>
+    <div class="toggles">
+      <label class="toggle"><input type="checkbox" id="mo-coil_power"><span>Bobine alimentate a motore fermo <em>tiene la posizione, scalda il motore</em></span></label>
+      <label class="toggle"><input type="checkbox" id="mo-reverse"><span>Inverti verso di rotazione</span></label>
+      <label class="toggle"><input type="checkbox" id="mo-backlash_in_enabled"><span>Gioco firmware IN <em id="mo-bl-in"></em></span></label>
+      <label class="toggle"><input type="checkbox" id="mo-backlash_out_enabled"><span>Gioco firmware OUT <em id="mo-bl-out"></em></span></label>
+    </div>
+    <p class="hint">Il gioco viene già compensato dall'app nella sequenza: lascia disattivato quello del firmware per non compensarlo due volte.
+      Cambiare il microstep cambia la scala delle posizioni: dopo la modifica ricontrolla i fine corsa.</p>
+  </section>
+
+  <section class="card" id="card-updates">
+    <header class="card-head">
+      <h2>Aggiornamenti</h2>
+      <button class="btn ghost small" id="up-check">Controlla ora</button>
+    </header>
+    <dl class="kv">
+      <dt>App</dt><dd id="up-app">—</dd>
+      <dt>Firmware del focheggiatore</dt><dd id="up-fw">—</dd>
+    </dl>
+    <button class="btn primary" id="fw-update" disabled>Aggiorna firmware</button>
+    <div class="progress-box hidden" id="fw-progress-box">
+      <div class="progress"><div id="fw-progress"></div></div>
+      <div class="progress-text" id="fw-phase"></div>
+    </div>
+    <p class="hint">L'aggiornamento del firmware dura circa 20 secondi e mantiene le impostazioni del
+      focheggiatore. Durante l'operazione non scollegare il cavo USB; se qualcosa va storto basta ripeterlo.</p>
+  </section>
+
+  <section class="card" id="card-temp">
+    <header class="card-head"><h2>Temperatura</h2><span class="chip" id="t-chip">—</span></header>
+    <div class="temp-big" id="t-value">—</div>
+    <svg class="spark" id="t-spark" viewBox="0 0 300 70" preserveAspectRatio="none"></svg>
+    <p class="hint" id="t-range">Ultimi 60 minuti. La temperatura di ogni scatto viene salvata in <code>sequence.json</code>.</p>
+  </section>
+
+  <section class="card" id="card-dof">
+    <header class="card-head"><h2>Profondità di campo</h2></header>
+    <div class="fields two">
+      <label>Apertura numerica (NA)<input type="number" id="d-na" step="0.01" value="0.25"></label>
+      <label>Ingrandimento sul sensore<input type="number" id="d-mag" step="0.1" value="10"></label>
+      <label>Pixel del sensore (µm)<input type="number" id="d-px" step="0.1" value="3.9"></label>
+      <label>Sovrapposizione (%)<input type="number" id="d-ov" step="5" value="30"></label>
+    </div>
+    <p class="result" id="d-result"></p>
+    <button class="btn ghost" id="d-apply">Usa come passo della sequenza</button>
+  </section>
+</main>
+
+<!-- ================================ REGISTRO ================================ -->
+<main class="view hidden" id="view-log">
+  <section class="card log-card">
+    <header class="card-head"><h2>Registro</h2></header>
+    <pre id="log"></pre>
+  </section>
+</main>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- Schermata mostrata quando il server non risponde più: è già nella pagina perché a server spento non si può più caricare nulla -->
+<div class="shutdown-screen hidden" id="shutdown-screen" role="alertdialog" aria-labelledby="shutdown-title">
+  <div class="shutdown-box">
+    <div class="shutdown-icon">⏻</div>
+    <h1 id="shutdown-title">Focus Stack è chiuso</h1>
+    <p id="shutdown-text">Per riprendere apri l'app <b>Focus Stack</b>: questa pagina si ricaricherà da sola.</p>
+    <p class="hint" id="shutdown-hint">Oppure puoi chiudere questa finestra.</p>
+  </div>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

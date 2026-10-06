@@ -1,0 +1,15 @@
+{
+  "name": "Focus Stack",
+  "short_name": "Focus Stack",
+  "description": "Controllo focheggiatore myFocuserPro2 e fotocamera per focus stacking al microscopio",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f1115",
+  "theme_color": "#14171c",
+  "lang": "it",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
