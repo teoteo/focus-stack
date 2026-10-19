@@ -159,6 +159,10 @@ La conversione è in cache in `~/Library/Caches/MyFocuserStack`.
   formato e destinazione; dopo ogni modifica l'app rilegge il valore che la fotocamera ha
   effettivamente accettato.
 - **Posa Bulb (s)** > 0 usa la posa B controllata dal computer, per tempi oltre i 30 s.
+- **Ritardo specchio (reflex)**, da 0,5 a 2,5 s: attesa fra il sollevamento dello specchio e lo
+  scatto, per far smorzare le vibrazioni. Nikon: l'app imposta il *ritardo di esposizione* della
+  fotocamera al primo valore disponibile uguale o più lungo. Canon: attiva il *blocco dello specchio*
+  nel menu della fotocamera; l'app solleva lo specchio, attende e poi scatta. Sony e mirrorless: non serve.
 - **Se la connessione fallisce:** macOS (`ptpcamerad`) si appropria della fotocamera appena
   la colleghi. L'app termina quel processo prima di connettersi; se non basta, chiudi Foto,
   Anteprima, Acquisizione Immagine, EOS Utility e NX Studio, poi riprova.

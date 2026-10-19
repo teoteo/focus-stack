@@ -268,6 +268,8 @@ function renderCamera(c, run) {
   $("c-connected-line").classList.toggle("hidden", !c.connected);
   if (c.connected) $("c-info").textContent = c.model + (c.simulated ? " (simulata)" : "");
   ["c-reload", "c-test"].forEach((id) => ($(id).disabled = !c.connected || run || c.busy));
+  $("c-mirror").disabled = run;
+  renderMirrorHint();
 
   const settings = (c.connected && c.settings) || {};
   const sig = JSON.stringify(settings);
@@ -283,6 +285,19 @@ function renderCamera(c, run) {
     sel.disabled = s.readonly || !s.choices.length;
   }
   updateSummary();
+}
+
+const MIRROR_HINTS = {
+  nikon: "Nikon: l'app imposta il “ritardo di esposizione” della fotocamera al valore disponibile più vicino.",
+  canon: "Canon: attiva il “blocco dello specchio” nel menu della fotocamera (funzioni personalizzate). L'app solleva lo specchio, attende e poi scatta.",
+  none: "Questa fotocamera non ha un ritardo dello specchio controllabile da remoto: l'impostazione viene ignorata.",
+};
+
+function renderMirrorHint() {
+  const c = S && S.camera, hint = $("c-mirror-hint");
+  const show = !!(c && c.connected && num("c-mirror") > 0 && !c.simulated);
+  hint.classList.toggle("hidden", !show);
+  if (show) hint.textContent = MIRROR_HINTS[c.mirror_method] || MIRROR_HINTS.none;
 }
 
 function renderSequence(f, c, q, run) {
@@ -404,6 +419,7 @@ function loadForms(cfg) {
   $("s-settle").value = q.settle_ms; $("s-post").value = q.post_shot_ms; $("s-backlash").value = q.backlash;
   $("s-mode").value = q.capture_mode; $("s-name").value = q.session_name; $("s-return").checked = q.return_to_start;
   $("c-bulb").value = q.bulb_s || 0;
+  $("c-mirror").value = String(q.mirror_delay_ms || 0);
   if (cfg.focuser_port) $("f-port").dataset.saved = cfg.focuser_port;
   loadLimitForm(cfg);
   const m = cfg.mechanics;
@@ -428,7 +444,7 @@ function formParams() {
     settle_ms: num("s-settle"), post_shot_ms: num("s-post"), backlash: num("s-backlash"),
     return_to_start: $("s-return").checked, capture_mode: $("s-mode").value,
     session_name: $("s-name").value.trim() || "stack", output_root: (S && S.settings.output_root) || "",
-    bulb_s: num("c-bulb"),
+    bulb_s: num("c-bulb"), mirror_delay_ms: num("c-mirror"),
   };
 }
 
@@ -448,7 +464,7 @@ function shutterSeconds() {
 function updateSummary() {
   if (!formLoaded || !S) return;
   const p = formParams(), n = shotCount(p), span = Math.abs(p.end - p.start);
-  const perShot = (p.settle_ms + p.post_shot_ms) / 1000 + (p.bulb_s || shutterSeconds()) + 1.5 + p.step / 400;
+  const perShot = (p.settle_ms + p.post_shot_ms + p.mirror_delay_ms) / 1000 + (p.bulb_s || shutterSeconds()) + 1.5 + p.step / 400;
   let html = `<b>${n}</b> scatti · escursione <b>${fmtInt(span)}</b> passi`;
   if (umPerStep()) html += ` = <b>${fmtUm(span)}</b> · passo <b>${fmtUm(p.step)}</b>`;
   html += `<br>Durata stimata <b>~${fmtTime(n * perShot)}</b>`;
@@ -588,7 +604,7 @@ function bind() {
     });
   }
   $("c-reload").onclick = (e) => act(e.target, () => api("/api/camera/settings/reload"));
-  $("c-test").onclick = (e) => act(e.target, () => api("/api/camera/test", { bulb_s: num("c-bulb") }), "Scatto completato");
+  $("c-test").onclick = (e) => act(e.target, () => api("/api/camera/test", { bulb_s: num("c-bulb"), mirror_delay_ms: num("c-mirror") }), "Scatto completato");
 
   // ultimo scatto / visualizzatore
   $("last-thumb").onclick = () => S && S.last_shot && openViewer(S.last_shot.id);
@@ -606,6 +622,7 @@ function bind() {
     syncCount(); updateSummary();
   });
   ["s-settle", "s-post", "s-backlash", "s-mode", "c-bulb", "c-shutter"].forEach((id) => $(id).addEventListener("input", updateSummary));
+  $("c-mirror").addEventListener("change", () => { updateSummary(); renderMirrorHint(); });
   $("s-start-btn").onclick = (e) => act(e.target, () => api("/api/sequence/start", formParams()), "Sequenza avviata");
   $("s-pause-btn").onclick = (e) => act(e.target, () => api(S.sequence.state === "paused" ? "/api/sequence/resume" : "/api/sequence/pause"));
   $("s-stop-btn").onclick = (e) => act(e.target, () => api("/api/sequence/stop"));
@@ -622,7 +639,7 @@ function bind() {
     const p = S.settings.presets[$("s-preset").value];
     if (!p) return;
     const map = { start: "s-start", end: "s-end", step: "s-step", settle_ms: "s-settle", post_shot_ms: "s-post",
-      backlash: "s-backlash", capture_mode: "s-mode", session_name: "s-name", bulb_s: "c-bulb" };
+      backlash: "s-backlash", capture_mode: "s-mode", session_name: "s-name", bulb_s: "c-bulb", mirror_delay_ms: "c-mirror" };
     for (const [k, id] of Object.entries(map)) if (p[k] !== undefined) $(id).value = p[k];
     if (p.return_to_start !== undefined) $("s-return").checked = p.return_to_start;
     syncCount(); updateSummary();

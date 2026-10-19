@@ -656,6 +656,12 @@ class CameraSetting(BaseModel):
 
 class TestShot(BaseModel):
     bulb_s: float = 0
+    mirror_delay_ms: int = 0
+
+
+def check_mirror_delay(ms: int) -> None:
+    if not 0 <= ms <= 2500:
+        raise ValueError("Il ritardo dello specchio deve essere fra 0 e 2,5 secondi")
 
 
 @api.post("/api/camera/detect")
@@ -676,6 +682,7 @@ async def camera_connect(body: CameraConnect):
     cam = SimulatedCamera() if body.simulate else GPhotoCamera(body.model, body.port)
     app_state.log(f"Connessione fotocamera {body.model or ('simulata' if body.simulate else 'automatica')}…")
     await cam.connect()
+    cam.log = app_state.log
     app_state.camera = cam
     app_state.log(f"Fotocamera connessa: {cam.model}")
     return cam.describe()
@@ -713,6 +720,7 @@ async def camera_set(body: CameraSetting):
 @guard
 async def camera_test(body: TestShot):
     not_running()
+    check_mirror_delay(body.mirror_delay_ms)
     cam = need_camera()
     test_dir = Path(store.CONFIG_DIR) / "test-shots"
     test_dir.mkdir(parents=True, exist_ok=True)
@@ -722,7 +730,7 @@ async def camera_test(body: TestShot):
         p.unlink(missing_ok=True)
     app_state.log("Scatto di prova…")
     files = await cam.capture(mode="download", dest_base=test_dir / f"prova_{time.strftime('%H%M%S')}",
-                              bulb_s=body.bulb_s)
+                              bulb_s=body.bulb_s, mirror_s=body.mirror_delay_ms / 1000)
     f = app_state.focuser
     app_state.add_shot(files, "test", f.position if f and f.connected else None,
                        f.temperature if f and f.connected else None)
@@ -764,6 +772,7 @@ class SequenceBody(BaseModel):
     step: int
     settle_ms: int = 1500
     post_shot_ms: int = 500
+    mirror_delay_ms: int = 0
     backlash: int = 0
     return_to_start: bool = True
     capture_mode: str = "download"
@@ -780,6 +789,7 @@ async def sequence_start(body: SequenceBody):
         raise ValueError("Il passo deve essere almeno 1")
     if body.capture_mode not in ("download", "card", "trigger"):
         raise ValueError("Modalità di scatto non valida")
+    check_mirror_delay(body.mirror_delay_ms)
     need_focuser()
     data["output_root"] = (validate_output_root(body.output_root or app_state.cfg["output_root"])
                            if body.capture_mode == "download" else body.output_root or app_state.cfg["output_root"])

@@ -17,6 +17,7 @@ class SequenceParams:
     step: int
     settle_ms: int = 1500        # attesa anti-vibrazione dopo il movimento
     post_shot_ms: int = 500      # pausa dopo lo scatto (scrittura card, flash...)
+    mirror_delay_ms: int = 0     # reflex: attesa fra sollevamento dello specchio e scatto
     backlash: int = 0            # overshoot per avvicinarsi sempre dalla stessa direzione
     return_to_start: bool = True
     capture_mode: str = "download"   # download | card | trigger
@@ -176,7 +177,8 @@ class SequenceRunner:
                     await self._checkpoint()
                     continue  # ripete la stessa posizione
                 base = folder / f"{safe_name}_{i + 1:04d}" if download else None
-                files = await camera.capture(mode=p.capture_mode, dest_base=base, bulb_s=p.bulb_s)
+                files = await camera.capture(mode=p.capture_mode, dest_base=base, bulb_s=p.bulb_s,
+                                             mirror_s=p.mirror_delay_ms / 1000)
                 record = {"index": i + 1, "position": pos, "temperature": focuser.temperature,
                           "time": datetime.now().isoformat(timespec="seconds"), "files": files}
                 shots.append(record)

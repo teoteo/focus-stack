@@ -30,6 +30,7 @@ DEFAULTS: dict = {
         "step": 50,
         "settle_ms": 1500,
         "post_shot_ms": 500,
+        "mirror_delay_ms": 0,
         "backlash": 0,
         "return_to_start": True,
         "capture_mode": "download",

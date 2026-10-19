@@ -220,7 +220,18 @@
         <label>Formato<select id="c-format"></select></label>
         <label>Destinazione<select id="c-target"></select></label>
         <label>Posa B (secondi)<input type="number" id="c-bulb" min="0" step="0.5" value="0" title="0 = usa il tempo di posa. Maggiore di 0 = posa B dal computer"></label>
+        <label>Ritardo specchio (reflex)
+          <select id="c-mirror" title="Attesa fra il sollevamento dello specchio e lo scatto, per far smorzare le vibrazioni">
+            <option value="0">Nessuno</option>
+            <option value="500">0,5 s</option>
+            <option value="1000">1 s</option>
+            <option value="1500">1,5 s</option>
+            <option value="2000">2 s</option>
+            <option value="2500">2,5 s</option>
+          </select>
+        </label>
       </div>
+      <p class="hint hidden" id="c-mirror-hint"></p>
       <div class="row">
         <button class="btn ghost small" id="c-reload">Rileggi</button>
         <span class="grow"></span>

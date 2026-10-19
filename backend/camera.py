@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import struct
 import subprocess
 import time
@@ -57,6 +58,12 @@ class GPhotoCamera:
         self.settings: dict[str, dict] = {}
         self.busy = False
         self.last_file: str | None = None
+        # Ritardo dopo il sollevamento dello specchio (reflex):
+        # "nikon" = ritardo di esposizione della fotocamera, "canon" = blocco specchio (due pressioni)
+        self.mirror_method: str | None = None
+        self._mirror_original: str | None = None   # valore Nikon prima che l'app lo cambiasse
+        self._mirror_warned = False
+        self.log = lambda _msg: None
 
     @property
     def connected(self) -> bool:
@@ -116,6 +123,10 @@ class GPhotoCamera:
             pass
         self._resolve_keys()
         self._read_settings_blocking()
+        if self._has("exposuredelaymode"):
+            self.mirror_method = "nikon"
+        elif self._has("eosremoterelease"):
+            self.mirror_method = "canon"
 
     def _resolve_keys(self) -> None:
         self._keys = {}
@@ -163,6 +174,10 @@ class GPhotoCamera:
     def _disconnect_blocking(self) -> None:
         if self._cam is not None:
             try:
+                self._nikon_delay_blocking(0)
+            except gp.GPhoto2Error:
+                pass
+            try:
                 self._cam.exit()
             except gp.GPhoto2Error:
                 pass
@@ -201,12 +216,73 @@ class GPhotoCamera:
                     break
         return files
 
-    def _bulb_blocking(self, seconds: float) -> None:
+    # ---------- specchio ----------
+    def _set_raw(self, key: str, value) -> None:
+        w = self._cam.get_single_config(key)
+        w.set_value(value)
+        self._cam.set_single_config(key, w)
+
+    def _nikon_delay_blocking(self, delay_s: float) -> None:
+        """Imposta il ritardo di esposizione Nikon più vicino (per eccesso) a delay_s.
+        Con delay_s = 0 rimette il valore che c'era prima che l'app lo cambiasse."""
+        if self.mirror_method != "nikon":
+            return
+        w = self._cam.get_single_config("exposuredelaymode")
+        current = str(w.get_value())
+        if delay_s <= 0:
+            if self._mirror_original is not None and current != self._mirror_original:
+                self._set_raw("exposuredelaymode", self._mirror_original)
+                self.log(f"Ritardo di esposizione della fotocamera riportato a {self._mirror_original}")
+            self._mirror_original = None
+            return
+        choices = [w.get_choice(i) for i in range(w.count_choices())]
+        timed = []
+        for c in choices:
+            m = re.search(r"\d+(?:[.,]\d+)?", c)
+            if m and float(m.group().replace(",", ".")) > 0:
+                timed.append((float(m.group().replace(",", ".")), c))
+        if timed:
+            timed.sort()
+            choice = next((c for t, c in timed if t >= delay_s - 0.01), timed[-1][1])
+        else:  # modelli con solo On/Off: ritardo fisso deciso dalla fotocamera
+            choice = next((c for c in choices if c.lower() in ("on", "1")), None)
+        if choice is None:
+            raise CameraError(f"Ritardo di esposizione non riconosciuto (valori: {', '.join(choices)})")
+        if choice != current:
+            if self._mirror_original is None:
+                self._mirror_original = current
+            self._set_raw("exposuredelaymode", choice)
+            self.log(f"Ritardo di esposizione della fotocamera: {choice} (richiesti {delay_s:g} s)")
+
+    def _canon_mirror_up_blocking(self, delay_s: float) -> list | None:
+        """Prima pressione: con il blocco specchio attivo solleva lo specchio, poi attende.
+        Se invece la fotocamera scatta subito (blocco specchio spento) restituisce i file."""
+        for value in ("Press Full", "Release Full"):
+            self._set_raw("eosremoterelease", value)
+        files, shot = [], False
+        end = time.monotonic() + delay_s
+        while (left := end - time.monotonic()) > 0:
+            ev_type, data = self._cam.wait_for_event(max(1, int(left * 1000)))
+            if ev_type == gp.GP_EVENT_FILE_ADDED:
+                files.append((data.folder, data.name))
+            elif ev_type == gp.GP_EVENT_CAPTURE_COMPLETE:
+                shot = True
+        if files or shot:
+            if not self._mirror_warned:
+                self._mirror_warned = True
+                self.log("Attenzione: la fotocamera ha scattato senza ritardo. Attiva il blocco dello "
+                         "specchio nel menu della fotocamera (funzioni personalizzate)")
+            return files
+        return None
+
+    def _ensure_bulb(self) -> None:
         ss = self.settings.get("shutterspeed")
         if ss:
             bulb = next((c for c in ss["choices"] if c.lower() == "bulb"), None)
             if bulb and ss["current"] != bulb:
                 self._set_blocking("shutterspeed", bulb)
+
+    def _bulb_blocking(self, seconds: float) -> None:
         if self._has("eosremoterelease"):
             key, press, release = "eosremoterelease", "Press Full", "Release Full"
         elif self._has("bulb"):
@@ -220,11 +296,28 @@ class GPhotoCamera:
             if value == press:
                 time.sleep(seconds)
 
-    def _capture_blocking(self, mode: str, dest_base: str | None, bulb_s: float, timeout_s: float) -> list[str]:
+    def _capture_blocking(self, mode: str, dest_base: str | None, bulb_s: float, timeout_s: float,
+                          mirror_s: float = 0) -> list[str]:
         self._require()
         deadline = time.monotonic() + timeout_s
+        self._nikon_delay_blocking(mirror_s)
+        canon_mlu = mirror_s > 0 and self.mirror_method == "canon"
         if bulb_s > 0:
+            self._ensure_bulb()
+        early = self._canon_mirror_up_blocking(mirror_s) if canon_mlu else None
+        if early is not None:  # scattato alla prima pressione: niente seconda pressione
+            if mode == "trigger":
+                return []
+            new_files = early + [f for f in self._drain_events(500, not early, deadline) if f not in early]
+        elif bulb_s > 0:
             self._bulb_blocking(bulb_s)
+            new_files = self._drain_events(1000, True, deadline)
+        elif canon_mlu:  # specchio già sollevato: la seconda pressione scatta
+            for value in ("Press Full", "Release Full"):
+                self._set_raw("eosremoterelease", value)
+            if mode == "trigger":
+                self._drain_events(500, False, deadline)
+                return []
             new_files = self._drain_events(1000, True, deadline)
         elif mode == "trigger":
             self._cam.trigger_capture()
@@ -251,19 +344,19 @@ class GPhotoCamera:
         return saved
 
     async def capture(self, mode: str = "download", dest_base: Path | None = None,
-                      bulb_s: float = 0, timeout_s: float = 60) -> list[str]:
+                      bulb_s: float = 0, timeout_s: float = 60, mirror_s: float = 0) -> list[str]:
         self._require()
         self.busy = True
         try:
-            return await self._run(self._capture_blocking, mode,
-                                   str(dest_base) if dest_base else None, bulb_s, timeout_s + bulb_s)
+            return await self._run(self._capture_blocking, mode, str(dest_base) if dest_base else None,
+                                   bulb_s, timeout_s + bulb_s + mirror_s, mirror_s)
         finally:
             self.busy = False
 
     def describe(self) -> dict:
         return {"connected": self.connected, "simulated": self.simulated, "model": self.model,
                 "port": self.port, "busy": self.busy, "settings": self.settings,
-                "last_file": self.last_file}
+                "last_file": self.last_file, "mirror_method": self.mirror_method}
 
 
 def _sim_png(path: str, n: int) -> None:
@@ -294,6 +387,7 @@ class SimulatedCamera(GPhotoCamera):
 
     def __init__(self):
         super().__init__("Fotocamera simulata", "sim")
+        self.mirror_method = "sim"
         self._open = False
         self._n = 0
         self.settings = {
@@ -327,11 +421,11 @@ class SimulatedCamera(GPhotoCamera):
         return self.settings
 
     async def capture(self, mode: str = "download", dest_base: Path | None = None,
-                      bulb_s: float = 0, timeout_s: float = 60) -> list[str]:
+                      bulb_s: float = 0, timeout_s: float = 60, mirror_s: float = 0) -> list[str]:
         self._require()
         self.busy = True
         try:
-            await asyncio.sleep(0.5 + bulb_s)
+            await asyncio.sleep(0.5 + bulb_s + mirror_s)
             self._n += 1
             if mode == "download" and dest_base:
                 target = f"{dest_base}.png"
