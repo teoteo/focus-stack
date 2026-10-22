@@ -59,14 +59,14 @@
 //   da 0 a PB_SPEED2TIME ms        velocità normale del motore (~20 passi/s)
 //   fino a PB_SPEED3TIME ms        PB_SPEED2PERIOD (13333 us = 75 passi/s)
 //   fino a PB_SPEED4TIME ms        PB_SPEED3PERIOD (4000 us = 250 passi/s)
-//   oltre                          PB_SPEED4PERIOD (1000 us = 1000 passi/s)
+//   oltre                          PB_SPEED4PERIOD (2500 us = 400 passi/s)
 // Se il motore a velocità alta perde passi o fischia senza muoversi, aumentare il periodo.
 #define PB_SPEED2TIME     5000L
 #define PB_SPEED3TIME     10000L
 #define PB_SPEED4TIME     20000L
 #define PB_SPEED2PERIOD   13333L
 #define PB_SPEED3PERIOD   4000L
-#define PB_SPEED4PERIOD   1000L
+#define PB_SPEED4PERIOD   2500L
 
 // Movimenti comandati (app, ASCOM/INDI): rampa di accelerazione e decelerazione.
 // Il motore parte a MOVE_STARTSPEED, accelera di MOVE_ACCEL passi/s al secondo fino a
@@ -75,7 +75,7 @@
 // originale (/2 e /2,5). I pulsanti fisici usano invece i gradini PB_SPEED*.
 // Se il motore perde passi in partenza o in arrivo, ridurre MOVE_STARTSPEED o MOVE_ACCEL.
 #define MOVE_STARTSPEED   100.0   // passi/s
-#define MOVE_MAXSPEED     700.0   // passi/s
+#define MOVE_MAXSPEED     400.0   // passi/s (motore 14HM11-0404S, 25 ohm: a 12 V oltre perde coppia)
 #define MOVE_ACCEL        2000.0  // passi/s al secondo
 
 

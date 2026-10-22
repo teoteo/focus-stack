@@ -3,5 +3,5 @@
 // sul focheggiatore è più basso di quello incluso nell'app.
 #ifndef fsbuild_h
 #define fsbuild_h
-#define FSBUILD 1
+#define FSBUILD 2
 #endif
