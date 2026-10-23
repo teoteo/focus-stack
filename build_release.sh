@@ -41,7 +41,11 @@ arduino-cli compile -b arduino:avr:nano:cpu=atmega328old --build-path "$ROOT/bui
 FWOUT="$ROOT/firmware/build"
 rm -rf "$FWOUT"; mkdir -p "$FWOUT"
 cp "$ROOT/build/firmware/myFP2F_DRV8825_330.ino.hex" "$FWOUT/firmware.hex"
-printf '{"build": %s, "hex": "firmware.hex"}\n' "$FSBUILD" > "$FWOUT/manifest.json"
+# stessa build per la scheda Ardufocus (opzione ARDUFOCUSPCB in focuserconfig.h)
+arduino-cli compile -b arduino:avr:nano:cpu=atmega328old --build-property "compiler.cpp.extra_flags=-DARDUFOCUSPCB" \
+  --build-path "$ROOT/build/firmware-ardufocus" "$SKETCH" | tail -2
+cp "$ROOT/build/firmware-ardufocus/myFP2F_DRV8825_330.ino.hex" "$FWOUT/firmware-ardufocus.hex"
+printf '{"build": %s, "hex": "firmware.hex", "boards": {"ardufocus": "firmware-ardufocus.hex"}}\n' "$FSBUILD" > "$FWOUT/manifest.json"
 
 # ---------- applet (programma di avvio) e icona ----------
 osacompile -s -o "$APP" "$ROOT/packaging/launcher.applescript"

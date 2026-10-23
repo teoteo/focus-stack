@@ -270,6 +270,9 @@ void ser_comms() {
     case 97:  // Focus Stack: numero di build del firmware (vedi fsbuild.h)
       SendPacket('B', (long)FSBUILD);
       break;
+    case 98:  // Focus Stack: scheda per cui è compilato il firmware (0 = myFocuserPro2, 1 = Ardufocus)
+      SendPacket('H', (long)FSBOARD);
+      break;
     case 5:  // set new target position to xxxxxx (and focuser initiates immediate move to xxxxxx)
       // only if not already moving
       if (stepperpower == 1) {

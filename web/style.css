@@ -190,11 +190,14 @@ label.check { flex-direction: row; align-items: center; gap: 9px; font-size: 14.
 /* ---------------- jog ---------------- */
 .jog { margin-top: 14px; }
 .jog .seg { display: flex; }
-.jog .seg button { flex: 1; }
+.jog .seg button { flex: 1; min-width: 0; padding-inline: 4px; }
+#jog-max button { min-width: 0; padding-inline: 6px; white-space: nowrap; }
 .jog-hint { font-size: 13px; color: var(--muted); text-align: center; margin: 6px 0 10px; font-variant-numeric: tabular-nums; }
 .jog-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .jog-btn { min-height: 64px; flex-direction: column; gap: 2px; font-size: 15px; background: var(--card-2); border-color: var(--line); }
 .jog-btn .arrow { font-size: 20px; line-height: 1; color: var(--accent); }
+.jog-btn { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.jog-btn.holding { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
 .goto input { flex: 1; width: auto; }
 
 /* ---------------- sequenza ---------------- */

@@ -48,11 +48,16 @@ def parse_version(v: str) -> tuple[int, ...]:
 
 
 # ---------------- firmware ----------------
-def bundled_firmware() -> dict | None:
-    """{"build": int, "hex": Path} del firmware incluso, oppure None."""
+def bundled_firmware(board: str = "myfp2") -> dict | None:
+    """{"build": int, "hex": Path} del firmware incluso per la scheda indicata, oppure None.
+
+    manifest.json: "hex" è il firmware per la scheda myFocuserPro2 (lo leggono anche le versioni
+    dell'app precedenti); "boards" elenca i file per le altre schede, per esempio "ardufocus".
+    """
     try:
         manifest = json.loads((FIRMWARE_DIR / "manifest.json").read_text())
-        hex_path = FIRMWARE_DIR / manifest["hex"]
+        name = manifest["hex"] if board == "myfp2" else manifest.get("boards", {})[board]
+        hex_path = FIRMWARE_DIR / name
         return {"build": int(manifest["build"]), "hex": hex_path} if hex_path.exists() else None
     except (OSError, ValueError, KeyError):
         return None

@@ -24,6 +24,10 @@ DEFAULTS: dict = {
         "um_per_knob_rev": 100.0,  # corsa della micrometrica per giro (µm)
     },
     "output_root": str(Path.home() / "Pictures" / "FocusStack"),
+    # Pulsanti Allontana/Avvicina: ampiezze per decine da 1 a jog_max passi; jog_hold = tenendo
+    # premuto il motore si muove senza fermarsi fino al rilascio
+    "jog_max": 1000,
+    "jog_hold": True,
     "sequence": {
         "start": 0,
         "end": 1000,

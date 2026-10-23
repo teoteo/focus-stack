@@ -1,7 +1,8 @@
 """Caricamento del firmware sull'Arduino Nano del focheggiatore, senza avrdude.
 
 Parla con il bootloader Arduino (protocollo STK500 v1, lo stesso usato da avrdude con
-`-c arduino`): riavvia la scheda tramite DTR, controlla la firma del chip, scrive la flash a
+`-c arduino`): riavvia la scheda tramite DTR (o aspetta che si prema il tasto reset, sulle
+schede come l'Ardufocus che non si riavviano da USB), controlla la firma del chip, scrive la flash a
 pagine da 128 byte e la rilegge tutta per verificarla. La EEPROM (impostazioni del
 focheggiatore) non viene toccata. Funziona sia con il bootloader vecchio (57600 baud) sia con
 optiboot (115200 baud).
@@ -127,12 +128,44 @@ def _open_bootloader(port: str) -> tuple[serial.Serial, _Bootloader]:
                      "stia usando la porta del focheggiatore")
 
 
-def flash(port: str, hex_path: str | Path, progress: Progress | None = None) -> int:
+def _wait_bootloader(port: str, report: Progress, window: float = 10.0, total: float = 90.0) -> tuple[serial.Serial, _Bootloader]:
+    """Aspetta che l'utente prema il tasto reset e aggancia il bootloader.
+
+    Una velocità per finestra di `window` secondi, alternandole fino a `total`: byte ricevuti a
+    velocità sbagliata fanno uscire optiboot dal bootloader, quindi cambiarla a ogni tentativo
+    farebbe fallire anche quella giusta. Se la pressione cade nella finestra sbagliata basta
+    ripremere il tasto.
+    """
+    start = time.monotonic()
+    i = 0
+    while time.monotonic() - start < total:
+        baud = BAUD_RATES[i % len(BAUD_RATES)]
+        i += 1
+        left = int(total - (time.monotonic() - start))
+        report(f"Premi il tasto reset sul focheggiatore (ancora {left} s)", 0.0)
+        try:
+            ser = serial.Serial(port, baud, timeout=0.05)
+        except (OSError, serial.SerialException) as exc:
+            raise FlashError(f"Impossibile aprire {port}: {exc}") from exc
+        end = min(time.monotonic() + window, start + total)
+        while time.monotonic() < end:
+            ser.reset_input_buffer()
+            ser.write(bytes([GET_SYNC, CRC_EOP]))
+            time.sleep(0.05)
+            if ser.read(2) == bytes([STK_INSYNC, STK_OK]):
+                return ser, _Bootloader(ser)
+        ser.close()
+    raise FlashError("Bootloader non trovato: premi il tasto reset del focheggiatore mentre "
+                     "l'app aspetta, e controlla che nessun altro programma usi la porta")
+
+
+def flash(port: str, hex_path: str | Path, progress: Progress | None = None,
+          manual_reset: bool = False) -> int:
     """Scrive e verifica il firmware. Restituisce il numero di byte scritti."""
     report = progress or (lambda phase, frac: None)
     image = read_hex(hex_path)
     report("Collegamento al bootloader", 0.0)
-    ser, bl = _open_bootloader(port)
+    ser, bl = _wait_bootloader(port, report) if manual_reset else _open_bootloader(port)
     try:
         sig = bl.signature()
         if sig != ATMEGA328P_SIGNATURE:

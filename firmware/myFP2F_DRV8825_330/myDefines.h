@@ -56,6 +56,8 @@ struct config_t {
 extern struct config_t myfocuser;
 
 #define PBSWITCHESPIN A0  // push button switches
+#define ARDUFOCUSPBOUT 2  // Ardufocus: pulsanti verso massa (FWD = OUT, BWD = IN)
+#define ARDUFOCUSPBIN 3
 #define INLED A1          // in and out leds
 #define OUTLED A2
 #define BUZZERPIN A3  // buzzer

@@ -73,6 +73,7 @@ class MyFocuserPro2:
         self.max_step: int | None = None
         self.firmware: str | None = None
         self.fs_build: int | None = None   # build del firmware Focus Stack (:97#); None = firmware originale
+        self.board = "myfp2"               # scheda del firmware Focus Stack (:98#): "myfp2" o "ardufocus"
         self.has_temp_probe = False
         self.motor: dict = {}
         self.limit_min = 0
@@ -153,6 +154,12 @@ class MyFocuserPro2:
             self.fs_build = int(self._value(":97#", 0.8))  # i firmware non Focus Stack non rispondono
         except (FocuserError, ValueError):
             self.fs_build = None
+        self.board = "myfp2"
+        if self.fs_build is not None:
+            try:  # le build fino alla 2 non rispondono: erano solo per la scheda myFocuserPro2
+                self.board = "ardufocus" if self._value(":98#", 0.8) == "1" else "myfp2"
+            except FocuserError:
+                pass
         try:
             self.has_temp_probe = self._value(":83#", 0.8) == "1"
         except FocuserError:
@@ -271,7 +278,7 @@ class MyFocuserPro2:
             "connected": self.connected, "simulated": self.simulated, "port": self.port,
             "position": self.position, "moving": self.moving, "temperature": self.temperature,
             "has_temp_probe": self.has_temp_probe, "max_step": self.max_step, "firmware": self.firmware,
-            "fs_build": self.fs_build,
+            "fs_build": self.fs_build, "board": self.board,
             "motor": self.motor, "bounds": [lo, hi],
         }
 

@@ -37,6 +37,8 @@ si chiude e si riapre da sola. Lo stesso controllo si fa a mano da *Configurazio
 un firmware più vecchio (o quello originale myFocuserPro2), la barra in alto lo segnala e in
 *Configurazione › Aggiornamenti* si aggiorna con un clic (circa 20 secondi, le impostazioni del
 focheggiatore restano). Il caricamento usa il bootloader dell'Arduino, senza avrdude né Arduino IDE.
+L'app sceglie il firmware adatto alla scheda (myFocuserPro2 o Ardufocus). L'Ardufocus non si
+riavvia da USB: durante l'aggiornamento l'app chiede di premere il tasto reset del focheggiatore.
 
 ## Avvio
 
@@ -71,8 +73,14 @@ Il tema scuro è quello predefinito; il pulsante ◐ in alto a destra passa al t
 L'app è divisa in tre schede:
 
 - **Sessione**: posizione, barra dei fine corsa, movimento manuale, sequenza, fotocamera e ultimo scatto.
-- **Configurazione**: fine corsa, meccanica, motore (firmware), temperatura e calcolo della profondità di campo.
+- **Configurazione**: fine corsa, meccanica, comandi manuali, motore (firmware), temperatura e calcolo
+  della profondità di campo.
 - **Registro**: tutti gli eventi della sessione.
+
+**Movimento manuale:** un tocco su *Allontana*/*Avvicina* sposta dell'ampiezza scelta (per decine, fino
+a 1000, 10 000 o 100 000 passi secondo *Configurazione › Comandi manuali*). Tenendo premuto il motore
+si muove senza fermarsi e rallenta fino a fermarsi al rilascio; se la pagina smette di rispondere il
+server lo ferma dopo circa un secondo.
 
 Nella barra sotto la posizione:
 
@@ -213,7 +221,14 @@ Le app installate vedono la nuova release entro 6 ore (o subito con *Controlla o
 copyright nei file) per scheda DRV8825, con: pulsanti, sonda di temperatura, display OLED a tre
 righe (Position, Target, Temp) senza sfarfallio; pulsanti con movimento continuo a velocità
 crescente (`PB_SPEED*` in `focuserconfig.h`); rampa di accelerazione e decelerazione per i movimenti
-comandati (`MOVE_*`); comando `:97#` che restituisce il numero di build (`fsbuild.h`).
+comandati (`MOVE_*`); comando `:97#` che restituisce il numero di build (`fsbuild.h`) e `:98#` che
+indica la scheda (0 = myFocuserPro2, 1 = Ardufocus).
+
+**Scheda Ardufocus:** con `ARDUFOCUSPCB` (riga in `focuserconfig.h`, oppure `-DARDUFOCUSPCB` come fa
+`build_release.sh` per `firmware-ardufocus.hex`) lo stesso firmware usa i collegamenti del circuito
+stampato Ardufocus rev1 con DRV8825: motore su D4 (DIR), D5 (STEP), D6 (SLEEP); pulsanti verso massa su
+D2 (OUT) e D3 (IN). Sonda DS18B20, OLED, LED e buzzer sono disattivati. Le velocità sono più alte,
+pensate per un NEMA 17 con riduttore 27:1.
 
 ## Struttura
 

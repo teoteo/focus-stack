@@ -6,6 +6,7 @@
 #define myBoards_h
 
 #include <Arduino.h>
+#include "focuserconfig.h"  // ARDUFOCUSPCB
 
 #if !defined(SLOW)
 #define SLOW 0  // motorspeeds
@@ -48,12 +49,25 @@
 #define MAXSTEPMODE 32
 #endif
 
+#if defined(ARDUFOCUSPCB)
+// Ardufocus: l'ENABLE del driver è a massa, il motore si spegne con SLEEP (attivo basso)
+#define DRV8825DIR 4
+#define DRV8825STEP 5
+#define DRV8825ENABLE 6
+#define DRV8825MOTORON HIGH
+#define DRV8825MOTOROFF LOW
+#define DRV8825WAKEDELAY 2  // ms: il DRV8825 esce dallo sleep in 1,7 ms al massimo
+#else
 #define DRV8825DIR 3  // drv8825 control lines
 #define DRV8825STEP 4
 #define DRV8825ENABLE 8
 #define DRV8825M2 7  // for easydriver, do not connect
 #define DRV8825M1 6  // for easydriver, connect to MS1
 #define DRV8825M0 5  // for easydriver, connect to MS0
+#define DRV8825MOTORON LOW
+#define DRV8825MOTOROFF HIGH
+#define DRV8825WAKEDELAY 1
+#endif
 
 // TFT drv pins
 #define DRV8825DIRTFT A4

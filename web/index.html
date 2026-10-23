@@ -94,18 +94,13 @@
     </div>
 
     <div class="jog">
-      <div class="seg" id="jog-size" role="radiogroup" aria-label="Ampiezza passo">
-        <button data-size="1">1</button>
-        <button data-size="10">10</button>
-        <button data-size="100" aria-checked="true">100</button>
-        <button data-size="1000">1000</button>
-      </div>
+      <div class="seg" id="jog-size" role="radiogroup" aria-label="Ampiezza passo"></div>
       <div class="jog-hint" id="jog-um">&nbsp;</div>
       <div class="jog-buttons">
         <button class="btn jog-btn" id="jog-away"><span class="arrow">▲</span><span id="jog-away-label">Allontana</span></button>
         <button class="btn jog-btn" id="jog-toward"><span class="arrow">▼</span><span id="jog-toward-label">Avvicina</span></button>
       </div>
-      <p class="hint">Tastiera: ↑ ↓ muovi · ⇧ ×10 · 1–4 ampiezza · <kbd>Esc</kbd> stop</p>
+      <p class="hint" id="jog-keys">Tastiera: ↑ ↓ muovi · ⇧ ×10 · 1–4 ampiezza · <kbd>Esc</kbd> stop</p>
     </div>
 
     <div class="row goto">
@@ -323,6 +318,20 @@
     <p class="result" id="m-result"></p>
     <p class="hint">Per misurare: muovi di 1000 passi e leggi lo spostamento sul nonio della micrometrica, oppure metti a fuoco un micrometro oggetto inclinato.</p>
     <button class="btn primary" id="m-save">Salva meccanica</button>
+  </section>
+
+  <section class="card" id="card-jog">
+    <header class="card-head"><h2>Comandi manuali</h2></header>
+    <span class="label">Ampiezze dei pulsanti Allontana/Avvicina</span>
+    <div class="seg wide" id="jog-max" role="radiogroup" aria-label="Ampiezza massima">
+      <button data-max="1000">fino a 1000</button>
+      <button data-max="10000">fino a 10k</button>
+      <button data-max="100000">fino a 100k</button>
+    </div>
+    <p class="hint">Le ampiezze crescono per decine (1, 10, 100, …): con un motore a riduttore servono più passi per lo stesso spostamento.</p>
+    <div class="toggles">
+      <label class="toggle"><input type="checkbox" id="jog-hold"><span>Tieni premuto per muovere senza fermarti <em>al rilascio il motore rallenta e si ferma; si ferma comunque al fine corsa</em></span></label>
+    </div>
   </section>
 
   <section class="card" id="card-motor">

@@ -25,6 +25,14 @@
 //#define DRVBRD   DRV8825RE
 //#define DRVBRD   DRV8825TFT22        // Wiring details in myBoards.h
 
+// Scheda Ardufocus (circuito stampato ufficiale rev1 con driver DRV8825) invece della scheda
+// myFocuserPro2. Motore: D4 DIR, D5 STEP, D6 SLEEP (alto = motore alimentato), microstep fissato
+// sulla scheda. Pulsanti verso massa su D2 (OUT) e D3 (IN). Sonda DS18B20, OLED, LED e buzzer
+// vengono disattivati perché quei piedini sull'Ardufocus hanno altri usi.
+// Per compilare per l'Ardufocus togliere il commento alla riga seguente, oppure passare
+// -DARDUFOCUSPCB al compilatore (lo fa build_release.sh per firmware-ardufocus.hex).
+//#define ARDUFOCUSPCB 1
+
 
 //-----------------------------------------------------------------------
 // INPUT DEVICES
@@ -61,12 +69,23 @@
 //   fino a PB_SPEED4TIME ms        PB_SPEED3PERIOD (4000 us = 250 passi/s)
 //   oltre                          PB_SPEED4PERIOD (2500 us = 400 passi/s)
 // Se il motore a velocità alta perde passi o fischia senza muoversi, aumentare il periodo.
+#if defined(ARDUFOCUSPCB)
+// Ardufocus con NEMA 17 da 1,8° e riduttore 26,85:1 (17HS13-0404S-PG27): per un giro d'uscita
+// servono ~5370 passi, quindi si parte subito a 200 passi/s, poi 600 dopo 2 s e 1200 dopo 5 s.
+#define PB_SPEED2TIME     0L
+#define PB_SPEED3TIME     2000L
+#define PB_SPEED4TIME     5000L
+#define PB_SPEED2PERIOD   5000L
+#define PB_SPEED3PERIOD   1667L
+#define PB_SPEED4PERIOD   833L
+#else
 #define PB_SPEED2TIME     5000L
 #define PB_SPEED3TIME     10000L
 #define PB_SPEED4TIME     20000L
 #define PB_SPEED2PERIOD   13333L
 #define PB_SPEED3PERIOD   4000L
 #define PB_SPEED4PERIOD   2500L
+#endif
 
 // Movimenti comandati (app, ASCOM/INDI): rampa di accelerazione e decelerazione.
 // Il motore parte a MOVE_STARTSPEED, accelera di MOVE_ACCEL passi/s al secondo fino a
@@ -74,9 +93,17 @@
 // decelera. Con velocità motore "media" o "lenta" la massima è ridotta come nel firmware
 // originale (/2 e /2,5). I pulsanti fisici usano invece i gradini PB_SPEED*.
 // Se il motore perde passi in partenza o in arrivo, ridurre MOVE_STARTSPEED o MOVE_ACCEL.
+#if defined(ARDUFOCUSPCB)
+// NEMA 17 con riduttore: la coppia all'uscita abbonda anche dove quella del motore cala.
+// Velocità motore "media" e "lenta" nell'app portano la massima a 1000 e 800 passi/s.
+#define MOVE_STARTSPEED   200.0   // passi/s
+#define MOVE_MAXSPEED     2000.0  // passi/s
+#define MOVE_ACCEL        4000.0  // passi/s al secondo
+#else
 #define MOVE_STARTSPEED   100.0   // passi/s
 #define MOVE_MAXSPEED     400.0   // passi/s (motore 14HM11-0404S, 25 ohm: a 12 V oltre perde coppia)
 #define MOVE_ACCEL        2000.0  // passi/s al secondo
+#endif
 
 
 //-----------------------------------------------------------------------
@@ -146,6 +173,16 @@
 //-----------------------------------------------------------------------
 // USER CONFIGURATION END: DO NOT EDIT BELOW THIS LINE
 //-----------------------------------------------------------------------
+
+#if defined(ARDUFOCUSPCB)
+#undef TEMPERATUREPROBE  // D2 è il pulsante OUT
+#undef OLEDDISPLAY
+#undef INOUTLEDS         // A1 è il potenziometro, A2 un pulsante
+#undef BUZZER
+#define FSBOARD 1        // risposta al comando :98#
+#else
+#define FSBOARD 0        // scheda myFocuserPro2 DRV8825
+#endif
 
 
 //-----------------------------------------------------------------------

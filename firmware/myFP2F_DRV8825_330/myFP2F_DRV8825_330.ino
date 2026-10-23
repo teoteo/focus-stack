@@ -236,7 +236,19 @@ void software_Reboot() {
 }
 
 btnval readpushbuttons(void) {
-#if defined(PUSHBUTTONS)
+#if defined(PUSHBUTTONS) && defined(ARDUFOCUSPCB)
+  pinMode(ARDUFOCUSPBIN, INPUT_PULLUP);
+  pinMode(ARDUFOCUSPBOUT, INPUT_PULLUP);
+  bool pbin = (digitalRead(ARDUFOCUSPBIN) == LOW);
+  bool pbout = (digitalRead(ARDUFOCUSPBOUT) == LOW);
+  if (pbin && pbout) {
+    return Bothbtn;
+  } else if (pbin) {
+    return Inbtn;
+  } else if (pbout) {
+    return Outbtn;
+  }
+#elif defined(PUSHBUTTONS)
   digitalWrite(PBSWITCHESPIN, HIGH);
   delay(5);
   int pbval = analogRead(PBSWITCHESPIN);

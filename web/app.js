@@ -4,7 +4,8 @@ const $$ = (sel) => document.querySelectorAll(sel);
 let S = null;              // ultimo stato dal server
 let formLoaded = false;    // i campi vengono popolati dal server una sola volta
 let camSettingsSig = "", presetSig = "", motorSig = "", lastShotId = null;
-let jogSize = 100;
+let jogSize = 100, jogSizesSig = "";
+const HOLD_DELAY = 400;     // ms: oltre, il pulsante tenuto premuto diventa movimento continuo
 
 // ---------------- utilità ----------------
 function toast(msg, err = false) {
@@ -209,6 +210,7 @@ function renderFocuser(f, run) {
 
   renderRail(f, lo, hi);
 
+  renderJogSizes();
   const away = towardSign() < 0 ? "+" : "−", toward = towardSign() < 0 ? "−" : "+";
   $("jog-away-label").textContent = `Allontana  ${away}${fmtInt(jogSize)}`;
   $("jog-toward-label").textContent = `Avvicina  ${toward}${fmtInt(jogSize)}`;
@@ -547,6 +549,70 @@ async function detectCameras() {
   for (const c of cams) sel.add(new Option(`${c.model} (${c.port})`, JSON.stringify(c)));
 }
 
+// ampiezze per decine da 1 a jog_max (impostazione "Comandi manuali")
+function jogSizes() {
+  const max = (S && S.settings.jog_max) || 1000, out = [];
+  for (let s = 1; s <= max; s *= 10) out.push(s);
+  return out;
+}
+
+function renderJogSizes() {
+  const sizes = jogSizes(), hold = !!(S && S.settings.jog_hold);
+  const sig = sizes.join(",") + (hold ? "h" : "");
+  if (sig === jogSizesSig) return;
+  jogSizesSig = sig;
+  $("jog-size").innerHTML = sizes.map((s) =>
+    `<button data-size="${s}" aria-checked="${s === jogSize}">${s >= 10000 ? s / 1000 + "k" : s}</button>`).join("");
+  $$("#jog-size button").forEach((b) => (b.onclick = () => setJogSize(Number(b.dataset.size))));
+  if (!sizes.includes(jogSize)) {
+    jogSize = sizes.includes(100) ? 100 : sizes[sizes.length - 1];
+    $$("#jog-size button").forEach((b) => b.setAttribute("aria-checked", Number(b.dataset.size) === jogSize));
+  }
+  $("jog-keys").innerHTML = `Tastiera: ↑ ↓ muovi · ⇧ ×10 · 1–${sizes.length} ampiezza · <kbd>Esc</kbd> stop` +
+    (hold ? "<br>Tieni premuto un pulsante per muovere senza fermarti" : "");
+  $$("#jog-max button").forEach((b) => b.setAttribute("aria-checked", Number(b.dataset.max) === sizes[sizes.length - 1]));
+  $("jog-hold").checked = hold;
+}
+
+// Pulsante Allontana/Avvicina: un tocco sposta di jogSize passi; tenuto premuto oltre HOLD_DELAY
+// muove senza fermarsi fino al rilascio (se l'opzione è attiva). Durante il movimento la pagina
+// conferma al server ogni 250 ms che il pulsante è ancora premuto.
+function bindJogButton(btn, signFn) {
+  let pressed = false, holding = false, timer = null, beat = null;
+  const stopHold = () => {
+    clearInterval(beat); beat = null;
+    btn.classList.remove("holding");
+    if (holding) { holding = false; api("/api/focuser/hold", { direction: 0 }).catch(() => {}); }
+  };
+  const sendHold = () => api("/api/focuser/hold", { direction: signFn() }).catch((e) => {
+    pressed = false; stopHold(); toast(e.message, true);
+  });
+  btn.addEventListener("pointerdown", (e) => {
+    if (btn.disabled || e.button !== 0) return;
+    e.preventDefault();
+    try { btn.setPointerCapture(e.pointerId); } catch { /* opzionale */ }
+    pressed = true;
+    timer = setTimeout(() => {
+      timer = null;
+      if (!pressed || !(S && S.settings.jog_hold) || !S.focuser.connected || running()) return;
+      holding = true;
+      btn.classList.add("holding");
+      sendHold();
+      beat = setInterval(sendHold, 250);
+    }, HOLD_DELAY);
+  });
+  const release = () => {
+    if (!pressed) return;
+    pressed = false;
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (holding || beat) stopHold();
+    else jog(signFn());
+  };
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach((ev) => btn.addEventListener(ev, release));
+  window.addEventListener("blur", release);
+  btn.addEventListener("click", (e) => { if (e.detail === 0) jog(signFn()); });  // Invio/spazio da tastiera
+}
+
 function jog(sign) {
   if (!S || !S.focuser.connected || running()) return;
   api("/api/focuser/jog", { delta: sign * jogSize })
@@ -582,9 +648,16 @@ function bind() {
   $("f-refresh").onclick = refreshPorts;
   $("f-connect").onclick = (e) => act(e.target, () => api("/api/focuser/connect", { port: $("f-port").value, simulate: $("f-sim").checked }));
   $("f-disconnect").onclick = (e) => act(e.target, () => api("/api/focuser/disconnect"));
-  $$("#jog-size button").forEach((b) => (b.onclick = () => setJogSize(Number(b.dataset.size))));
-  $("jog-away").onclick = () => jog(-towardSign());
-  $("jog-toward").onclick = () => jog(towardSign());
+  bindJogButton($("jog-away"), () => -towardSign());
+  bindJogButton($("jog-toward"), () => towardSign());
+  $$("#jog-max button").forEach((b) => (b.onclick = () => act(null, async () => {
+    S.settings = await api("/api/settings", { jog_max: Number(b.dataset.max) });
+    render();
+  }, "Ampiezze aggiornate")));
+  $("jog-hold").onchange = (e) => act(null, async () => {
+    S.settings = await api("/api/settings", { jog_hold: e.target.checked });
+    render();
+  });
   $("f-goto-btn").onclick = (e) => act(e.target, () => api("/api/focuser/move", { position: num("f-goto") }));
   $("f-goto").onkeydown = (e) => { if (e.key === "Enter") $("f-goto-btn").click(); };
   $("f-halt").onclick = () => act(null, () => api("/api/focuser/halt"), "Stop");
@@ -720,13 +793,14 @@ function bind() {
   document.addEventListener("keydown", (e) => {
     if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName) || e.metaKey || e.ctrlKey) return;
     if (e.key === "Escape") { api("/api/focuser/halt").catch(() => {}); toast("Stop"); return; }
-    if (["1", "2", "3", "4"].includes(e.key)) { setJogSize([1, 10, 100, 1000][Number(e.key) - 1]); return; }
+    const sizes = jogSizes();
+    if (/^[1-9]$/.test(e.key) && Number(e.key) <= sizes.length) { setJogSize(sizes[Number(e.key) - 1]); return; }
     if (e.key === "ArrowUp" || e.key === "ArrowDown") {
       e.preventDefault();
       const away = e.key === "ArrowUp";
       const sign = away ? -towardSign() : towardSign();
       const prev = jogSize;
-      if (e.shiftKey) jogSize = Math.min(prev * 10, 10000);
+      if (e.shiftKey) jogSize = Math.min(prev * 10, sizes[sizes.length - 1] * 10);
       jog(sign);
       jogSize = prev;
     }

@@ -53,6 +53,10 @@ class App:
         self.updater = AppUpdater(self.log)
         # aggiornamento del firmware in corso: fase e avanzamento per la pagina
         self.fw = {"busy": False, "phase": "", "progress": 0.0, "error": ""}
+        # movimento continuo (pulsante della pagina tenuto premuto): verso (-1/+1, 0 = nessuno) e
+        # scadenza: la pagina la rinnova di continuo, se smette il motore viene fermato
+        self.hold_dir = 0
+        self.hold_deadline = 0.0
         self.runner = SequenceRunner(lambda: self.focuser if self.focuser and self.focuser.connected else None,
                                      lambda: self.camera if self.camera and self.camera.connected else None,
                                      self.log, self.add_sequence_shot)
@@ -119,9 +123,9 @@ class App:
         }
 
     def firmware_update_state(self) -> dict:
-        fw = bundled_firmware()
         f = self.focuser
         real = bool(f and f.connected and not f.simulated)
+        fw = bundled_firmware(f.board if real else "myfp2")
         installed = f.fs_build if real else None
         return {**self.fw, "bundled": fw["build"] if fw else None,
                 "installed": installed,
@@ -195,6 +199,7 @@ async def poll_loop():
             try:
                 await f.poll(with_temp=(tick % 20 == 0))
                 watchdog(f, last_pos)
+                hold_watchdog(f)
                 last_pos = f.position
             except Exception as exc:  # noqa: BLE001
                 app_state.log(f"Errore lettura focheggiatore: {exc}")
@@ -235,6 +240,19 @@ def watchdog(f: MyFocuserPro2, last_pos: int | None) -> None:
 
 
 _once: set[str] = set()
+
+HOLD_TIMEOUT = 1.0  # s senza conferma dalla pagina prima di fermare il movimento continuo
+
+
+def hold_watchdog(f: MyFocuserPro2) -> None:
+    if not app_state.hold_dir:
+        return
+    if not f.moving:  # arrivato al fine corsa o fermato in altro modo
+        app_state.hold_dir = 0
+    elif time.monotonic() > app_state.hold_deadline:
+        app_state.hold_dir = 0
+        asyncio.get_running_loop().create_task(f.halt())
+        app_state.log("Movimento continuo fermato: la pagina non risponde")
 
 
 async def update_check_loop():
@@ -417,14 +435,14 @@ async def focuser_disconnect():
     return {"ok": True}
 
 
-async def run_firmware_update(port: str, baud: int, hex_path: Path, build: int) -> None:
+async def run_firmware_update(port: str, baud: int, hex_path: Path, build: int, manual_reset: bool) -> None:
     fw = app_state.fw
 
     def progress(phase: str, frac: float) -> None:
         fw["phase"], fw["progress"] = phase, frac
 
     try:
-        await asyncio.to_thread(flasher.flash, port, hex_path, progress)
+        await asyncio.to_thread(flasher.flash, port, hex_path, progress, manual_reset)
         app_state.log(f"Firmware aggiornato (build {build})")
     except Exception as exc:  # noqa: BLE001
         fw["error"] = str(exc)
@@ -453,9 +471,9 @@ async def firmware_update():
     f = need_focuser()
     if f.simulated:
         raise ValueError("Il simulatore non ha firmware da aggiornare")
-    fw = bundled_firmware()
+    fw = bundled_firmware(f.board)
     if not fw:
-        raise ValueError("Questa copia dell'app non contiene il firmware")
+        raise ValueError("Questa copia dell'app non contiene il firmware per questa scheda")
     if f.moving:
         raise ValueError("Attendi che il motore sia fermo")
     port, baud = f.port, f.baud
@@ -463,7 +481,9 @@ async def firmware_update():
     app_state.log(f"Aggiornamento firmware alla build {fw['build']} su {port}…")
     await f.disconnect()
     app_state.focuser = None
-    asyncio.get_running_loop().create_task(run_firmware_update(port, baud, fw["hex"], fw["build"]))
+    # l'Ardufocus ha un condensatore che impedisce il riavvio da USB: serve il tasto reset
+    manual = f.board == "ardufocus"
+    asyncio.get_running_loop().create_task(run_firmware_update(port, baud, fw["hex"], fw["build"], manual))
     return {"ok": True}
 
 
@@ -508,9 +528,48 @@ async def focuser_jog(body: Delta):
     return {"ok": True, "target": clamped, "clamped": clamped != target}
 
 
+class Hold(BaseModel):
+    direction: int  # -1 / +1 = muovi verso il fine corsa e continua; 0 = fermati
+
+
+@api.post("/api/focuser/hold")
+@guard
+async def focuser_hold(body: Hold):
+    """Movimento continuo mentre un pulsante della pagina è tenuto premuto.
+
+    La pagina ripete la chiamata ogni 250 ms: ogni chiamata rinnova la scadenza e, se la pagina
+    smette (rete, scheda chiusa), hold_watchdog ferma il motore. Il firmware rallenta e si ferma
+    con la rampa sia al rilascio (:27#) sia arrivando al fine corsa.
+    """
+    f = need_focuser()
+    if body.direction == 0:
+        if app_state.hold_dir:
+            app_state.hold_dir = 0
+            await f.halt()
+        return {"ok": True}
+    not_running()
+    if body.direction not in (-1, 1):
+        raise ValueError("Verso non valido")
+    app_state.hold_deadline = time.monotonic() + HOLD_TIMEOUT
+    if app_state.hold_dir == body.direction:
+        return {"ok": True}
+    await f.poll()
+    if f.moving:  # il firmware ignora un nuovo target mentre si muove (es. sta ancora rallentando)
+        await f.wait_idle(timeout=5)
+    lo, hi = f.bounds()
+    target = lo if body.direction < 0 else (hi if hi is not None else f.position + 1_000_000)
+    if target == f.position:
+        raise LimitError("Fine corsa raggiunto")
+    app_state.hold_dir = body.direction
+    app_state.hold_deadline = time.monotonic() + HOLD_TIMEOUT
+    await f.move_to(target)
+    return {"ok": True, "target": target}
+
+
 @api.post("/api/focuser/halt")
 @guard
 async def focuser_halt():
+    app_state.hold_dir = 0
     if app_state.runner.busy:
         await app_state.runner.stop()
     elif app_state.focuser and app_state.focuser.connected:
@@ -821,6 +880,8 @@ async def sequence_stop():
 # ---------------- impostazioni / preset ----------------
 class SettingsBody(BaseModel):
     output_root: str | None = None
+    jog_max: int | None = None
+    jog_hold: bool | None = None
 
 
 class PresetBody(BaseModel):
@@ -849,6 +910,12 @@ async def save_settings(body: SettingsBody):
     if body.output_root is not None:
         app_state.cfg["output_root"] = validate_output_root(body.output_root)
         app_state.log(f"Cartella di salvataggio: {app_state.cfg['output_root']}")
+    if body.jog_max is not None:
+        if body.jog_max not in (1000, 10_000, 100_000):
+            raise ValueError("Ampiezza massima non valida")
+        app_state.cfg["jog_max"] = body.jog_max
+    if body.jog_hold is not None:
+        app_state.cfg["jog_hold"] = body.jog_hold
     store.save(app_state.cfg)
     return app_state.cfg
 

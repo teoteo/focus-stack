@@ -99,10 +99,12 @@ DriverBoard::DriverBoard(byte brdtype)
     pinMode(DRV8825ENABLE, OUTPUT);
     pinMode(DRV8825DIR, OUTPUT);
     pinMode(DRV8825STEP, OUTPUT);
-    digitalWrite(DRV8825ENABLE, HIGH);
+    digitalWrite(DRV8825ENABLE, DRV8825MOTOROFF);
+#if !defined(ARDUFOCUSPCB)
     pinMode(DRV8825M2, OUTPUT);
     pinMode(DRV8825M1, OUTPUT);
     pinMode(DRV8825M0, OUTPUT);
+#endif
   } else if (boardtype == DRV8825TFT22) {
     pinMode(DRV8825ENABLETFT, OUTPUT);
     pinMode(DRV8825DIRTFT, OUTPUT);
@@ -157,15 +159,15 @@ void DriverBoard::set_motorpower(bool state) {
   if (state == true) {
     // power on
     if (boardtype == DRV8825 || boardtype == DRV8825RE) {
-      digitalWrite(DRV8825ENABLE, LOW);
+      digitalWrite(DRV8825ENABLE, DRV8825MOTORON);
     } else if (boardtype == DRV8825TFT22) {
       digitalWrite(DRV8825ENABLETFT, LOW);
     }
-    delay(1);  // need to wait 1ms before driver chip is ready for stepping
+    delay(DRV8825WAKEDELAY);  // need to wait 1ms before driver chip is ready for stepping
   } else {
     // power off
     if (this->boardtype == DRV8825 || this->boardtype == DRV8825RE) {
-      digitalWrite(DRV8825ENABLE, HIGH);
+      digitalWrite(DRV8825ENABLE, DRV8825MOTOROFF);
     } else if (boardtype == DRV8825TFT22) {
       digitalWrite(DRV8825ENABLETFT, HIGH);
     }
@@ -371,6 +373,7 @@ void DriverBoard::set_stepmode() {
   switch (this->boardtype) {
     case DRV8825:
     case DRV8825RE:
+#if !defined(ARDUFOCUSPCB)  // sull'Ardufocus il microstep è fissato sulla scheda
       switch (myfocuser.stepmode) {
         case 1:
           digitalWrite(DRV8825M0, 0);
@@ -408,6 +411,7 @@ void DriverBoard::set_stepmode() {
           digitalWrite(DRV8825M2, 0);
           break;
       }
+#endif
       break;
     case DRV8825TFT22:
       switch (myfocuser.stepmode) {
