@@ -122,8 +122,9 @@ anche con *⌖ Usa posizione attuale*, e indichi in quale verso l'obiettivo si a
 - **µm per passo**: si calcolano da passi motore per giro × microstep (letto dal firmware) × rapporto
   di riduzione e dalla corsa della micrometrica per giro. In alternativa si inseriscono a mano.
 - **Motore**: microstep, velocità, bobine alimentate a motore fermo (tengono la posizione), inversione
-  del verso, gioco del firmware. Il gioco lo compensa già l'app nella sequenza: lascia spento quello
-  del firmware.
+  del verso, gioco del firmware (attivazione e passi IN/OUT, da 0 a 255). Il firmware compensa il gioco
+  a ogni inversione, anche con i pulsanti fisici; la sequenza ha una sua compensazione: usa l'una o
+  l'altra, non entrambe.
 - **Temperatura**: grafico dell'ultima ora. Il valore di ogni scatto viene salvato in `sequence.json`.
 
 ## Focheggiatore: connessione

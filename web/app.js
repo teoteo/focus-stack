@@ -378,8 +378,11 @@ function renderConfig(f) {
       el.disabled = !(name in motor);
       el.checked = !!motor[name];
     }
-    $("mo-bl-in").textContent = "backlash_in_steps" in motor ? `${motor.backlash_in_steps} passi` : "";
-    $("mo-bl-out").textContent = "backlash_out_steps" in motor ? `${motor.backlash_out_steps} passi` : "";
+    for (const name of ["backlash_in_steps", "backlash_out_steps"]) {
+      const el = $(`mo-${name}`);
+      el.disabled = !(name in motor);
+      el.value = name in motor ? motor[name] : "";
+    }
     $("m-micro").value = motor.step_mode ? (motor.step_mode === 1 ? "passo intero" : `1/${motor.step_mode}`) : "1 (non letto)";
     updateMechResult();
   }
@@ -777,6 +780,15 @@ function bind() {
   }
   for (const name of ["coil_power", "reverse", "backlash_in_enabled", "backlash_out_enabled"]) {
     $(`mo-${name}`).onchange = (e) => act(e.target, () => api("/api/focuser/motor", { name, value: e.target.checked }), "Impostazione inviata");
+  }
+  for (const name of ["backlash_in_steps", "backlash_out_steps"]) {
+    $(`mo-${name}`).onchange = (e) => {
+      const v = Number(e.target.value);
+      if (e.target.value.trim() === "" || !Number.isInteger(v) || v < 0 || v > 255) {
+        toast("Il gioco del firmware va da 0 a 255 passi", true); motorSig = ""; return;
+      }
+      act(e.target, () => api("/api/focuser/motor", { name, value: v }), "Gioco salvato nel firmware");
+    };
   }
 
   // profondità di campo

@@ -59,6 +59,15 @@ MOTOR_SETTINGS: dict[str, tuple[str, str, type]] = {
 }
 
 
+def check_motor_value(name: str, arg: int) -> None:
+    if name == "step_mode" and arg not in (1, 2, 4, 8, 16, 32, 64, 128, 256):
+        raise FocuserError("Microstep non valido")
+    if name == "speed" and arg not in (0, 1, 2):
+        raise FocuserError("Velocità non valida")
+    if name in ("backlash_in_steps", "backlash_out_steps") and not 0 <= arg <= 255:
+        raise FocuserError("Il gioco del firmware va da 0 a 255 passi")
+
+
 class MyFocuserPro2:
     simulated = False
 
@@ -264,10 +273,7 @@ class MyFocuserPro2:
             raise FocuserError(f"Impostazione motore sconosciuta: {name}")
         _, set_fmt, kind = MOTOR_SETTINGS[name]
         arg = int(bool(value)) if kind is bool else int(value)
-        if name == "step_mode" and arg not in (1, 2, 4, 8, 16, 32, 64, 128, 256):
-            raise FocuserError("Microstep non valido")
-        if name == "speed" and arg not in (0, 1, 2):
-            raise FocuserError("Velocità non valida")
+        check_motor_value(name, arg)
         await asyncio.to_thread(self._send, set_fmt.format(arg))
         await asyncio.sleep(0.1)
         return await self.read_motor()
@@ -364,5 +370,7 @@ class SimulatedFocuser(MyFocuserPro2):
         if name not in MOTOR_SETTINGS:
             raise FocuserError(f"Impostazione motore sconosciuta: {name}")
         kind = MOTOR_SETTINGS[name][2]
-        self.motor[name] = bool(value) if kind is bool else int(value)
+        value = bool(value) if kind is bool else int(value)
+        check_motor_value(name, int(value))
+        self.motor[name] = value
         return self.motor
