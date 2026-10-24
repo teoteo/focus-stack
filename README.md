@@ -176,6 +176,12 @@ La conversione è in cache in `~/Library/Caches/MyFocuserStack`.
   la colleghi. L'app termina quel processo prima di connettersi; se non basta, chiudi Foto,
   Anteprima, Acquisizione Immagine, EOS Utility e NX Studio, poi riprova.
 - Lo **scatto di prova** finisce nella galleria e si apre nel visualizzatore come gli scatti della sequenza.
+- **● Live** (scheda *Ultimo scatto*) mostra il live view della fotocamera, fino a 15 fotogrammi al
+  secondo; il doppio clic lo porta a schermo intero e i comandi del focheggiatore, tastiera compresa,
+  restano attivi. Durante la sequenza il live view viene spento e riprende alla fine; uno scatto di
+  prova lo sospende solo per il tempo dello scatto. Il server legge i fotogrammi con
+  `capture_preview` di libgphoto2 e li invia come MJPEG (`GET /api/camera/live`). Canon e Nikon
+  sollevano lo specchio finché il live è acceso. I Sony devono permettere il live view in *PC Remote*.
 
 ## Sequenza
 

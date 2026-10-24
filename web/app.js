@@ -129,6 +129,7 @@ function render() {
   safe("fotocamera", () => renderCamera(c, run));
   safe("sequenza", () => renderSequence(f, c, q, run));
   safe("ultimo scatto", renderLastShot);
+  safe("live view", () => renderLive(c, run));
   safe("configurazione", () => renderConfig(f));
   safe("preset", renderPresets);
   safe("registro", renderLog);
@@ -354,6 +355,55 @@ function renderLastShot() {
     if (shot.temperature != null) parts.push(`<span><b>${shot.temperature.toFixed(1)}</b> °C</span>`);
     parts.push(`<span>${shot.time}</span>`);
     $("last-meta").innerHTML = parts.join("");
+  }
+}
+
+// ---------------- live view (stream MJPEG del server in un <img>) ----------------
+let liveOn = false, liveStartedAt = 0;
+
+function setLive(on) {
+  liveOn = on;
+  liveStartedAt = Date.now();
+  const img = $("live-img");
+  // togliere src chiude la connessione: il server spegne il live view della fotocamera
+  if (on) img.src = `/api/camera/live?t=${liveStartedAt}`;
+  else img.removeAttribute("src");
+  if (!on && (document.fullscreenElement || document.webkitFullscreenElement)) {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  }
+  $("live-btn").setAttribute("aria-pressed", String(on));
+  $("live-btn").textContent = on ? "■ Ferma live" : "● Live";
+  $("last-title").textContent = on ? "Live view" : "Ultimo scatto";
+  for (const id of ["last-thumb", "last-meta"]) $(id).classList.toggle("hidden", on);
+  for (const id of ["live-box", "live-meta"]) $(id).classList.toggle("hidden", !on);
+  if (S) renderLive(S.camera, running());
+}
+
+function renderLive(c, run) {
+  $("live-btn").disabled = !c.connected;
+  if (!liveOn) return;
+  if (!c.connected) { setLive(false); return; }
+  // l'errore di uno stream precedente può arrivare ancora per un attimo dopo il riavvio
+  if (c.live_error && Date.now() - liveStartedAt > 2000) {
+    setLive(false);
+    toast(c.live_error, true);
+    return;
+  }
+  const paused = run || c.busy;
+  const badge = $("live-badge");
+  badge.textContent = run ? "IN PAUSA" : c.busy ? "SCATTO…" : "LIVE";
+  badge.classList.toggle("paused", paused);
+  $("live-meta").innerHTML = run
+    ? "<span>Live view in pausa durante la sequenza</span>"
+    : `<span><b>${c.model}</b></span><span>doppio clic: schermo intero</span>`;
+}
+
+function toggleLiveFullscreen() {
+  const box = $("live-box");
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  } else {
+    (box.requestFullscreen || box.webkitRequestFullscreen).call(box);
   }
 }
 
@@ -685,6 +735,8 @@ function bind() {
   // ultimo scatto / visualizzatore
   $("last-thumb").onclick = () => S && S.last_shot && openViewer(S.last_shot.id);
   $("v-open").onclick = () => openViewer(S && S.last_shot ? S.last_shot.id : null);
+  $("live-btn").onclick = () => setLive(!liveOn);
+  $("live-box").ondblclick = toggleLiveFullscreen;
 
   // sequenza
   $$("[data-mark]").forEach((b) => (b.onclick = () => {

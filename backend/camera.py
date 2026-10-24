@@ -63,6 +63,7 @@ class GPhotoCamera:
         self.mirror_method: str | None = None
         self._mirror_original: str | None = None   # valore Nikon prima che l'app lo cambiasse
         self._mirror_warned = False
+        self.live = False   # live view attivo (fotogrammi letti con capture_preview)
         self.log = lambda _msg: None
 
     @property
@@ -173,6 +174,7 @@ class GPhotoCamera:
 
     def _disconnect_blocking(self) -> None:
         if self._cam is not None:
+            self._end_preview_blocking()
             try:
                 self._nikon_delay_blocking(0)
             except gp.GPhoto2Error:
@@ -200,6 +202,36 @@ class GPhotoCamera:
     def _require(self) -> None:
         if not self.connected:
             raise CameraError("Fotocamera non connessa")
+
+    # ---------- live view ----------
+    def _preview_blocking(self) -> bytes:
+        """Un fotogramma del live view (JPEG). Il primo accende il live view della fotocamera."""
+        self._require()
+        try:
+            cam_file = self._cam.capture_preview()
+        except gp.GPhoto2Error as exc:
+            raise CameraError(f"Live view non disponibile su questa fotocamera ({exc})") from exc
+        self.live = True
+        return bytes(memoryview(cam_file.get_data_and_size()))
+
+    def _end_preview_blocking(self) -> None:
+        """Spegne il live view (Canon/Nikon: abbassa lo specchio). Sony non ha il comando."""
+        if not self.live or self._cam is None:
+            return
+        self.live = False
+        for key in ("viewfinder", "eosviewfinder"):
+            if self._has(key):
+                try:
+                    self._set_raw(key, 0)
+                except gp.GPhoto2Error:
+                    pass
+                return
+
+    async def preview(self) -> bytes:
+        return await self._run(self._preview_blocking)
+
+    async def end_preview(self) -> None:
+        await self._run(self._end_preview_blocking)
 
     # ---------- scatto ----------
     def _drain_events(self, timeout_ms: int, want_files: bool, deadline: float) -> list:
@@ -356,7 +388,7 @@ class GPhotoCamera:
     def describe(self) -> dict:
         return {"connected": self.connected, "simulated": self.simulated, "model": self.model,
                 "port": self.port, "busy": self.busy, "settings": self.settings,
-                "last_file": self.last_file, "mirror_method": self.mirror_method}
+                "last_file": self.last_file, "mirror_method": self.mirror_method, "live": self.live}
 
 
 def _sim_png(path: str, n: int) -> None:
@@ -382,6 +414,29 @@ def _sim_png(path: str, n: int) -> None:
     Path(path).write_bytes(png)
 
 
+SIM_FOCUS = 25000   # posizione del focheggiatore simulato in cui il live view simulato è a fuoco
+SIM_DOF = 1500      # passi entro cui l'immagine resta quasi nitida
+
+
+def _sim_live_png(position: int | None, t: float) -> bytes:
+    """Fotogramma 600×400 del live view simulato: una scacchiera di 4 px tanto più contrastata
+    quanto più il focheggiatore simulato è vicino a SIM_FOCUS, e una barra che scorre nel tempo."""
+    w, h = 600, 400
+    sharp = 0.0 if position is None else 2.0 ** (-((position - SIM_FOCUS) / SIM_DOF) ** 2)
+    hi, lo = int(128 + 112 * sharp), int(128 - 112 * sharp)
+    light, dark = bytes((hi, hi, hi)), bytes((lo, lo, lo))
+    checker = [b"\x00" + b"".join(light if ((x // 4) + k) % 2 else dark for x in range(w)) for k in (0, 1)]
+    bar_x = int(t * 120) % w
+    bar = [row[:1 + bar_x * 3] + b"\xff\xb0\x30" * 6 + row[1 + (bar_x + 6) * 3:] for row in checker]
+    rows = [(bar if y >= h - 24 else checker)[(y // 4) % 2][:1 + w * 3] for y in range(h)]
+
+    def chunk(tag, data):
+        return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) \
+        + chunk(b"IDAT", zlib.compress(b"".join(rows), 1)) + chunk(b"IEND", b"")
+
+
 class SimulatedCamera(GPhotoCamera):
     simulated = True
 
@@ -390,6 +445,7 @@ class SimulatedCamera(GPhotoCamera):
         self.mirror_method = "sim"
         self._open = False
         self._n = 0
+        self.focus_position = lambda: None   # impostata dal server: posizione del focheggiatore
         self.settings = {
             "shutterspeed": {"key": "shutterspeed", "current": "1/60",
                              "choices": ["bulb", "30", "15", "8", "4", "2", "1", "1/2", "1/4", "1/8", "1/15",
@@ -410,6 +466,16 @@ class SimulatedCamera(GPhotoCamera):
 
     async def disconnect(self) -> None:
         self._open = False
+        self.live = False
+
+    async def preview(self) -> bytes:
+        self._require()
+        await asyncio.sleep(0.05)
+        self.live = True
+        return await asyncio.to_thread(_sim_live_png, self.focus_position(), time.monotonic())
+
+    async def end_preview(self) -> None:
+        self.live = False
 
     async def read_settings(self) -> dict:
         return self.settings

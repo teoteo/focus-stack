@@ -236,14 +236,21 @@
 
     <section class="card" id="card-last">
       <header class="card-head">
-        <h2>Ultimo scatto</h2>
+        <h2 id="last-title">Ultimo scatto</h2>
+        <span class="grow"></span>
+        <button class="btn ghost small" id="live-btn" aria-pressed="false" title="Mostra il live view della fotocamera">● Live</button>
         <button class="btn ghost small" id="v-open">Apri visualizzatore ↗</button>
       </header>
       <button class="thumb empty" id="last-thumb" title="Apri nel visualizzatore (zoom e pan)">
         <img id="last-img" alt="">
         <span class="thumb-empty">Nessuno scatto</span>
       </button>
+      <div class="thumb live hidden" id="live-box" title="Doppio clic: schermo intero">
+        <img id="live-img" alt="Live view della fotocamera">
+        <span class="live-badge" id="live-badge">LIVE</span>
+      </div>
       <div class="last-meta" id="last-meta"></div>
+      <div class="last-meta hidden" id="live-meta"></div>
     </section>
   </div>
 </main>

@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -57,6 +57,9 @@ class App:
         # scadenza: la pagina la rinnova di continuo, se smette il motore viene fermato
         self.hold_dir = 0
         self.hold_deadline = 0.0
+        # live view: pagine collegate allo stream e ultimo errore (es. fotocamera senza live view)
+        self.live_clients = 0
+        self.live_error = ""
         self.runner = SequenceRunner(lambda: self.focuser if self.focuser and self.focuser.connected else None,
                                      lambda: self.camera if self.camera and self.camera.connected else None,
                                      self.log, self.add_sequence_shot)
@@ -106,7 +109,8 @@ class App:
         last = self.shots[-1] if self.shots else None
         return {
             "focuser": self.focuser.describe() if self.focuser else {"connected": False},
-            "camera": self.camera.describe() if self.camera else {"connected": False},
+            "camera": {**self.camera.describe(), "live_error": self.live_error} if self.camera
+            else {"connected": False},
             "gphoto": GPHOTO_AVAILABLE,
             "sequence": {**st.__dict__, "files": st.files[-3:], "file_count": len(st.files)},
             "settings": self.cfg,
@@ -742,6 +746,9 @@ async def camera_connect(body: CameraConnect):
     app_state.log(f"Connessione fotocamera {body.model or ('simulata' if body.simulate else 'automatica')}…")
     await cam.connect()
     cam.log = app_state.log
+    if isinstance(cam, SimulatedCamera):
+        cam.focus_position = lambda: (app_state.focuser.position
+                                      if app_state.focuser and app_state.focuser.connected else None)
     app_state.camera = cam
     app_state.log(f"Fotocamera connessa: {cam.model}")
     return cam.describe()
@@ -756,6 +763,53 @@ async def camera_disconnect():
         app_state.camera = None
         app_state.log("Fotocamera disconnessa")
     return {"ok": True}
+
+
+LIVE_BOUNDARY = "fsframe"
+LIVE_MAX_FPS = 15
+
+
+async def live_frames(cam: GPhotoCamera):
+    """Fotogrammi del live view come multipart/x-mixed-replace (MJPEG): il browser li mostra
+    in un normale <img>. Si mette in pausa durante scatti e sequenza e si spegne quando la
+    pagina chiude la connessione."""
+    app_state.live_clients += 1
+    try:
+        while cam.connected and app_state.camera is cam:
+            if app_state.runner.busy:
+                # la sequenza scatta come senza live view (specchio, ritardi): live view spento
+                if cam.live:
+                    await cam.end_preview()
+                await asyncio.sleep(0.3)
+                continue
+            if cam.busy:
+                await asyncio.sleep(0.1)
+                continue
+            t0 = time.monotonic()
+            try:
+                data = await cam.preview()
+            except Exception as exc:  # noqa: BLE001
+                app_state.live_error = str(exc)
+                app_state.log(f"Live view interrotto: {exc}")
+                return
+            app_state.live_error = ""
+            mime = "image/png" if data[:4] == b"\x89PNG" else "image/jpeg"
+            yield (f"--{LIVE_BOUNDARY}\r\nContent-Type: {mime}\r\nContent-Length: {len(data)}\r\n\r\n"
+                   .encode() + data + b"\r\n")
+            await asyncio.sleep(max(0.0, 1 / LIVE_MAX_FPS - (time.monotonic() - t0)))
+    finally:
+        app_state.live_clients -= 1
+        if app_state.live_clients == 0 and cam.connected and cam.live:
+            # la connessione può chiudersi con il generatore cancellato: spegne in un task a parte
+            asyncio.get_running_loop().create_task(cam.end_preview())
+
+
+@api.get("/api/camera/live")
+async def camera_live():
+    cam = need_camera()
+    app_state.live_error = ""
+    return StreamingResponse(live_frames(cam), media_type=f"multipart/x-mixed-replace; boundary={LIVE_BOUNDARY}",
+                             headers={"Cache-Control": "no-store"})
 
 
 @api.post("/api/camera/settings/reload")
