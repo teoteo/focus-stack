@@ -1,6 +1,6 @@
 "use strict";
 // Visualizzatore scatti: zoom +/−, adatta, 100% (pixel reali), pan con trascinamento,
-// zoom con rotella centrato sul cursore, navigazione tra gli scatti, "segui ultimo".
+// zoom con rotella centrato sul cursore, navigazione tra gli scatti, "segui ultimo" e live view.
 const $ = (id) => document.getElementById(id);
 const stage = $("stage"), img = $("img");
 
@@ -9,7 +9,7 @@ try { document.documentElement.dataset.theme = localStorage.getItem("fs-theme") 
 let shots = [];          // elenco dal server
 let current = null;      // id dello scatto mostrato
 let currentKey = null;   // chiave unica dello scatto mostrato (gli id ripartono da 0 a ogni riavvio)
-let live = true;         // segue automaticamente l'ultimo scatto
+let follow = true;       // segue automaticamente l'ultimo scatto
 let lockView = true;     // mantiene zoom/pan cambiando scatto
 let lastCount = -1;
 
@@ -133,14 +133,14 @@ function renderStrip() {
     b.dataset.key = s.key;
     b.title = s.name;
     b.innerHTML = `<img loading="lazy" alt="" src="/api/shots/${s.id}/image?size=preview&v=${s.key}"><span>${s.kind === "sequence" ? s.index : "P"}</span>`;
-    b.onclick = () => { setLive(s.id === shots[shots.length - 1].id); show(s.id); };
+    b.onclick = () => { setLiveView(false, { restore: false }); setFollow(s.id === shots[shots.length - 1].id); show(s.id); };
     strip.appendChild(b);
   }
   markStrip();
 }
 function markStrip() {
   for (const b of $("strip").children) {
-    const on = Number(b.dataset.id) === current;
+    const on = !liveOn && Number(b.dataset.id) === current;
     b.classList.toggle("active", on);
     if (on) b.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
@@ -159,22 +159,24 @@ async function fetchShots() {
   // server riavviato: lo scatto mostrato non esiste più
   if (current != null && !shots.some((s) => s.id === current && s.key === currentKey)) {
     current = currentKey = null;
-    natW = natH = fullW = 0;
-    img.removeAttribute("src");
-    $("msg").classList.remove("hidden");
-    $("v-name").textContent = "Nessuno scatto";
-    $("v-meta").textContent = "";
-    try { history.replaceState(null, "", location.pathname); } catch { /* opzionale */ }
+    if (!liveOn) {
+      natW = natH = fullW = 0;
+      img.removeAttribute("src");
+      $("msg").classList.remove("hidden");
+      $("v-name").textContent = "Nessuno scatto";
+      $("v-meta").textContent = "";
+      try { history.replaceState(null, "", location.pathname); } catch { /* opzionale */ }
+    }
   }
-  if (!shots.length) return;
+  if (!shots.length || liveOn) return;   // durante il live view arrivano solo le miniature
   const hashId = Number(location.hash.slice(1));
   if (current == null) {
     const fromHash = location.hash && shots.some((s) => s.id === hashId);
     // aperto su uno scatto specifico che non è l'ultimo: non saltare subito all'ultimo
-    if (fromHash && hashId !== shots[shots.length - 1].id) setLive(false);
+    if (fromHash && hashId !== shots[shots.length - 1].id) setFollow(false);
     show(fromHash ? hashId : shots[shots.length - 1].id, { keepView: false });
   }
-  else if (live) show(shots[shots.length - 1].id);
+  else if (follow) show(shots[shots.length - 1].id);
   else renderMeta(shots.find((s) => s.id === current));
 }
 
@@ -183,20 +185,113 @@ function connectWS() {
   const ws = new WebSocket(`ws://${location.host}/ws`);
   ws.onmessage = (ev) => {
     const st = JSON.parse(ev.data);
+    camState = st.camera;
+    seqRunning = ["running", "paused", "stopping"].includes(st.sequence.state);
+    if (wantLive && camState.connected) setLiveView(true);
+    wantLive = false;
+    renderLiveView();
     if (st.shot_count !== lastCount) { lastCount = st.shot_count; loadShots().catch(() => {}); }
   };
   ws.onclose = () => setTimeout(connectWS, 1500);
 }
 
+// ---------------- live view (stream MJPEG del server nella stessa <img>, con zoom e pan) ----------------
+let liveOn = false, liveStartedAt = 0, liveTimer = 0;
+let camState = { connected: false }, seqRunning = false;
+let wantLive = location.hash === "#live";   // aperto dalla finestra principale con il live view acceso
+let noticeTimer = 0;
+
+function notice(text) {
+  $("notice").textContent = text;
+  $("notice").classList.remove("hidden");
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => $("notice").classList.add("hidden"), 8000);
+}
+
+// restore: all'uscita torna allo scatto mostrato prima (all'ultimo con "segui ultimo")
+function setLiveView(on, { restore = true } = {}) {
+  if (on === liveOn) return;
+  liveOn = on;
+  liveStartedAt = Date.now();
+  ++loadToken;                      // annulla i caricamenti di scatti in corso
+  clearInterval(liveTimer);
+  natW = natH = fullW = 0;
+  $("loading").classList.add("hidden");
+  $("liveview").setAttribute("aria-pressed", String(on));
+  $("liveview").textContent = on ? "■ Ferma live" : "● Live";
+  $("live-badge").classList.toggle("hidden", !on);
+  $("reveal").disabled = on;
+  markStrip();
+  if (on) {
+    $("notice").classList.add("hidden");
+    img.style.visibility = "hidden";   // niente scatto vecchio finché non arriva il primo fotogramma
+    img.src = `/api/camera/live?t=${liveStartedAt}`;
+    $("msg").textContent = "Avvio del live view…";
+    $("msg").classList.remove("hidden");
+    try { history.replaceState(null, "", "#live"); } catch { /* opzionale */ }
+    // l'evento load di uno stream MJPEG non è affidabile: si controllano le dimensioni del fotogramma
+    liveTimer = setInterval(checkLiveFrame, 100);
+    renderLiveView();
+    return;
+  }
+  // togliere src chiude la connessione: il server spegne il live view della fotocamera
+  img.removeAttribute("src");
+  img.style.visibility = "";
+  $("msg").textContent = "In attesa del primo scatto…";
+  $("msg").classList.remove("hidden");
+  $("v-name").textContent = "Nessuno scatto";
+  $("v-meta").textContent = "";
+  document.title = "Visualizzatore";
+  try { history.replaceState(null, "", location.pathname); } catch { /* opzionale */ }
+  if (restore && shots.length) {
+    const back = !follow && shots.some((s) => s.id === current) ? current : shots[shots.length - 1].id;
+    show(back, { keepView: false });
+  } else if (shots.length) {
+    $("prev").disabled = $("next").disabled = false;
+  }
+}
+
+function checkLiveFrame() {
+  if (!liveOn || !img.naturalWidth) return;
+  if (img.naturalWidth === natW && img.naturalHeight === natH) return;
+  const oldW = natW;
+  natW = img.naturalWidth; natH = img.naturalHeight; fullW = natW;   // 100% = pixel del live view
+  img.style.visibility = "";
+  $("msg").classList.add("hidden");
+  if (!oldW || view.mode === "fit") fit();
+  else { view.scale *= oldW / natW; apply(); }   // la fotocamera ha cambiato risoluzione
+}
+
+function renderLiveView() {
+  $("liveview").disabled = !camState.connected;
+  if (!liveOn) return;
+  if (!camState.connected) { setLiveView(false); notice("Fotocamera scollegata: live view chiuso"); return; }
+  // l'errore di uno stream precedente può arrivare ancora per un attimo dopo il riavvio
+  if (camState.live_error && Date.now() - liveStartedAt > 2000) {
+    const err = camState.live_error;
+    setLiveView(false);
+    notice(err);
+    return;
+  }
+  const badge = $("live-badge");
+  badge.textContent = seqRunning ? "IN PAUSA" : camState.busy ? "SCATTO…" : "LIVE";
+  badge.classList.toggle("paused", seqRunning || camState.busy);
+  $("v-name").textContent = "Live view";
+  $("v-meta").textContent = seqRunning ? "In pausa durante la sequenza" : camState.model || "";
+  $("prev").disabled = $("next").disabled = !shots.length;
+  document.title = "Live view — Visualizzatore";
+}
+
 // ---------------- interazione ----------------
 function step(delta) {
+  if (liveOn) { setLiveView(false); return; }   // esce dal live view tornando allo scatto di prima
   const i = shots.findIndex((s) => s.id === current);
   const n = shots[i + delta];
   if (!n) return;
-  setLive(n === shots[shots.length - 1]);
+  setFollow(n === shots[shots.length - 1]);
   show(n.id);
 }
-function setLive(on) { live = on; $("live").setAttribute("aria-pressed", on); }
+function setFollow(on) { follow = on; $("follow").setAttribute("aria-pressed", on); }
 function setLock(on) { lockView = on; $("lock").setAttribute("aria-pressed", on); }
 
 $("prev").onclick = () => step(-1);
@@ -206,9 +301,14 @@ $("z-out").onclick = () => zoomBy(1 / 1.25);
 $("z-fit").onclick = fit;
 $("z-reset").onclick = fit;
 $("z-100").onclick = () => actualPixels();
-$("live").onclick = () => { setLive(!live); if (live && shots.length) show(shots[shots.length - 1].id); };
+$("follow").onclick = () => {
+  setFollow(liveOn || !follow);
+  setLiveView(false, { restore: false });
+  if (follow && shots.length) show(shots[shots.length - 1].id, { keepView: false });
+};
+$("liveview").onclick = () => setLiveView(!liveOn);
 $("lock").onclick = () => setLock(!lockView);
-$("reveal").onclick = () => current != null && fetch(`/api/shots/${current}/reveal`, { method: "POST", headers: { "X-FocusStack": "1" } });
+$("reveal").onclick = () => !liveOn && current != null && fetch(`/api/shots/${current}/reveal`, { method: "POST", headers: { "X-FocusStack": "1" } });
 $("fs").onclick = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.());
 
 // pan con il mouse (pointer events: funziona anche con trackpad e touch)
@@ -269,7 +369,8 @@ document.addEventListener("keydown", (e) => {
   else if (k === "1") actualPixels();
   else if (k === "ArrowLeft") step(-1);
   else if (k === "ArrowRight") step(1);
-  else if (k === "l" || k === "L") $("live").click();
+  else if (k === "l" || k === "L") { if (!$("liveview").disabled) $("liveview").click(); }
+  else if (k === "u" || k === "U") $("follow").click();
   else if (k === "k" || k === "K") $("lock").click();
   else if (k === "f" || k === "F") $("fs").click();
   else return;
@@ -279,8 +380,12 @@ document.addEventListener("keydown", (e) => {
 // in modalità "adatta" la vista segue il ridimensionamento della finestra
 new ResizeObserver(() => { if (view.mode === "fit") fit(); }).observe(stage);
 window.addEventListener("hashchange", () => {
+  // la finestra principale chiede il live view (#live) o uno scatto (#id)
+  if (location.hash === "#live") { if (!liveOn) { if (camState.connected) setLiveView(true); else wantLive = true; } return; }
   const id = Number(location.hash.slice(1));
-  if (location.hash && id !== current && shots.some((s) => s.id === id)) { setLive(false); show(id); }
+  if (location.hash && (id !== current || liveOn) && shots.some((s) => s.id === id)) {
+    setLiveView(false, { restore: false }); setFollow(false); show(id);
+  }
 });
 
 apply();

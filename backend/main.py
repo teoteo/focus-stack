@@ -767,13 +767,36 @@ async def camera_disconnect():
 
 LIVE_BOUNDARY = "fsframe"
 LIVE_MAX_FPS = 15
+# ultimo fotogramma letto, condiviso fra le pagine collegate (finestra principale e visualizzatore):
+# la fotocamera ne produce uno solo per volta, al massimo LIVE_MAX_FPS al secondo
+live_lock = asyncio.Lock()
+live_frame: dict | None = None
+
+
+async def next_live_frame(cam: GPhotoCamera, last_seq: int) -> dict:
+    """Il fotogramma più recente non ancora inviato a questo client: riusa quello appena letto
+    per un'altra pagina, altrimenti ne legge uno nuovo rispettando LIVE_MAX_FPS."""
+    global live_frame
+    async with live_lock:
+        f = live_frame if live_frame and live_frame["cam"] is cam else None
+        if f:
+            age = time.monotonic() - f["t"]
+            if f["seq"] != last_seq and age < 1 / LIVE_MAX_FPS:
+                return f
+            await asyncio.sleep(max(0.0, 1 / LIVE_MAX_FPS - age))
+        t0 = time.monotonic()
+        data = await cam.preview()
+        live_frame = {"cam": cam, "seq": f["seq"] + 1 if f else 1, "t": t0, "data": data}
+        return live_frame
 
 
 async def live_frames(cam: GPhotoCamera):
     """Fotogrammi del live view come multipart/x-mixed-replace (MJPEG): il browser li mostra
-    in un normale <img>. Si mette in pausa durante scatti e sequenza e si spegne quando la
-    pagina chiude la connessione."""
+    in un normale <img>. Si mette in pausa durante scatti e sequenza e si spegne quando
+    l'ultima pagina chiude la connessione."""
+    global live_frame
     app_state.live_clients += 1
+    seq = 0
     try:
         while cam.connected and app_state.camera is cam:
             if app_state.runner.busy:
@@ -785,23 +808,24 @@ async def live_frames(cam: GPhotoCamera):
             if cam.busy:
                 await asyncio.sleep(0.1)
                 continue
-            t0 = time.monotonic()
             try:
-                data = await cam.preview()
+                frame = await next_live_frame(cam, seq)
             except Exception as exc:  # noqa: BLE001
                 app_state.live_error = str(exc)
                 app_state.log(f"Live view interrotto: {exc}")
                 return
             app_state.live_error = ""
+            seq, data = frame["seq"], frame["data"]
             mime = "image/png" if data[:4] == b"\x89PNG" else "image/jpeg"
             yield (f"--{LIVE_BOUNDARY}\r\nContent-Type: {mime}\r\nContent-Length: {len(data)}\r\n\r\n"
                    .encode() + data + b"\r\n")
-            await asyncio.sleep(max(0.0, 1 / LIVE_MAX_FPS - (time.monotonic() - t0)))
     finally:
         app_state.live_clients -= 1
-        if app_state.live_clients == 0 and cam.connected and cam.live:
-            # la connessione può chiudersi con il generatore cancellato: spegne in un task a parte
-            asyncio.get_running_loop().create_task(cam.end_preview())
+        if app_state.live_clients == 0:
+            live_frame = None
+            if cam.connected and cam.live:
+                # la connessione può chiudersi con il generatore cancellato: spegne in un task a parte
+                asyncio.get_running_loop().create_task(cam.end_preview())
 
 
 @api.get("/api/camera/live")

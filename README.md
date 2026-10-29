@@ -138,7 +138,7 @@ anche con *⌖ Usa posizione attuale*, e indichi in quale verso l'obiettivo si a
 ## Visualizzatore scatti
 
 Clic sull'ultimo scatto o su **Apri visualizzatore ↗**: si apre in una finestra separata, che puoi
-spostare su un secondo monitor.
+spostare su un secondo monitor. Se il live view è acceso, il visualizzatore si apre già sul live.
 
 | Comando | Tasto | Effetto |
 |---|---|---|
@@ -149,7 +149,8 @@ spostare su un secondo monitor.
 | Rotella (o pinch sul trackpad) | — | zoom centrato sul cursore |
 | Doppio clic | — | alterna adatta ↔ 100% |
 | ◀ ▶ e miniature in basso | ← → | scatto precedente o successivo |
-| **Segui ultimo** | L | mostra automaticamente ogni nuovo scatto |
+| **● Live** | L | live view della fotocamera con zoom, 100% e spostamento; ◀ ▶ o una miniatura tornano agli scatti |
+| **Segui ultimo** | U | mostra automaticamente ogni nuovo scatto |
 | **Blocca vista** | K | mantiene zoom e posizione cambiando scatto, utile per confrontare la messa a fuoco nello stesso punto |
 | Schermo intero | F | — |
 
@@ -180,7 +181,8 @@ La conversione è in cache in `~/Library/Caches/MyFocuserStack`.
   secondo; il doppio clic lo porta a schermo intero e i comandi del focheggiatore, tastiera compresa,
   restano attivi. Durante la sequenza il live view viene spento e riprende alla fine; uno scatto di
   prova lo sospende solo per il tempo dello scatto. Il server legge i fotogrammi con
-  `capture_preview` di libgphoto2 e li invia come MJPEG (`GET /api/camera/live`). Canon e Nikon
+  `capture_preview` di libgphoto2 e li invia come MJPEG (`GET /api/camera/live`); se il live è aperto
+  sia qui sia nel visualizzatore, le due finestre ricevono gli stessi fotogrammi. Canon e Nikon
   sollevano lo specchio finché il live è acceso. I Sony devono permettere il live view in *PC Remote*.
 
 ## Sequenza

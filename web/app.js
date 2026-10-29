@@ -734,7 +734,8 @@ function bind() {
 
   // ultimo scatto / visualizzatore
   $("last-thumb").onclick = () => S && S.last_shot && openViewer(S.last_shot.id);
-  $("v-open").onclick = () => openViewer(S && S.last_shot ? S.last_shot.id : null);
+  // con il live view acceso il visualizzatore si apre sul live view (zoom e pan)
+  $("v-open").onclick = () => openViewer(liveOn ? "live" : S && S.last_shot ? S.last_shot.id : null);
   $("live-btn").onclick = () => setLive(!liveOn);
   $("live-box").ondblclick = toggleLiveFullscreen;
 
