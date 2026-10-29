@@ -780,13 +780,14 @@ async def next_live_frame(cam: GPhotoCamera, last_seq: int) -> dict:
     async with live_lock:
         f = live_frame if live_frame and live_frame["cam"] is cam else None
         if f:
-            age = time.monotonic() - f["t"]
-            if f["seq"] != last_seq and age < 1 / LIVE_MAX_FPS:
+            # appena letto per un'altra pagina: la freschezza si misura dalla fine della lettura,
+            # perché una fotocamera vera (Nikon ~120 ms) impiega più di 1/LIVE_MAX_FPS per fotogramma
+            if f["seq"] != last_seq and time.monotonic() - f["done"] < 0.5:
                 return f
-            await asyncio.sleep(max(0.0, 1 / LIVE_MAX_FPS - age))
+            await asyncio.sleep(max(0.0, 1 / LIVE_MAX_FPS - (time.monotonic() - f["t"])))
         t0 = time.monotonic()
         data = await cam.preview()
-        live_frame = {"cam": cam, "seq": f["seq"] + 1 if f else 1, "t": t0, "data": data}
+        live_frame = {"cam": cam, "seq": f["seq"] + 1 if f else 1, "t": t0, "done": time.monotonic(), "data": data}
         return live_frame
 
 
