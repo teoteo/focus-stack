@@ -94,10 +94,17 @@ sich in <b>Safari</b> unter <code>http://localhost:8765</code> und ist nur von d
 <h2>Was Sie brauchen</h2>
 <ul>
 <li>Einen Mac mit macOS 13 oder neuer (Intel) bzw. macOS 14 oder neuer (Apple Silicon), mit Safari.</li>
-<li>Den Fokussierer, angeschlossen mit seinem USB-Kabel und mit Strom versorgt (12 V).</li>
+<li>Einen Fokussierer <b>myFocuserPro2</b> (Version mit DRV8825-Treiber) oder <b>Ardufocus</b> (Platine rev1 mit
+  DRV8825), angeschlossen mit seinem USB-Kabel und mit Strom versorgt (12 V).</li>
 <li>Eine Kamera von Nikon, Canon oder Sony mit USB-Kabel. Als Beispiel dient in dieser Anleitung eine <b>Nikon D5600</b>.</li>
 <li>Einen Adapter, der das Mikroskopbild auf den Sensor projiziert (Fototubus, T2-Adapter oder Ähnliches).</li>
 </ul>
+<div class="box warn"><span class="t">Unterstützte Fokussierer</span>Focus Stack funktioniert mit den Platinen
+<b>myFocuserPro2</b> und <b>Ardufocus</b> mit der Firmware, die der App beiliegt. Ein myFocuserPro2 mit Original-Firmware
+lässt sich sofort verbinden, und die App bietet an, sie mit einem Klick zu aktualisieren. Ein Ardufocus mit
+Original-Firmware (Moonlite-Protokoll) wird dagegen nicht erkannt: Beim ersten Mal muss die Focus-Stack-Firmware von Hand
+geladen werden (Anleitung im README unter github.com/teoteo/focus-stack); danach wird auch der Ardufocus aus der App
+aktualisiert.</div>
 <div class="box tip"><span class="t">Ohne Hardware</span>In den Karten „{ui("Focheggiatore")}“ und „{ui("Fotocamera")}“
 gibt es das Kästchen <span class="ui">{ui("Simulatore")}</span>: Damit können Sie die ganze App ausprobieren, ohne
 etwas anzuschließen. Die Bildschirmfotos dieser Anleitung sind so entstanden.</div>

@@ -196,10 +196,16 @@ Arduino board running the myFocuserPro2 firmware) and to the camera. The interfa
 <h2>What you need</h2>
 <ul>
 <li>A Mac with macOS 13 or later (Intel) or macOS 14 or later (Apple Silicon), with Safari.</li>
-<li>The focuser, connected with its USB cable and powered (12 V).</li>
+<li>A <b>myFocuserPro2</b> focuser (DRV8825 driver version) or an <b>Ardufocus</b> (rev1 board with DRV8825),
+  connected with its USB cable and powered (12 V).</li>
 <li>A Nikon, Canon or Sony camera with its USB cable. This guide uses a <b>Nikon D5600</b> as the example.</li>
 <li>An adapter that projects the microscope image onto the sensor (photo tube, T2 adapter or similar).</li>
 </ul>
+<div class="box warn"><span class="t">Supported focusers</span>Focus Stack works with <b>myFocuserPro2</b> and
+<b>Ardufocus</b> boards, running the firmware bundled with the app. A myFocuserPro2 with its original firmware connects
+straight away and the app offers to update it with one click. An Ardufocus with its original firmware (Moonlite protocol)
+is not recognised: the first time, the Focus Stack firmware must be loaded by hand (instructions in the README at
+github.com/teoteo/focus-stack); after that, the Ardufocus is updated from the app too.</div>
 <div class="box tip"><span class="t">No hardware?</span>The Focuser and Camera cards have a
 <span class="ui">{ui("Simulatore")}</span> box: it lets you try the whole app without connecting anything.
 The screenshots in this guide were made that way.</div>

@@ -93,10 +93,16 @@ scatta</b>: decine di foto a fuochi diversi, pronte da fondere in un'unica immag
 <h2>Che cosa serve</h2>
 <ul>
 <li>Un Mac con macOS 13 o successivo (Intel) oppure macOS 14 o successivo (Apple Silicon), con Safari.</li>
-<li>Il focheggiatore collegato con il suo cavo USB e alimentato (12 V).</li>
+<li>Un focheggiatore <b>myFocuserPro2</b> (versione con driver DRV8825) oppure <b>Ardufocus</b> (circuito rev1 con
+  DRV8825), collegato con il suo cavo USB e alimentato (12 V).</li>
 <li>Una fotocamera Nikon, Canon o Sony con il cavo USB. In questa guida l'esempio è una <b>Nikon D5600</b>.</li>
 <li>Un adattatore che proietti l'immagine del microscopio sul sensore (fototubo, raccordo T2 o simile).</li>
 </ul>
+<div class="box warn"><span class="t">Focheggiatori supportati</span>Focus Stack funziona con le schede
+<b>myFocuserPro2</b> e <b>Ardufocus</b>, con il firmware incluso nell'app. Un myFocuserPro2 con il firmware originale si
+collega subito e l'app propone di aggiornarlo con un clic. Un Ardufocus con il firmware originale (protocollo Moonlite)
+invece non viene riconosciuto: la prima volta il firmware di Focus Stack va caricato a mano (istruzioni nel README su
+github.com/teoteo/focus-stack); dopo, anche l'Ardufocus si aggiorna dall'app.</div>
 <div class="box tip"><span class="t">Senza hardware</span>Nelle schede Focheggiatore e Fotocamera c'è la casella
 <span class="ui">Simulatore</span>: permette di provare tutta l'app senza collegare niente. Le schermate di questa
 guida sono state fatte così.</div>

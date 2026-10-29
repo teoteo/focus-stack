@@ -94,10 +94,16 @@ dirección <code>http://localhost:8765</code>, y solo es accesible desde este Ma
 <h2>Qué se necesita</h2>
 <ul>
 <li>Un Mac con macOS 13 o posterior (Intel) o macOS 14 o posterior (Apple Silicon), con Safari.</li>
-<li>El enfocador, conectado con su cable USB y alimentado (12 V).</li>
+<li>Un enfocador <b>myFocuserPro2</b> (versión con driver DRV8825) o <b>Ardufocus</b> (placa rev1 con DRV8825),
+  conectado con su cable USB y alimentado (12 V).</li>
 <li>Una cámara Nikon, Canon o Sony con su cable USB. En esta guía el ejemplo es una <b>Nikon D5600</b>.</li>
 <li>Un adaptador que proyecte la imagen del microscopio sobre el sensor (fototubo, adaptador T2 o similar).</li>
 </ul>
+<div class="box warn"><span class="t">Enfocadores compatibles</span>Focus Stack funciona con las placas
+<b>myFocuserPro2</b> y <b>Ardufocus</b>, con el firmware incluido en la app. Un myFocuserPro2 con su firmware original se
+conecta enseguida y la app ofrece actualizarlo con un clic. En cambio, un Ardufocus con su firmware original (protocolo
+Moonlite) no se reconoce: la primera vez hay que cargar a mano el firmware de Focus Stack (instrucciones en el README de
+github.com/teoteo/focus-stack); después, el Ardufocus también se actualiza desde la app.</div>
 <div class="box tip"><span class="t">Sin hardware</span>Las tarjetas Enfocador y Cámara tienen la casilla
 <span class="ui">{ui("Simulatore")}</span>: permite probar toda la app sin conectar nada. Las capturas de esta guía
 se hicieron así.</div>

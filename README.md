@@ -1,289 +1,312 @@
-# Focus Stack — focheggiatore myFocuserPro2 + fotocamera per microscopia
+# Focus Stack — myFocuserPro2 or Ardufocus focuser + camera for microscopy
 
-Controlla da Safari (macOS) un focheggiatore DIY **myFocuserPro2** montato sul microscopio
-e una fotocamera **Sony / Nikon / Canon** via USB, eseguendo sequenze automatiche
-*muovi → attendi → scatta* pronte da elaborare in **Helicon Focus**.
+*English · [Italiano](README.it.md)*
 
-## Perché un server locale + PWA (e non una PWA pura)
+Controls, from Safari on macOS, a DIY **myFocuserPro2** or **Ardufocus** focuser mounted on a
+microscope and a **Sony / Nikon / Canon** camera over USB, running automatic
+*move → settle → shoot* sequences ready for **Helicon Focus**.
 
-Safari non supporta né Web Serial né WebUSB, quindi una pagina web non può parlare
-direttamente con l'Arduino o con la fotocamera. L'app è quindi divisa in due parti:
+The app and its PDF user guide are available in **Italian, English, French, German and Spanish**.
 
-```
-Safari (PWA, interfaccia)  ⇄  http://localhost:8765  ⇄  server Python
-                                                        ├─ pyserial  → myFocuserPro2 (USB seriale)
-                                                        └─ libgphoto2 → fotocamera (USB PTP)
-```
+## Supported focusers
 
-Il server ascolta solo su `127.0.0.1`, quindi non è raggiungibile da altri computer.
+| Board | Firmware | Notes |
+|---|---|---|
+| **myFocuserPro2** (Robert Brown), DRV8825 driver version | Focus Stack's, bundled with the app | with the original myFocuserPro2 firmware it connects straight away and the app offers a one-click update |
+| **Ardufocus** (rev1 PCB with DRV8825) | Focus Stack's, built with `ARDUFOCUSPCB` | the original Ardufocus firmware (Moonlite protocol) is **not** supported: load ours by hand the first time (below); after that it updates from the app |
 
-## Installazione
+Both boards run the same firmware (a modified myFocuserPro2 330, see [Firmware](#firmware)) and the
+same serial protocol; the app detects the board and picks the right file for updates.
 
-1. Scarica `FocusStack-<versione>.zip` dall'[ultima release](https://github.com/teoteo/focus-stack/releases/latest)
-   e aprilo: compare **Focus Stack**.
-2. Trascina *Focus Stack* nella cartella **Applicazioni** (prima di aprirla).
-3. Aprila. macOS avvisa che non può verificare lo sviluppatore (l'app non è firmata da Apple):
-   apri **Impostazioni di Sistema › Privacy e sicurezza**, scorri in basso e premi **Apri comunque**.
-   Serve solo la prima volta.
-
-L'app contiene già tutto (Python, librerie, firmware): non serve installare altro. Funziona sui Mac
-Apple Silicon (macOS 14 o successivo) e Intel (macOS 13 o successivo).
-
-**Aggiornamenti:** all'avvio, e poi ogni 6 ore, l'app controlla le release su GitHub. Se c'è una
-versione nuova compare una barra in alto con **Aggiorna e riavvia**: l'app scarica la nuova versione,
-si chiude e si riapre da sola. Lo stesso controllo si fa a mano da *Configurazione › Aggiornamenti*.
-
-**Firmware del focheggiatore:** l'app contiene anche il firmware. Quando il focheggiatore collegato ha
-un firmware più vecchio (o quello originale myFocuserPro2), la barra in alto lo segnala e in
-*Configurazione › Aggiornamenti* si aggiorna con un clic (circa 20 secondi, le impostazioni del
-focheggiatore restano). Il caricamento usa il bootloader dell'Arduino, senza avrdude né Arduino IDE.
-L'app sceglie il firmware adatto alla scheda (myFocuserPro2 o Ardufocus). L'Ardufocus non si
-riavvia da USB: durante l'aggiornamento l'app chiede di premere il tasto reset del focheggiatore.
-
-## Avvio
-
-1. Fai doppio clic su **`Avvia Focus Stack.command`**. La prima volta crea l'ambiente
-   Python e installa le dipendenze; poi apre Safari su `http://localhost:8765`.
-2. Per provare senza hardware, spunta **Simulatore** nei pannelli Focheggiatore e Fotocamera.
-
-**Come app per Mac:** Focus Stack.app avvia il server senza finestra del Terminale, apre Safari e
-resta nel Dock finché il server è acceso; un clic sull'icona nel Dock riporta in primo piano la
-pagina. Se il server non parte mostra un avviso; il registro è in `~/Library/Logs/FocusStack.log`.
-Il punto 1 qui sopra (`Avvia Focus Stack.command`) serve solo per lo sviluppo, con il codice di
-questa cartella.
-
-Da Terminale: `.venv/bin/python run.py [--port 8765] [--no-browser]`
-
-**Spegnimento:** chiudi l'app Focus Stack (⌘Q, oppure Esci dal menu dell'icona nel Dock). Il
-server prima interrompe un'eventuale sequenza (l'app chiede conferma) e ferma il motore, poi si
-spegne; la pagina in Safari mostra “Focus Stack è chiuso” e si ricarica da sola quando riapri l'app.
-Se il server è stato avviato con “Avvia Focus Stack.command”, si spegne con `Ctrl+C` nella finestra
-del Terminale (o chiudendola).
-Chiudere Safari *non* spegne il server.
-Se apri l'app mentre il server è già acceso, mostra solo la pagina; per ricaricare il codice dopo
-un aggiornamento chiudi l'app e riaprila. “Avvia Focus Stack.command” invece chiude un server già
-acceso e lo sostituisce con la versione aggiornata.
-
-Requisiti: macOS con Python 3.10 o successivo (`brew install python`). La libreria libgphoto2
-è già inclusa nel pacchetto `gphoto2` di pip, quindi Homebrew non serve per la fotocamera.
-
-## Lingue
-
-L'app è in **italiano, inglese, francese, tedesco e spagnolo**. Con *Configurazione › Lingua* su
-“Automatica” segue la lingua di macOS (inglese se non è una di queste); si può anche scegliere una
-lingua fissa. Vale per l'interfaccia, i messaggi, il Registro e i dialoghi dell'app.
-
-- Le chiavi delle traduzioni sono i testi italiani; le traduzioni stanno in `web/lang/<lingua>-web.json`
-  (pagina) e `web/lang/<lingua>-server.json` (server), condivise da `backend/i18n.py` e `web/i18n.js`.
-- Per aggiungere una lingua: i due file JSON, il codice in `SUPPORTED` (`backend/i18n.py`), il locale in
-  `web/i18n.js`, la voce nel menu Lingua di `web/index.html` e i testi del programma di avvio.
-- `python3 tools/i18n_check.py --lang <lingua>` elenca i testi senza traduzione (esce con 1 se ne mancano).
-
-## Guida all'uso (PDF)
-
-Una guida per lingua, allegata a ogni release: interfaccia con schermate annotate, calcoli della
-configurazione meccanica e del passo della sequenza.
-Si rigenera con un'istanza di prova sulla porta 8799 (vedi `docs/guida/cattura_schermate.py`):
+**First flash on an Ardufocus.** The Ardufocus does not reset over USB: press the board's reset button
+and right after run (with [avrdude](https://github.com/avrdudes/avrdude), `brew install avrdude`):
 
 ```
-python3.11 docs/guida/cattura_schermate.py --lang it    # schermate (una volta per lingua)
-python3.11 docs/guida/genera_guida.py all               # PDF in docs/
+avrdude -p m328p -c arduino -b 57600 -P /dev/cu.wchusbserialXXXX \
+  -U flash:w:"/Applications/Focus Stack.app/Contents/Resources/app/firmware/build/firmware-ardufocus.hex":i
 ```
 
-## Interfaccia
+`57600` is the speed of the Arduino Nano's old bootloader; with the new bootloader use `115200`.
+If avrdude cannot find the board, try again pressing reset a moment earlier. It is worth saving the
+original firmware first (`-U flash:r:ardufocus-original.hex:i`) so you can put it back.
 
-Il tema scuro è quello predefinito; il pulsante ◐ in alto a destra passa al tema chiaro.
-L'app è divisa in tre schede:
+## Why a local server + PWA (and not a plain PWA)
 
-- **Sessione**: posizione, barra dei fine corsa, movimento manuale, sequenza, fotocamera e ultimo scatto.
-- **Configurazione**: fine corsa, meccanica, comandi manuali, motore (firmware), temperatura e calcolo
-  della profondità di campo.
-- **Registro**: tutti gli eventi della sessione.
+Safari supports neither Web Serial nor WebUSB, so a web page cannot talk directly to the Arduino
+or the camera. The app is therefore split in two:
 
-**Movimento manuale:** un tocco su *Allontana*/*Avvicina* sposta dell'ampiezza scelta (per decine, fino
-a 1000, 10 000 o 100 000 passi secondo *Configurazione › Comandi manuali*). Tenendo premuto il motore
-si muove senza fermarsi e rallenta fino a fermarsi al rilascio; se la pagina smette di rispondere il
-server lo ferma dopo circa un secondo.
+```
+Safari (PWA, interface)  ⇄  http://localhost:8765  ⇄  Python server
+                                                       ├─ pyserial  → focuser (USB serial)
+                                                       └─ libgphoto2 → camera (USB PTP)
+```
 
-Nella barra sotto la posizione:
+The server listens on `127.0.0.1` only, so it cannot be reached from other computers.
 
-- le **zone tratteggiate rosse** sono quelle vietate;
-- la **fascia blu** è l'intervallo della sequenza, con una tacca per ogni scatto;
-- la **linea bianca** è la posizione attuale.
+## Installation
 
-Tastiera nella scheda Sessione:
+1. Download `FocusStack-<version>.zip` from the [latest release](https://github.com/teoteo/focus-stack/releases/latest)
+   and open it: **Focus Stack** appears. The PDF user guides are attached to the same release.
+2. Drag *Focus Stack* into the **Applications** folder (before opening it).
+3. Open it. macOS warns that it cannot verify the developer (the app is not signed by Apple):
+   open **System Settings › Privacy & Security**, scroll down and click **Open Anyway**.
+   This is needed only the first time.
 
-| Tasto | Azione |
+The app contains everything (Python, libraries, firmware): nothing else to install. It runs on
+Apple Silicon Macs (macOS 14 or later) and Intel Macs (macOS 13 or later).
+
+**Updates:** at start-up, and then every 6 hours, the app checks the GitHub releases. When there is a
+new version, a bar with **Update and restart** appears at the top: the app downloads the new version,
+quits and reopens by itself. The same check can be run by hand in *Configuration › Updates*.
+
+**Focuser firmware:** the app also contains the firmware. When the connected focuser has an older
+firmware (or the original myFocuserPro2 one), the top bar says so and *Configuration › Updates*
+updates it with one click (about 20 seconds; the focuser settings are kept). Flashing goes through the
+Arduino bootloader, without avrdude or the Arduino IDE. The app picks the firmware for the board
+(myFocuserPro2 or Ardufocus). The Ardufocus does not reset over USB: during the update the app asks you
+to press the focuser's reset button.
+
+## Running
+
+**As a Mac app:** Focus Stack.app starts the server without a Terminal window, opens Safari and stays
+in the Dock while the server runs; clicking the Dock icon brings the page back to the front. If the
+server does not start, it shows an alert; the log is in `~/Library/Logs/FocusStack.log`.
+
+**Quitting:** quit Focus Stack (⌘Q, or Quit from the Dock icon's menu). The server first stops any
+running sequence (the app asks for confirmation) and halts the motor, then shuts down; the Safari page
+shows “Focus Stack is closed” and reloads by itself when you reopen the app.
+Closing Safari does *not* stop the server.
+If you open the app while the server is already running, it just shows the page; to reload the code
+after an update, quit the app and open it again.
+
+**From source (development):**
+
+1. Double-click **`Avvia Focus Stack.command`**. The first time it creates the Python environment and
+   installs the dependencies; then it opens Safari at `http://localhost:8765`. It also replaces an
+   already running server with the updated code.
+2. To try it without hardware, tick **Simulator** in the Focuser and Camera cards.
+
+From the Terminal: `.venv/bin/python run.py [--port 8765] [--no-browser]` (stop it with `Ctrl+C`).
+
+Requirements: macOS with Python 3.10 or later (`brew install python`). The libgphoto2 library is
+already included in the `gphoto2` pip package, so Homebrew is not needed for the camera.
+
+## Languages
+
+The app speaks **Italian, English, French, German and Spanish**. With *Configuration › Language* set
+to “Automatic” it follows the macOS language (English if it is none of these); a fixed language can
+also be chosen. It applies to the interface, messages, the Log and the app's dialogs.
+
+- Translation keys are the Italian texts; translations live in `web/lang/<lang>-web.json` (page) and
+  `web/lang/<lang>-server.json` (server), shared by `backend/i18n.py` and `web/i18n.js`.
+- To add a language: the two JSON files, the code in `SUPPORTED` (`backend/i18n.py`), the locale in
+  `web/i18n.js`, the entry in the Language menu of `web/index.html` and the launcher's texts.
+- `python3 tools/i18n_check.py --lang <lang>` lists untranslated texts (exits with 1 if any are missing).
+
+## User guide (PDF)
+
+One guide per language, attached to every release: the interface with annotated screenshots, and the
+calculations for the mechanical setup and the sequence step.
+It is regenerated with a test instance on port 8799 (see `docs/guida/cattura_schermate.py`):
+
+```
+python3.11 docs/guida/cattura_schermate.py --lang en    # screenshots (once per language)
+python3.11 docs/guida/genera_guida.py all               # PDFs in docs/
+```
+
+## Interface
+
+The dark theme is the default; the ◐ button at the top right switches to the light theme.
+The app has three tabs:
+
+- **Session**: position, limits bar, manual moves, sequence, camera and latest shot.
+- **Configuration**: limits, mechanics, manual controls, motor (firmware), language, updates,
+  temperature and depth-of-field calculator.
+- **Log**: every event of the session.
+
+**Manual moves:** a click on *Away*/*Closer* moves by the chosen step size (in powers of ten, up to
+1000, 10,000 or 100,000 steps depending on *Configuration › Manual controls*). Holding the button
+down keeps the motor moving; on release it slows down and stops. If the page stops responding, the
+server stops the motor after about one second.
+
+In the bar below the position:
+
+- the **red hatched zones** are forbidden;
+- the **blue band** is the sequence range, with a tick for each shot;
+- the **white line** is the current position.
+
+Keyboard in the Session tab:
+
+| Key | Action |
 |---|---|
-| ↑ | allontana l'obiettivo |
-| ↓ | avvicina l'obiettivo |
-| ⇧ con ↑ o ↓ | passo ×10 |
-| 1, 2, 3, 4 | ampiezza del passo: 1, 10, 100, 1000 passi |
+| ↑ | move the objective away |
+| ↓ | move the objective closer |
+| ⇧ with ↑ or ↓ | step ×10 |
+| 1, 2, 3, … | step size: 1, 10, 100, … steps (as many as the sizes chosen in *Manual controls*) |
 | Esc | STOP |
 
-## Fine corsa (sicurezza del microscopio)
+## Limits (microscope safety)
 
-In **Configurazione › Fine corsa di sicurezza** imposti il fine corsa inferiore e quello superiore,
-anche con *⌖ Usa posizione attuale*, e indichi in quale verso l'obiettivo si avvicina al campione.
+In **Configuration › Safety limits** you set the lower and upper limits, also with
+*⌖ Use current position*, and tell the app in which direction the objective gets closer to the specimen.
 
-- **Movimenti comandati dall'app**: il server controlla vai-a, jog, sequenza e compensazione del gioco
-  *prima* di muovere il motore. Il jog si ferma al fine corsa; una sequenza che uscirebbe dai limiti non parte.
-- **Pulsanti fisici del focheggiatore**: muovono il motore senza passare dall'app.
-  - Il server legge la posizione ogni 0,2–0,5 s. Se esce dai limiti invia STOP e mostra un allarme rosso,
-    ma tra una lettura e l'altra il motore può superare il limite di qualche decina di passi.
-  - Protezione consigliata, applicata dal firmware stesso anche ai pulsanti:
-    1. porta l'obiettivo al punto più basso sicuro e premi **Imposta qui lo zero**
-       (fine corsa e sequenza vengono traslati di conseguenza);
-    2. porta l'obiettivo al punto più alto sicuro, usalo come fine corsa superiore e premi
-       **Scrivi il massimo nel firmware**.
-  - Verifica una volta, a mano e lentamente, che il tuo firmware blocchi davvero i pulsanti a 0 e al massimo.
-- **Pulsanti premuti durante una sequenza**: la sequenza va in pausa e, alla ripresa, ripete lo scatto
-  dalla posizione corretta.
+- **Moves commanded by the app**: the server checks go-to, jog, sequence and backlash compensation
+  *before* moving the motor. Jogging stops at the limit; a sequence that would go beyond the limits does not start.
+- **Focuser hardware buttons**: they drive the motor without going through the app.
+  - The server reads the position every 0.2–0.5 s. If it goes beyond the limits it sends STOP and shows
+    a red alarm, but between two readings the motor can overshoot the limit by a few dozen steps.
+  - Recommended protection, enforced by the firmware itself on the buttons too:
+    1. move the objective to the lowest safe point and press **Set zero here**
+       (limits and sequence are shifted accordingly);
+    2. move the objective to the highest safe point, use it as the upper limit and press
+       **Write maximum to firmware**.
+  - Check once, by hand and slowly, that your firmware really stops the buttons at 0 and at the maximum.
+- **Buttons pressed during a sequence**: the sequence pauses and, on resume, repeats the shot from the
+  correct position.
 
-## Meccanica e motore
+## Mechanics and motor
 
-- **µm per passo**: si calcolano da passi motore per giro × microstep (letto dal firmware) × rapporto
-  di riduzione e dalla corsa della micrometrica per giro. In alternativa si inseriscono a mano.
-- **Motore**: microstep, velocità, bobine alimentate a motore fermo (tengono la posizione), inversione
-  del verso, gioco del firmware (attivazione e passi IN/OUT, da 0 a 255). Il firmware compensa il gioco
-  a ogni inversione, anche con i pulsanti fisici; la sequenza ha una sua compensazione: usa l'una o
-  l'altra, non entrambe.
-- **Temperatura**: grafico dell'ultima ora. Il valore di ogni scatto viene salvato in `sequence.json`.
+- **µm per step**: calculated from motor steps per revolution × microstep (read from the firmware) ×
+  gear ratio and from the fine-focus travel per knob turn. Alternatively, entered by hand.
+- **Motor**: microstep, speed, coils powered when idle (they hold the position), reverse rotation,
+  firmware backlash (enable and IN/OUT steps, 0 to 255). The firmware compensates backlash at every
+  change of direction, with the hardware buttons too; the sequence has its own compensation: use one
+  or the other, not both.
+- **Temperature**: chart of the last hour. The value at each shot is saved in `sequence.json`.
 
-## Focheggiatore: connessione
+## Focuser: connection
 
-- Collega l'Arduino e scegli la porta `/dev/cu.usbserial-…`, `/dev/cu.wchusbserial…` o
-  `/dev/cu.usbmodem…`. La velocità è 9600 baud.
-- All'apertura della porta l'Arduino si resetta: la connessione richiede circa 2–3 s.
-- Protocollo: driver INDI `myfocuserpro2` (`:00#` posizione, `:05xxxx#` vai a, `:27#` stop, …),
-  implementato in `backend/focuser.py`.
+- Connect the Arduino and choose the port `/dev/cu.usbserial-…`, `/dev/cu.wchusbserial…` or
+  `/dev/cu.usbmodem…`. The speed is 9600 baud.
+- Opening the port resets the Arduino: connecting takes about 2–3 s.
+- Protocol: the INDI `myfocuserpro2` driver's (`:00#` position, `:05xxxx#` go to, `:27#` stop, …),
+  implemented in `backend/focuser.py`.
 
-## Visualizzatore scatti
+## Shot viewer
 
-Clic sull'ultimo scatto o su **Apri visualizzatore ↗**: si apre in una finestra separata, che puoi
-spostare su un secondo monitor. Se il live view è acceso, il visualizzatore si apre già sul live.
+Click the latest shot or **Open viewer ↗**: it opens in a separate window that you can move to a
+second monitor. If the live view is on, the viewer opens straight on the live view.
 
-| Comando | Tasto | Effetto |
+| Control | Key | Effect |
 |---|---|---|
 | **−** / **+** | − / + | zoom |
-| **Adatta** / **Reset** | 0 o R | immagine intera nella finestra |
-| **100%** | 1 | un pixel del sensore = un pixel dello schermo. Oltre il 150% i pixel restano netti, senza sfocatura di interpolazione |
-| Trascina con il mouse | — | sposta l'immagine |
-| Rotella (o pinch sul trackpad) | — | zoom centrato sul cursore |
-| Doppio clic | — | alterna adatta ↔ 100% |
-| ◀ ▶ e miniature in basso | ← → | scatto precedente o successivo |
-| **● Live** | L | live view della fotocamera con zoom, 100% e spostamento; ◀ ▶ o una miniatura tornano agli scatti |
-| **Segui ultimo** | U | mostra automaticamente ogni nuovo scatto |
-| **Blocca vista** | K | mantiene zoom e posizione cambiando scatto, utile per confrontare la messa a fuoco nello stesso punto |
-| Schermo intero | F | — |
+| **Fit** / **Reset** | 0 or R | whole image in the window |
+| **100%** | 1 | one sensor pixel = one screen pixel. Above 150% pixels stay sharp, without interpolation blur |
+| Drag with the mouse | — | pan |
+| Scroll wheel (or trackpad pinch) | — | zoom centred on the pointer |
+| Double-click | — | toggle fit ↔ 100% |
+| ◀ ▶ and thumbnails at the bottom | ← → | previous or next shot |
+| **● Live** | L | camera live view with zoom, 100% and pan; ◀ ▶ or a thumbnail go back to the shots |
+| **Follow latest** | U | show every new shot automatically |
+| **Lock view** | K | keep zoom and position when changing shot, to compare focus at the same spot |
+| Full screen | F | — |
 
-Gli scatti RAW vengono convertiti in JPEG con `sips` di macOS, prima un'anteprima e poi la piena risoluzione.
-La conversione è in cache in `~/Library/Caches/MyFocuserStack`.
+RAW shots are converted to JPEG with macOS `sips`, first a preview and then full resolution.
+The conversion is cached in `~/Library/Caches/MyFocuserStack`.
 
-## Fotocamera
+## Camera
 
-| Marca | Impostazioni sulla fotocamera |
+| Brand | Camera settings |
 |---|---|
-| Sony | Menu USB → **PC Remote**; modo **M** |
-| Nikon | modo **M**; disattiva la revisione immagine |
-| Canon | modo **M**; lo scatto va in RAM, oppure sulla scheda se *Destinazione = card* |
+| Sony | USB menu → **PC Remote**; mode **M** |
+| Nikon | mode **M**; turn off image review |
+| Canon | mode **M**; the shot goes to RAM, or to the card if *Destination = card* |
 
-- **Rileva** (⟳) e poi **Connetti**. Da qui si impostano tempo di posa, ISO, diaframma,
-  formato e destinazione; dopo ogni modifica l'app rilegge il valore che la fotocamera ha
-  effettivamente accettato.
-- **Posa Bulb (s)** > 0 usa la posa B controllata dal computer, per tempi oltre i 30 s.
-- **Ritardo specchio (reflex)**, da 0,5 a 2,5 s: attesa fra il sollevamento dello specchio e lo
-  scatto, per far smorzare le vibrazioni. Nikon: l'app imposta il *ritardo di esposizione* della
-  fotocamera al primo valore disponibile uguale o più lungo. Canon: attiva il *blocco dello specchio*
-  nel menu della fotocamera; l'app solleva lo specchio, attende e poi scatta. Sony e mirrorless: non serve.
-- **Se la connessione fallisce:** macOS (`ptpcamerad`) si appropria della fotocamera appena
-  la colleghi. L'app termina quel processo prima di connettersi; se non basta, chiudi Foto,
-  Anteprima, Acquisizione Immagine, EOS Utility e NX Studio, poi riprova.
-- Lo **scatto di prova** finisce nella galleria e si apre nel visualizzatore come gli scatti della sequenza.
-- **● Live** (scheda *Ultimo scatto*) mostra il live view della fotocamera, fino a 15 fotogrammi al
-  secondo; il doppio clic lo porta a schermo intero e i comandi del focheggiatore, tastiera compresa,
-  restano attivi. Durante la sequenza il live view viene spento e riprende alla fine; uno scatto di
-  prova lo sospende solo per il tempo dello scatto. Il server legge i fotogrammi con
-  `capture_preview` di libgphoto2 e li invia come MJPEG (`GET /api/camera/live`); se il live è aperto
-  sia qui sia nel visualizzatore, le due finestre ricevono gli stessi fotogrammi. Canon e Nikon
-  sollevano lo specchio finché il live è acceso. I Sony devono permettere il live view in *PC Remote*.
+- **Detect cameras** (⟳) and then **Connect**. From here you set shutter speed, ISO, aperture,
+  format and destination; after each change the app reads back the value the camera actually accepted.
+- **Bulb (seconds)** > 0 uses a bulb exposure controlled by the computer, for times beyond 30 s.
+- **Mirror delay (DSLR)**, 0.5 to 2.5 s: wait between raising the mirror and the shot, to let
+  vibrations die down. Nikon: the app sets the camera's *exposure delay mode* to the first available
+  value equal or longer. Canon: enable *mirror lockup* in the camera menu; the app raises the mirror,
+  waits, then shoots. Sony and mirrorless: not needed.
+- **If connecting fails:** macOS (`ptpcamerad`) grabs the camera as soon as you plug it in. The app
+  kills that process before connecting; if that is not enough, quit Photos, Preview, Image Capture,
+  EOS Utility and NX Studio, then try again.
+- The **test shot** goes to the gallery and opens in the viewer like the sequence shots.
+- **● Live** (*Latest shot* card) shows the camera live view, up to 15 frames per second; double-click
+  for full screen. The focuser controls, keyboard included, stay active. During the sequence the live
+  view is turned off and resumes at the end; a test shot pauses it only for the shot. The server reads
+  the frames with libgphoto2's `capture_preview` and sends them as MJPEG (`GET /api/camera/live`); if
+  the live view is open both here and in the viewer, the two windows receive the same frames. Canon and
+  Nikon keep the mirror up while the live view is on. Sony cameras must allow live view in *PC Remote*.
 
-## Sequenza
+## Sequence
 
-| Campo | Significato |
+| Field | Meaning |
 |---|---|
-| Inizio / Fine | posizioni in passi (⌖ copia la posizione attuale) |
-| Passo / N. scatti | sono collegati: modificandone uno si ricalcola l'altro |
-| Attesa dopo movimento | smorzamento delle vibrazioni prima dello scatto (1–3 s su un microscopio) |
-| Pausa dopo scatto | tempo per scrivere sulla scheda e ricaricare il flash |
-| Compensazione gioco | prima del primo scatto il motore arretra di N passi e poi avanza, così ogni scatto viene raggiunto dalla stessa direzione |
-| Modalità | **Scarica sul Mac** (consigliata), **Solo scheda**, **Solo trigger** (più veloce; con questa imposta la destinazione su scheda) |
+| Start / End | positions in steps (⌖ copies the current position) |
+| Step / Number of shots | linked: changing one recalculates the other |
+| Settle time after moving | lets vibrations die down before the shot (1–3 s on a microscope) |
+| Pause after the shot | time to write to the card and recharge the flash |
+| Backlash compensation | before the first shot the motor backs off N steps and then advances, so every shot is reached from the same direction |
+| Capture mode | **Download to the Mac** (recommended), **Memory card only**, **Trigger only** (fastest; set the destination to the card) |
 
-**Cartella di salvataggio:** nella scheda Sequenza, riga *Salva in*. **Scegli…** apre il pannello
-"Scegli cartella" di macOS; **Apri** mostra la cartella nel Finder. Safari non può leggere percorsi
-del disco, quindi il pannello lo apre il server. Se la cartella non esiste viene creata e, prima di
-salvarla, l'app verifica di poterci scrivere.
+**Save folder:** in the Sequence card, *Save to* row. **Choose…** opens the macOS “Choose folder”
+panel; **Open** shows the folder in the Finder. Safari cannot read disk paths, so the panel is opened
+by the server. If the folder does not exist it is created and, before saving it, the app checks that it
+can write there.
 
-Gli scatti vengono salvati nella cartella scelta (predefinita `~/Pictures/FocusStack`), in una
-sottocartella `<nome>_<data-ora>/`, con nomi
-`<nome>_0001.ARW`, `_0002…`. Nella stessa cartella c'è `sequence.json` con i parametri usati.
-A fine sequenza **Apri in Helicon Focus** carica direttamente tutte le immagini.
+Shots are saved in the chosen folder (default `~/Pictures/FocusStack`), in a `<name>_<date-time>/`
+subfolder, named `<name>_0001.ARW`, `_0002…`. The same folder holds `sequence.json` with the parameters
+used. At the end of the sequence **Open in Helicon Focus** loads all the images directly.
 
-Pausa, ripresa e interruzione sono sempre disponibili; **STOP** ferma subito anche il motore.
-Le sequenze si possono salvare come **preset**, ad esempio uno per obiettivo.
+Pause, resume and abort are always available; **STOP** also halts the motor at once.
+Sequences can be saved as **presets**, for example one per objective.
 
-## Pubblicare una nuova versione
+## Publishing a new version
 
-Sul Mac di sviluppo servono `gh` autenticato (`gh auth login`), `arduino-cli` con il core
-`arduino:avr` e le librerie di myFocuserPro2 in `~/Documents/Arduino/libraries`.
+On the development Mac you need `gh` authenticated (`gh auth login`), `arduino-cli` with the
+`arduino:avr` core and the myFocuserPro2 libraries in `~/Documents/Arduino/libraries`.
 
-1. Aumenta il numero in `VERSION` (es. `1.0.0` → `1.0.1`).
-2. Se hai modificato il firmware, aumenta anche `FSBUILD` in `firmware/myFP2F_DRV8825_330/fsbuild.h`:
-   è il numero con cui l'app capisce che il focheggiatore va aggiornato.
-3. Fai il commit e il push delle modifiche.
-4. Esegui `./build_release.sh --publish`: compila il firmware, scarica Python per Apple Silicon e
-   Intel, assembla l'app universale (~60 MB) e crea la release `v<VERSIONE>` su GitHub.
-   Senza `--publish` crea solo `build/dist/FocusStack-<VERSIONE>.zip` per provarla.
+1. Bump the number in `VERSION` (e.g. `1.0.0` → `1.0.1`).
+2. If you changed the firmware, also bump `FSBUILD` in `firmware/myFP2F_DRV8825_330/fsbuild.h`:
+   it is the number the app uses to tell that the focuser needs an update.
+3. Commit and push the changes.
+4. Run `./build_release.sh --publish`: it builds the firmware, downloads Python for Apple Silicon and
+   Intel, assembles the universal app (~60 MB) and creates the `v<VERSION>` release on GitHub.
+   Without `--publish` it only creates `build/dist/FocusStack-<VERSION>.zip` for testing.
+5. Attach the PDF guides (`docs/*.pdf`) with `gh release upload` and write the release notes with
+   `gh release edit --notes-file`.
 
-Le app installate vedono la nuova release entro 6 ore (o subito con *Controlla ora*).
+Installed apps see the new release within 6 hours (or at once with *Check now*).
 
 ## Firmware
 
-`firmware/myFP2F_DRV8825_330` è myFocuserPro2 330 di Robert Brown (licenza MIT, vedi le note di
-copyright nei file) per scheda DRV8825, con: pulsanti, sonda di temperatura, display OLED a tre
-righe (Position, Target, Temp) senza sfarfallio; pulsanti con movimento continuo a velocità
-crescente (`PB_SPEED*` in `focuserconfig.h`); rampa di accelerazione e decelerazione per i movimenti
-comandati (`MOVE_*`); comando `:97#` che restituisce il numero di build (`fsbuild.h`) e `:98#` che
-indica la scheda (0 = myFocuserPro2, 1 = Ardufocus).
+`firmware/myFP2F_DRV8825_330` is Robert Brown's myFocuserPro2 330 (MIT licence, see the copyright
+notes in the files) for the DRV8825 board, with: buttons, temperature probe, flicker-free three-line
+OLED display (Position, Target, Temp); buttons with continuous movement at increasing speed
+(`PB_SPEED*` in `focuserconfig.h`); acceleration and deceleration ramps for commanded moves (`MOVE_*`);
+command `:97#` returning the build number (`fsbuild.h`) and `:98#` returning the board
+(0 = myFocuserPro2, 1 = Ardufocus).
 
-**Scheda Ardufocus:** con `ARDUFOCUSPCB` (riga in `focuserconfig.h`, oppure `-DARDUFOCUSPCB` come fa
-`build_release.sh` per `firmware-ardufocus.hex`) lo stesso firmware usa i collegamenti del circuito
-stampato Ardufocus rev1 con DRV8825: motore su D4 (DIR), D5 (STEP), D6 (SLEEP); pulsanti verso massa su
-D2 (OUT) e D3 (IN). Sonda DS18B20, OLED, LED e buzzer sono disattivati. Le velocità sono più alte,
-pensate per un NEMA 17 con riduttore 27:1.
+**Ardufocus board:** with `ARDUFOCUSPCB` (a line in `focuserconfig.h`, or `-DARDUFOCUSPCB` as
+`build_release.sh` does for `firmware-ardufocus.hex`) the same firmware uses the wiring of the
+Ardufocus rev1 PCB with DRV8825: motor on D4 (DIR), D5 (STEP), D6 (SLEEP); buttons to ground on
+D2 (OUT) and D3 (IN). DS18B20 probe, OLED, LEDs and buzzer are disabled. Speeds are higher, meant for a
+NEMA 17 with a 27:1 gearbox.
 
-## Struttura
+## Structure
 
 ```
-backend/focuser.py   driver seriale myFocuserPro2 + simulatore
-backend/camera.py    controllo fotocamera (python-gphoto2, sessione persistente) + simulatore
-backend/sequence.py  motore delle sequenze
-backend/main.py      API REST + WebSocket di stato
-backend/settings.py  impostazioni in ~/Library/Application Support/MyFocuserStack/
-backend/updater.py   versione, aggiornamenti da GitHub, firmware incluso
-backend/flasher.py   caricamento del firmware sull'Arduino (protocollo STK500 del bootloader)
-packaging/           programma di avvio dell'app (AppleScript)
-build_release.sh     costruzione e pubblicazione dell'app universale
-firmware/            sorgente del firmware del focheggiatore
-web/index.html …     interfaccia principale (PWA, nessuna dipendenza esterna)
-web/viewer.*         visualizzatore con zoom e pan
-web/i18n.js, web/lang/ traduzioni dell'interfaccia e dei messaggi
-backend/i18n.py      lingua corrente e traduzioni lato server
-docs/guida/          generatore della guida in PDF (testo_<lingua>.py)
-tools/i18n_check.py  controllo delle traduzioni
+backend/focuser.py     myFocuserPro2 serial driver + simulator
+backend/camera.py      camera control (python-gphoto2, persistent session) + simulator
+backend/sequence.py    sequence engine
+backend/main.py        REST API + status WebSocket
+backend/settings.py    settings in ~/Library/Application Support/MyFocuserStack/
+backend/updater.py     version, updates from GitHub, bundled firmware
+backend/flasher.py     firmware upload to the Arduino (bootloader STK500 protocol)
+backend/i18n.py        current language and server-side translations
+packaging/             app launcher (AppleScript) and icon
+build_release.sh       build and publish the universal app
+firmware/              focuser firmware source
+web/index.html …       main interface (PWA, no external dependencies)
+web/viewer.*           viewer with zoom and pan
+web/i18n.js, web/lang/ interface and message translations
+docs/guida/            PDF guide generator (testo_<lang>.py)
+tools/i18n_check.py    translation check
 ```
 
-## Licenza
+## Licence
 
-MIT (vedi `LICENSE`). Il firmware in `firmware/` deriva da myFocuserPro2 di Robert Brown e
-collaboratori, anch'esso con licenza MIT: le note di copyright originali sono nei file.
+MIT (see `LICENSE`). The firmware in `firmware/` derives from myFocuserPro2 by Robert Brown and
+contributors, also MIT-licensed: the original copyright notes are in the files.
