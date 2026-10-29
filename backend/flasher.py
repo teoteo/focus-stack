@@ -18,6 +18,8 @@ from typing import Callable
 
 import serial
 
+from .i18n import tr
+
 STK_OK, STK_INSYNC, CRC_EOP = 0x10, 0x14, 0x20
 GET_SYNC, ENTER_PROGMODE, LEAVE_PROGMODE = 0x30, 0x50, 0x51
 LOAD_ADDRESS, PROG_PAGE, READ_PAGE, READ_SIGN = 0x55, 0x64, 0x74, 0x75
@@ -43,10 +45,10 @@ def read_hex(path: str | Path) -> bytes:
         if not line:
             continue
         if not line.startswith(":"):
-            raise FlashError(f"File HEX non valido (riga {n})")
+            raise FlashError(tr("File HEX non valido (riga {n})", n=n))
         rec = bytes.fromhex(line[1:])
         if sum(rec) & 0xFF:
-            raise FlashError(f"Checksum errato nel file HEX (riga {n})")
+            raise FlashError(tr("Checksum errato nel file HEX (riga {n})", n=n))
         length, addr, rtype, data = rec[0], (rec[1] << 8) | rec[2], rec[3], rec[4:4 + rec[0]]
         if rtype == 0:
             start = base + addr
@@ -60,9 +62,9 @@ def read_hex(path: str | Path) -> bytes:
         elif rtype == 4:
             base = ((data[0] << 8) | data[1]) << 16
     if not image:
-        raise FlashError("Il file HEX è vuoto")
+        raise FlashError(tr("Il file HEX è vuoto"))
     if len(image) > MAX_APP_SIZE:
-        raise FlashError(f"Firmware troppo grande ({len(image)} byte, massimo {MAX_APP_SIZE})")
+        raise FlashError(tr("Firmware troppo grande ({size} byte, massimo {max})", size=len(image), max=MAX_APP_SIZE))
     if len(image) % PAGE_SIZE:
         image.extend(b"\xff" * (PAGE_SIZE - len(image) % PAGE_SIZE))
     return bytes(image)
@@ -78,10 +80,10 @@ class _Bootloader:
         self.ser.flush()
         head = self.ser.read(1)
         if head != bytes([STK_INSYNC]):
-            raise FlashError(f"Il bootloader non risponde (ricevuto {head.hex() or 'niente'})")
+            raise FlashError(tr("Il bootloader non risponde (ricevuto {data})", data=head.hex() or tr("niente")))
         data = self.ser.read(reply_len) if reply_len else b""
         if len(data) != reply_len or self.ser.read(1) != bytes([STK_OK]):
-            raise FlashError("Risposta incompleta dal bootloader")
+            raise FlashError(tr("Risposta incompleta dal bootloader"))
         return data
 
     def sync(self) -> bool:
@@ -122,10 +124,10 @@ def _open_bootloader(port: str) -> tuple[serial.Serial, _Bootloader]:
                 return ser, bl
         except (OSError, serial.SerialException) as exc:
             ser.close()
-            raise FlashError(f"Impossibile aprire {port}: {exc}") from exc
+            raise FlashError(tr("Impossibile aprire {port}: {exc}", port=port, exc=exc)) from exc
         ser.close()
-    raise FlashError("Bootloader non trovato: controlla il cavo USB e che nessun altro programma "
-                     "stia usando la porta del focheggiatore")
+    raise FlashError(tr("Bootloader non trovato: controlla il cavo USB e che nessun altro programma "
+                        "stia usando la porta del focheggiatore"))
 
 
 def _wait_bootloader(port: str, report: Progress, window: float = 10.0, total: float = 90.0) -> tuple[serial.Serial, _Bootloader]:
@@ -142,11 +144,11 @@ def _wait_bootloader(port: str, report: Progress, window: float = 10.0, total: f
         baud = BAUD_RATES[i % len(BAUD_RATES)]
         i += 1
         left = int(total - (time.monotonic() - start))
-        report(f"Premi il tasto reset sul focheggiatore (ancora {left} s)", 0.0)
+        report(tr("Premi il tasto reset sul focheggiatore (ancora {left} s)", left=left), 0.0)
         try:
             ser = serial.Serial(port, baud, timeout=0.05)
         except (OSError, serial.SerialException) as exc:
-            raise FlashError(f"Impossibile aprire {port}: {exc}") from exc
+            raise FlashError(tr("Impossibile aprire {port}: {exc}", port=port, exc=exc)) from exc
         end = min(time.monotonic() + window, start + total)
         while time.monotonic() < end:
             ser.reset_input_buffer()
@@ -155,8 +157,8 @@ def _wait_bootloader(port: str, report: Progress, window: float = 10.0, total: f
             if ser.read(2) == bytes([STK_INSYNC, STK_OK]):
                 return ser, _Bootloader(ser)
         ser.close()
-    raise FlashError("Bootloader non trovato: premi il tasto reset del focheggiatore mentre "
-                     "l'app aspetta, e controlla che nessun altro programma usi la porta")
+    raise FlashError(tr("Bootloader non trovato: premi il tasto reset del focheggiatore mentre "
+                        "l'app aspetta, e controlla che nessun altro programma usi la porta"))
 
 
 def flash(port: str, hex_path: str | Path, progress: Progress | None = None,
@@ -164,25 +166,25 @@ def flash(port: str, hex_path: str | Path, progress: Progress | None = None,
     """Scrive e verifica il firmware. Restituisce il numero di byte scritti."""
     report = progress or (lambda phase, frac: None)
     image = read_hex(hex_path)
-    report("Collegamento al bootloader", 0.0)
+    report(tr("Collegamento al bootloader"), 0.0)
     ser, bl = _wait_bootloader(port, report) if manual_reset else _open_bootloader(port)
     try:
         sig = bl.signature()
         if sig != ATMEGA328P_SIGNATURE:
-            raise FlashError(f"Chip inatteso (firma {sig.hex()}): il firmware è per ATmega328P")
+            raise FlashError(tr("Chip inatteso (firma {sig}): il firmware è per ATmega328P", sig=sig.hex()))
         bl._cmd(bytes([ENTER_PROGMODE]))
         pages = range(0, len(image), PAGE_SIZE)
         for i, addr in enumerate(pages):
             bl.load_address(addr)
             bl.write_page(image[addr:addr + PAGE_SIZE])
-            report("Scrittura", (i + 1) / len(pages))
+            report(tr("Scrittura"), (i + 1) / len(pages))
         for i, addr in enumerate(pages):
             bl.load_address(addr)
             if bl.read_page(PAGE_SIZE) != image[addr:addr + PAGE_SIZE]:
-                raise FlashError(f"Verifica fallita all'indirizzo {addr:#06x}: riprova il caricamento")
-            report("Verifica", (i + 1) / len(pages))
+                raise FlashError(tr("Verifica fallita all'indirizzo {addr}: riprova il caricamento", addr=f"{addr:#06x}"))
+            report(tr("Verifica"), (i + 1) / len(pages))
         bl._cmd(bytes([LEAVE_PROGMODE]))
     finally:
         ser.close()
-    report("Completato", 1.0)
+    report(tr("Completato"), 1.0)
     return len(image)

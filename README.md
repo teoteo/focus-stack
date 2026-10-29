@@ -67,6 +67,29 @@ acceso e lo sostituisce con la versione aggiornata.
 Requisiti: macOS con Python 3.10 o successivo (`brew install python`). La libreria libgphoto2
 è già inclusa nel pacchetto `gphoto2` di pip, quindi Homebrew non serve per la fotocamera.
 
+## Lingue
+
+L'app è in **italiano, inglese, francese, tedesco e spagnolo**. Con *Configurazione › Lingua* su
+“Automatica” segue la lingua di macOS (inglese se non è una di queste); si può anche scegliere una
+lingua fissa. Vale per l'interfaccia, i messaggi, il Registro e i dialoghi dell'app.
+
+- Le chiavi delle traduzioni sono i testi italiani; le traduzioni stanno in `web/lang/<lingua>-web.json`
+  (pagina) e `web/lang/<lingua>-server.json` (server), condivise da `backend/i18n.py` e `web/i18n.js`.
+- Per aggiungere una lingua: i due file JSON, il codice in `SUPPORTED` (`backend/i18n.py`), il locale in
+  `web/i18n.js`, la voce nel menu Lingua di `web/index.html` e i testi del programma di avvio.
+- `python3 tools/i18n_check.py --lang <lingua>` elenca i testi senza traduzione (esce con 1 se ne mancano).
+
+## Guida all'uso (PDF)
+
+Una guida per lingua, allegata a ogni release: interfaccia con schermate annotate, calcoli della
+configurazione meccanica e del passo della sequenza.
+Si rigenera con un'istanza di prova sulla porta 8799 (vedi `docs/guida/cattura_schermate.py`):
+
+```
+python3.11 docs/guida/cattura_schermate.py --lang it    # schermate (una volta per lingua)
+python3.11 docs/guida/genera_guida.py all               # PDF in docs/
+```
+
 ## Interfaccia
 
 Il tema scuro è quello predefinito; il pulsante ◐ in alto a destra passa al tema chiaro.
@@ -254,6 +277,10 @@ build_release.sh     costruzione e pubblicazione dell'app universale
 firmware/            sorgente del firmware del focheggiatore
 web/index.html …     interfaccia principale (PWA, nessuna dipendenza esterna)
 web/viewer.*         visualizzatore con zoom e pan
+web/i18n.js, web/lang/ traduzioni dell'interfaccia e dei messaggi
+backend/i18n.py      lingua corrente e traduzioni lato server
+docs/guida/          generatore della guida in PDF (testo_<lingua>.py)
+tools/i18n_check.py  controllo delle traduzioni
 ```
 
 ## Licenza

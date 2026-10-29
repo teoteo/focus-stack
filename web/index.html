@@ -100,7 +100,7 @@
         <button class="btn jog-btn" id="jog-away"><span class="arrow">▲</span><span id="jog-away-label">Allontana</span></button>
         <button class="btn jog-btn" id="jog-toward"><span class="arrow">▼</span><span id="jog-toward-label">Avvicina</span></button>
       </div>
-      <p class="hint" id="jog-keys">Tastiera: ↑ ↓ muovi · ⇧ ×10 · 1–4 ampiezza · <kbd>Esc</kbd> stop</p>
+      <p class="hint" id="jog-keys" data-i18n-skip>Tastiera: ↑ ↓ muovi · ⇧ ×10 · 1–4 ampiezza · <kbd>Esc</kbd> stop</p>
     </div>
 
     <div class="row goto">
@@ -189,7 +189,7 @@
         <h2>Fotocamera</h2>
         <span class="chip" id="c-chip">Disconnessa</span>
       </header>
-      <div class="warn hidden" id="gp-missing">Libreria gphoto2 mancante: esegui <code>.venv/bin/pip install gphoto2</code></div>
+      <div class="warn hidden" id="gp-missing" data-i18n-html>Libreria gphoto2 mancante: esegui <code>.venv/bin/pip install gphoto2</code></div>
 
       <div class="connect" id="c-connect-box">
         <div class="row">
@@ -292,12 +292,12 @@
 
     <div class="callout">
       <h3>Pulsanti fisici del focheggiatore</h3>
-      <p>I pulsanti sul focheggiatore muovono il motore senza passare dall'app, quindi i limiti software non possono fermarli in anticipo.
+      <p data-i18n-html>I pulsanti sul focheggiatore muovono il motore senza passare dall'app, quindi i limiti software non possono fermarli in anticipo.
         Il server li sorveglia: se la posizione esce dai fine corsa invia <b>STOP</b> e mostra un allarme. Tra una lettura e l'altra il motore può però superare il limite di qualche decina di passi.</p>
-      <p><b>Protezione consigliata</b>: fai rispettare i limiti direttamente al firmware, che li applica anche ai pulsanti.</p>
+      <p data-i18n-html><b>Protezione consigliata</b>: fai rispettare i limiti direttamente al firmware, che li applica anche ai pulsanti.</p>
       <ol>
-        <li>Porta l'obiettivo alla posizione più bassa sicura e premi <b>Imposta qui lo zero</b>: il firmware non scende mai sotto 0.</li>
-        <li>Porta l'obiettivo alla posizione più alta sicura, usala come fine corsa superiore e premi <b>Scrivi il massimo nel firmware</b>.</li>
+        <li data-i18n-html>Porta l'obiettivo alla posizione più bassa sicura e premi <b>Imposta qui lo zero</b>: il firmware non scende mai sotto 0.</li>
+        <li data-i18n-html>Porta l'obiettivo alla posizione più alta sicura, usala come fine corsa superiore e premi <b>Scrivi il massimo nel firmware</b>.</li>
       </ol>
       <div class="row">
         <button class="btn ghost" id="lim-zero">Imposta qui lo zero</button>
@@ -372,6 +372,20 @@
       Cambiare il microstep cambia la scala delle posizioni: dopo la modifica ricontrolla i fine corsa.</p>
   </section>
 
+  <section class="card" id="card-lang">
+    <header class="card-head"><h2>Lingua</h2></header>
+    <label>Lingua dell'interfaccia
+      <select id="lang-select">
+        <option value="auto">Automatica (lingua del sistema)</option>
+        <option value="it" data-i18n-skip>Italiano</option>
+        <option value="en" data-i18n-skip>English</option>
+        <option value="fr" data-i18n-skip>Français</option>
+        <option value="de" data-i18n-skip>Deutsch</option>
+        <option value="es" data-i18n-skip>Español</option>
+      </select>
+    </label>
+    <p class="hint">Vale per l'interfaccia, i messaggi e il registro. Con “Automatica” l'app usa la lingua di macOS; se non è disponibile, l'inglese.</p>
+  </section>
   <section class="card" id="card-updates">
     <header class="card-head">
       <h2>Aggiornamenti</h2>
@@ -394,7 +408,7 @@
     <header class="card-head"><h2>Temperatura</h2><span class="chip" id="t-chip">—</span></header>
     <div class="temp-big" id="t-value">—</div>
     <svg class="spark" id="t-spark" viewBox="0 0 300 70" preserveAspectRatio="none"></svg>
-    <p class="hint" id="t-range">Ultimi 60 minuti. La temperatura di ogni scatto viene salvata in <code>sequence.json</code>.</p>
+    <p class="hint" id="t-range" data-i18n-html>Ultimi 60 minuti. La temperatura di ogni scatto viene salvata in <code>sequence.json</code>.</p>
   </section>
 
   <section class="card" id="card-dof">
@@ -425,10 +439,12 @@
   <div class="shutdown-box">
     <div class="shutdown-icon">⏻</div>
     <h1 id="shutdown-title">Focus Stack è chiuso</h1>
-    <p id="shutdown-text">Per riprendere apri l'app <b>Focus Stack</b>: questa pagina si ricaricherà da sola.</p>
+    <p id="shutdown-text" data-i18n-html>Per riprendere apri l'app <b>Focus Stack</b>: questa pagina si ricaricherà da sola.</p>
     <p class="hint" id="shutdown-hint">Oppure puoi chiudere questa finestra.</p>
   </div>
 </div>
+<script src="/lang.js"></script>
+<script src="/i18n.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

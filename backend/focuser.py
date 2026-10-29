@@ -22,6 +22,8 @@ import time
 import serial
 from serial.tools import list_ports
 
+from .i18n import tr
+
 
 def list_serial_ports() -> list[dict]:
     ports = []
@@ -61,11 +63,11 @@ MOTOR_SETTINGS: dict[str, tuple[str, str, type]] = {
 
 def check_motor_value(name: str, arg: int) -> None:
     if name == "step_mode" and arg not in (1, 2, 4, 8, 16, 32, 64, 128, 256):
-        raise FocuserError("Microstep non valido")
+        raise FocuserError(tr("Microstep non valido"))
     if name == "speed" and arg not in (0, 1, 2):
-        raise FocuserError("Velocità non valida")
+        raise FocuserError(tr("Velocità non valida"))
     if name in ("backlash_in_steps", "backlash_out_steps") and not 0 <= arg <= 255:
-        raise FocuserError("Il gioco del firmware va da 0 a 255 passi")
+        raise FocuserError(tr("Il gioco del firmware va da 0 a 255 passi"))
 
 
 class MyFocuserPro2:
@@ -120,20 +122,20 @@ class MyFocuserPro2:
         with self._lock:
             ser = self._ser
             if ser is None:
-                raise FocuserError("Non connesso")
+                raise FocuserError(tr("Non connesso"))
             ser.timeout = timeout
             ser.reset_input_buffer()
             ser.write(cmd.encode("ascii"))
             ser.flush()
             raw = ser.read_until(b"#", 32)
         if not raw.endswith(b"#"):
-            raise FocuserError(f"Nessuna risposta a {cmd}")
+            raise FocuserError(tr("Nessuna risposta a {cmd}", cmd=cmd))
         return raw.decode("ascii", "replace")[:-1]
 
     def _send(self, cmd: str) -> None:
         with self._lock:
             if self._ser is None:
-                raise FocuserError("Non connesso")
+                raise FocuserError(tr("Non connesso"))
             self._ser.reset_input_buffer()
             self._ser.write(cmd.encode("ascii"))
             self._ser.flush()
@@ -156,7 +158,7 @@ class MyFocuserPro2:
                 time.sleep(0.5)
         else:
             self._close_blocking()
-            raise FocuserError(f"Il dispositivo non risponde come myFocuserPro2 ({last_exc})")
+            raise FocuserError(tr("Il dispositivo non risponde come myFocuserPro2 ({exc})", exc=last_exc))
         self._send(":16#")  # temperatura in °C
         self.max_step = int(self._value(":08#"))
         try:
@@ -214,7 +216,8 @@ class MyFocuserPro2:
     def check(self, pos: int) -> int:
         lo, hi = self.bounds()
         if pos < lo or (hi is not None and pos > hi):
-            raise LimitError(f"Posizione {pos} fuori dai fine corsa ({lo} – {hi if hi is not None else '∞'})")
+            raise LimitError(tr("Posizione {pos} fuori dai fine corsa ({lo} – {hi})", pos=pos, lo=lo,
+                                hi=hi if hi is not None else "∞"))
         return int(pos)
 
     def clamp(self, pos: int) -> int:
@@ -247,10 +250,10 @@ class MyFocuserPro2:
             await self.poll()
             if not self.moving:
                 if target is not None and self.position != target:
-                    raise FocuserError(f"Movimento terminato a {self.position} invece di {target}")
+                    raise FocuserError(tr("Movimento terminato a {pos} invece di {target}", pos=self.position, target=target))
                 return
             if time.monotonic() > deadline:
-                raise FocuserError("Timeout movimento")
+                raise FocuserError(tr("Timeout movimento"))
             await asyncio.sleep(0.1)
 
     async def halt(self) -> None:
@@ -270,7 +273,7 @@ class MyFocuserPro2:
 
     async def set_motor(self, name: str, value) -> dict:
         if name not in MOTOR_SETTINGS:
-            raise FocuserError(f"Impostazione motore sconosciuta: {name}")
+            raise FocuserError(tr("Impostazione motore sconosciuta: {name}", name=name))
         _, set_fmt, kind = MOTOR_SETTINGS[name]
         arg = int(bool(value)) if kind is bool else int(value)
         check_motor_value(name, arg)
@@ -368,7 +371,7 @@ class SimulatedFocuser(MyFocuserPro2):
 
     async def set_motor(self, name: str, value) -> dict:
         if name not in MOTOR_SETTINGS:
-            raise FocuserError(f"Impostazione motore sconosciuta: {name}")
+            raise FocuserError(tr("Impostazione motore sconosciuta: {name}", name=name))
         kind = MOTOR_SETTINGS[name][2]
         value = bool(value) if kind is bool else int(value)
         check_motor_value(name, int(value))

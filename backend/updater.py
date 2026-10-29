@@ -19,6 +19,8 @@ import time
 import urllib.request
 from pathlib import Path
 
+from .i18n import tr
+
 APP_ROOT = Path(__file__).resolve().parent.parent
 GITHUB_REPO = "teoteo/focus-stack"
 ASSET_RE = re.compile(r"^FocusStack-.*\.zip$")
@@ -90,7 +92,7 @@ class AppUpdater:
             with urllib.request.urlopen(req, timeout=10) as r:
                 rel = json.load(r)
         except Exception as exc:  # noqa: BLE001 - senza rete si riprova più tardi
-            self.error = f"Controllo aggiornamenti non riuscito: {exc}"
+            self.error = tr("Controllo aggiornamenti non riuscito: {exc}", exc=exc)
             self.checked_at = time.time()
             return
         self.error = ""
@@ -107,25 +109,25 @@ class AppUpdater:
         """Scarica e prepara la nuova versione, poi avvia lo script che sostituisce l'app."""
         bundle = app_bundle()
         if not bundle:
-            raise RuntimeError("Aggiornamento possibile solo dall'app Focus Stack installata")
+            raise RuntimeError(tr("Aggiornamento possibile solo dall'app Focus Stack installata"))
         if not self.asset_url:
-            raise RuntimeError("Nessun aggiornamento disponibile")
+            raise RuntimeError(tr("Nessun aggiornamento disponibile"))
         parent = bundle.parent
         if not os.access(parent, os.W_OK):
-            raise RuntimeError(f"Non ho i permessi per scrivere in {parent}: sposta Focus Stack "
-                               "in Applicazioni con un account amministratore")
+            raise RuntimeError(tr("Non ho i permessi per scrivere in {path}: sposta Focus Stack "
+                                  "in Applicazioni con un account amministratore", path=parent))
         self.installing = True
         try:
             work = Path(tempfile.mkdtemp(prefix="FocusStack-update-"))
             zip_path = work / "FocusStack.zip"
-            self.log(f"Scaricamento della versione {self.latest}…")
+            self.log(tr("Scaricamento della versione {version}…", version=self.latest))
             req = urllib.request.Request(self.asset_url, headers={"User-Agent": "FocusStack"})
             with urllib.request.urlopen(req, timeout=60) as r, open(zip_path, "wb") as out:
                 shutil.copyfileobj(r, out)
             subprocess.run(["ditto", "-x", "-k", str(zip_path), str(work / "x")], check=True)
             new_app = next((work / "x").glob("*.app"), None)
             if not new_app or not (new_app / "Contents" / "Info.plist").exists():
-                raise RuntimeError("Il pacchetto scaricato non contiene l'app")
+                raise RuntimeError(tr("Il pacchetto scaricato non contiene l'app"))
             # copia accanto a quella attuale: lo scambio finale è un semplice rename
             staged = parent / f".{bundle.stem}-aggiornamento.app"
             shutil.rmtree(staged, ignore_errors=True)
@@ -135,7 +137,7 @@ class AppUpdater:
             subprocess.Popen(["/bin/zsh", str(script), str(bundle), str(staged), str(work)],
                              stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                              stderr=subprocess.DEVNULL, start_new_session=True)
-            self.log(f"Installazione della versione {self.latest}: Focus Stack si riavvia…")
+            self.log(tr("Installazione della versione {version}: Focus Stack si riavvia…", version=self.latest))
         except Exception:
             self.installing = False
             raise

@@ -49,10 +49,12 @@ printf '{"build": %s, "hex": "firmware.hex", "boards": {"ardufocus": "firmware-a
 
 # ---------- applet (programma di avvio) e icona ----------
 osacompile -s -o "$APP" "$ROOT/packaging/launcher.applescript"
+# packaging/AppIcon-1024.png = packaging/AppIcon.svg nella griglia di macOS, con angoli e margine trasparenti
 ICONSET="$STAGE/AppIcon.iconset"; mkdir -p "$ICONSET"
+ICON_SRC="$ROOT/packaging/AppIcon-1024.png"
 for s in 16 32 128 256 512; do
-  sips -z $s $s "$ROOT/web/icon-512.png" --out "$ICONSET/icon_${s}x${s}.png" >/dev/null
-  d=$((s * 2)); [ $d -le 512 ] && sips -z $d $d "$ROOT/web/icon-512.png" --out "$ICONSET/icon_${s}x${s}@2x.png" >/dev/null
+  sips -z $s $s "$ICON_SRC" --out "$ICONSET/icon_${s}x${s}.png" >/dev/null
+  d=$((s * 2)); sips -z $d $d "$ICON_SRC" --out "$ICONSET/icon_${s}x${s}@2x.png" >/dev/null
 done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/applet.icns"
 rm -rf "$ICONSET" "$APP/Contents/Resources/Assets.car"

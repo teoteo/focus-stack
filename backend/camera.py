@@ -17,6 +17,8 @@ import zlib
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from .i18n import tr
+
 try:
     import gphoto2 as gp
 except ImportError:  # pragma: no cover
@@ -77,7 +79,7 @@ class GPhotoCamera:
     @staticmethod
     def _detect_blocking() -> list[dict]:
         if not GPHOTO_AVAILABLE:
-            raise CameraError("python-gphoto2 non installato (pip install gphoto2)")
+            raise CameraError(tr("python-gphoto2 non installato (pip install gphoto2)"))
         release_from_macos()
         time.sleep(0.3)
         cams = gp.check_result(gp.gp_camera_autodetect())
@@ -90,7 +92,7 @@ class GPhotoCamera:
     # ---------- connessione ----------
     def _connect_blocking(self) -> None:
         if not GPHOTO_AVAILABLE:
-            raise CameraError("python-gphoto2 non installato (pip install gphoto2)")
+            raise CameraError(tr("python-gphoto2 non installato (pip install gphoto2)"))
         last_err = None
         for attempt in range(4):
             release_from_macos()
@@ -111,9 +113,9 @@ class GPhotoCamera:
             except gp.GPhoto2Error as exc:
                 last_err = exc
         else:
-            raise CameraError(
-                f"Impossibile aprire la fotocamera ({last_err}). Chiudi Foto, Anteprima, "
-                "Acquisizione Immagine e i software del produttore; per Sony imposta USB 'PC Remote'.")
+            raise CameraError(tr(
+                "Impossibile aprire la fotocamera ({err}). Chiudi Foto, Anteprima, Acquisizione Immagine "
+                "e i software del produttore; per Sony imposta USB 'PC Remote'.", err=last_err))
         try:
             summary = str(self._cam.get_summary())
             for line in summary.splitlines():
@@ -164,7 +166,7 @@ class GPhotoCamera:
     def _set_blocking(self, logical: str, value: str) -> dict:
         key = self._keys.get(logical)
         if not key:
-            raise CameraError(f"Impostazione '{logical}' non supportata da questa fotocamera")
+            raise CameraError(tr("Impostazione '{name}' non supportata da questa fotocamera", name=logical))
         w = self._cam.get_single_config(key)
         w.set_value(value)
         self._cam.set_single_config(key, w)
@@ -201,7 +203,7 @@ class GPhotoCamera:
 
     def _require(self) -> None:
         if not self.connected:
-            raise CameraError("Fotocamera non connessa")
+            raise CameraError(tr("Fotocamera non connessa"))
 
     # ---------- live view ----------
     def _preview_blocking(self) -> bytes:
@@ -210,7 +212,7 @@ class GPhotoCamera:
         try:
             cam_file = self._cam.capture_preview()
         except gp.GPhoto2Error as exc:
-            raise CameraError(f"Live view non disponibile su questa fotocamera ({exc})") from exc
+            raise CameraError(tr("Live view non disponibile su questa fotocamera ({exc})", exc=exc)) from exc
         self.live = True
         return bytes(memoryview(cam_file.get_data_and_size()))
 
@@ -264,7 +266,7 @@ class GPhotoCamera:
         if delay_s <= 0:
             if self._mirror_original is not None and current != self._mirror_original:
                 self._set_raw("exposuredelaymode", self._mirror_original)
-                self.log(f"Ritardo di esposizione della fotocamera riportato a {self._mirror_original}")
+                self.log(tr("Ritardo di esposizione della fotocamera riportato a {value}", value=self._mirror_original))
             self._mirror_original = None
             return
         choices = [w.get_choice(i) for i in range(w.count_choices())]
@@ -279,12 +281,12 @@ class GPhotoCamera:
         else:  # modelli con solo On/Off: ritardo fisso deciso dalla fotocamera
             choice = next((c for c in choices if c.lower() in ("on", "1")), None)
         if choice is None:
-            raise CameraError(f"Ritardo di esposizione non riconosciuto (valori: {', '.join(choices)})")
+            raise CameraError(tr("Ritardo di esposizione non riconosciuto (valori: {values})", values=", ".join(choices)))
         if choice != current:
             if self._mirror_original is None:
                 self._mirror_original = current
             self._set_raw("exposuredelaymode", choice)
-            self.log(f"Ritardo di esposizione della fotocamera: {choice} (richiesti {delay_s:g} s)")
+            self.log(tr("Ritardo di esposizione della fotocamera: {choice} (richiesti {delay} s)", choice=choice, delay=f"{delay_s:g}"))
 
     def _canon_mirror_up_blocking(self, delay_s: float) -> list | None:
         """Prima pressione: con il blocco specchio attivo solleva lo specchio, poi attende.
@@ -302,8 +304,8 @@ class GPhotoCamera:
         if files or shot:
             if not self._mirror_warned:
                 self._mirror_warned = True
-                self.log("Attenzione: la fotocamera ha scattato senza ritardo. Attiva il blocco dello "
-                         "specchio nel menu della fotocamera (funzioni personalizzate)")
+                self.log(tr("Attenzione: la fotocamera ha scattato senza ritardo. Attiva il blocco dello "
+                            "specchio nel menu della fotocamera (funzioni personalizzate)"))
             return files
         return None
 
@@ -320,7 +322,7 @@ class GPhotoCamera:
         elif self._has("bulb"):
             key, press, release = "bulb", 1, 0
         else:
-            raise CameraError("Questa fotocamera non supporta la posa B da remoto")
+            raise CameraError(tr("Questa fotocamera non supporta la posa B da remoto"))
         for value in (press, release):
             w = self._cam.get_single_config(key)
             w.set_value(value)
@@ -362,7 +364,7 @@ class GPhotoCamera:
             new_files += [f for f in self._drain_events(150, False, time.monotonic() + 2) if f not in new_files]
 
         if not new_files:
-            raise CameraError("La fotocamera non ha segnalato nessun file")
+            raise CameraError(tr("La fotocamera non ha segnalato nessun file"))
         saved = []
         if mode == "download" and dest_base:
             for folder, name in new_files:
@@ -440,8 +442,16 @@ def _sim_live_png(position: int | None, t: float) -> bytes:
 class SimulatedCamera(GPhotoCamera):
     simulated = True
 
+    @property
+    def model(self) -> str:
+        return tr("Fotocamera simulata")   # nella lingua corrente, anche dopo un cambio di lingua
+
+    @model.setter
+    def model(self, _value: str) -> None:
+        pass
+
     def __init__(self):
-        super().__init__("Fotocamera simulata", "sim")
+        super().__init__(tr("Fotocamera simulata"), "sim")
         self.mirror_method = "sim"
         self._open = False
         self._n = 0
@@ -482,7 +492,7 @@ class SimulatedCamera(GPhotoCamera):
 
     async def set_setting(self, logical: str, value: str) -> dict:
         if logical not in self.settings or value not in self.settings[logical]["choices"]:
-            raise CameraError(f"Valore non valido: {value}")
+            raise CameraError(tr("Valore non valido: {value}", value=value))
         self.settings[logical]["current"] = value
         return self.settings
 

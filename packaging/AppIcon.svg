@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Icona dell'app per macOS: stesso disegno di web/icon.svg nella griglia delle icone di macOS
+       (quadrato arrotondato di 824 px su 1024, margine trasparente e ombra leggera). -->
+  <defs>
+    <filter id="ombra" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity=".3"/>
+    </filter>
+  </defs>
+  <g transform="translate(100 100) scale(1.609375)">
+    <rect width="512" height="512" rx="115" fill="#1d2430" filter="url(#ombra)"/>
+    <g fill="none" stroke-linecap="round">
+      <ellipse cx="256" cy="150" rx="150" ry="44" stroke="#3b82f6" stroke-width="22" opacity=".45"/>
+      <ellipse cx="256" cy="256" rx="150" ry="44" stroke="#3b82f6" stroke-width="22" opacity=".75"/>
+      <ellipse cx="256" cy="362" rx="150" ry="44" stroke="#60a5fa" stroke-width="22"/>
+    </g>
+    <circle cx="256" cy="256" r="26" fill="#f8fafc"/>
+  </g>
+</svg>

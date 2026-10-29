@@ -41,6 +41,8 @@ DEFAULTS: dict = {
         "session_name": "stack",
     },
     "presets": {},
+    # lingua dell'interfaccia: "auto" = quella di macOS, oppure "it" / "en"
+    "language": "auto",
 }
 
 _lock = threading.Lock()

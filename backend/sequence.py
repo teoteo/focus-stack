@@ -9,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
+from .i18n import tr
+
 
 @dataclass
 class SequenceParams:
@@ -79,12 +81,12 @@ class SequenceRunner:
 
     def start(self, params: SequenceParams) -> None:
         if self.busy:
-            raise RuntimeError("Sequenza già in corso")
+            raise RuntimeError(tr("Sequenza già in corso"))
         focuser = self._focuser()
         if focuser is None:
-            raise RuntimeError("Focheggiatore non connesso")
+            raise RuntimeError(tr("Focheggiatore non connesso"))
         if self._camera() is None:
-            raise RuntimeError("Fotocamera non connessa")
+            raise RuntimeError(tr("Fotocamera non connessa"))
         # Verifica preventiva: nessun movimento della sequenza deve uscire dai fine corsa.
         focuser.check(params.start)
         focuser.check(params.end)
@@ -93,8 +95,8 @@ class SequenceRunner:
             try:
                 focuser.check(approach)
             except Exception as exc:
-                raise RuntimeError(f"La compensazione del gioco porterebbe fuori dai limiti: {exc}. "
-                                   "Riduci il gioco o sposta l'inizio.") from exc
+                raise RuntimeError(tr("La compensazione del gioco porterebbe fuori dai limiti: {exc}. "
+                                      "Riduci il gioco o sposta l'inizio.", exc=exc)) from exc
         self._stop = False
         self._resume.set()
         self._task = asyncio.create_task(self._run(params))
@@ -104,14 +106,14 @@ class SequenceRunner:
             self._resume.clear()
             self.status.state = "paused"
             self.status.message = reason
-            self._log(f"Sequenza in pausa{': ' + reason if reason else ''}")
+            self._log(tr("Sequenza in pausa: {reason}", reason=reason) if reason else tr("Sequenza in pausa"))
 
     def resume(self) -> None:
         if self.busy and self.status.state == "paused":
             self.status.state = "running"
             self.status.message = ""
             self._resume.set()
-            self._log("Sequenza ripresa")
+            self._log(tr("Sequenza ripresa"))
 
     async def stop(self) -> None:
         if not self.busy:
@@ -152,12 +154,13 @@ class SequenceRunner:
         self.status = SequenceStatus(state="running", total=len(positions), started_at=time.time(),
                                      folder=str(folder) if download else None,
                                      start=p.start, end=p.end, step=p.step)
-        self._log(f"Avvio sequenza: {len(positions)} scatti da {p.start} a {p.end}, passo {p.step}")
+        self._log(tr("Avvio sequenza: {n} scatti da {start} a {end}, passo {step}",
+                     n=len(positions), start=p.start, end=p.end, step=p.step))
         shot_times: list[float] = []
         try:
             approach = p.approach_position()
             if approach is not None:
-                self._log(f"Compensazione gioco: passaggio da {approach}")
+                self._log(tr("Compensazione gioco: passaggio da {pos}", pos=approach))
                 await focuser.move_to(approach, wait=True)
             i = 0
             while i < len(positions):
@@ -172,8 +175,8 @@ class SequenceRunner:
                 # Verifica che nessuno abbia mosso il motore (pulsanti fisici) durante l'attesa.
                 await focuser.poll(with_temp=True)
                 if focuser.position != pos or focuser.moving:
-                    self.pause(f"movimento manuale rilevato ({focuser.position} invece di {pos}). "
-                               "Premi Riprendi per ripetere lo scatto")
+                    self.pause(tr("movimento manuale rilevato ({actual} invece di {pos}). "
+                                  "Premi Riprendi per ripetere lo scatto", actual=focuser.position, pos=pos))
                     await self._checkpoint()
                     continue  # ripete la stessa posizione
                 base = folder / f"{safe_name}_{i + 1:04d}" if download else None
@@ -185,7 +188,7 @@ class SequenceRunner:
                 self.status.files.extend(files)
                 self._on_shot(record)
                 temp = f", {focuser.temperature:.1f} °C" if focuser.temperature is not None else ""
-                self._log(f"Scatto {i + 1}/{len(positions)} @ {pos}{temp}"
+                self._log(tr("Scatto {i}/{n} @ {pos}", i=i + 1, n=len(positions), pos=pos) + temp
                           + (f" → {Path(files[0]).name}" if files else ""))
                 await asyncio.sleep(p.post_shot_ms / 1000)
                 shot_times.append(time.time() - t0)
@@ -194,21 +197,21 @@ class SequenceRunner:
                 self.status.eta_s = avg * (len(positions) - i - 1)
                 i += 1
             self.status.state = "done"
-            self.status.message = "Sequenza completata"
-            self._log("Sequenza completata")
+            self.status.message = tr("Sequenza completata")
+            self._log(tr("Sequenza completata"))
         except asyncio.CancelledError:
             self.status.state = "idle"
-            self.status.message = "Sequenza interrotta"
-            self._log("Sequenza interrotta dall'utente")
+            self.status.message = tr("Sequenza interrotta")
+            self._log(tr("Sequenza interrotta dall'utente"))
         except Exception as exc:  # noqa: BLE001
             if self._stop:  # l'halt durante un movimento genera un errore di posizione: è un'interruzione
                 self.status.state = "idle"
-                self.status.message = "Sequenza interrotta"
-                self._log("Sequenza interrotta dall'utente")
+                self.status.message = tr("Sequenza interrotta")
+                self._log(tr("Sequenza interrotta dall'utente"))
             else:
                 self.status.state = "error"
                 self.status.message = str(exc)
-                self._log(f"ERRORE sequenza: {exc}")
+                self._log(tr("ERRORE sequenza: {exc}", exc=exc))
         finally:
             self.status.eta_s = None
             try:
@@ -218,6 +221,6 @@ class SequenceRunner:
             if p.return_to_start and not self._stop and focuser.connected:
                 try:
                     await focuser.move_to(p.start, wait=False)
-                    self._log(f"Ritorno alla posizione iniziale {p.start}")
+                    self._log(tr("Ritorno alla posizione iniziale {pos}", pos=p.start))
                 except Exception as exc:  # noqa: BLE001
-                    self._log(f"Ritorno all'inizio fallito: {exc}")
+                    self._log(tr("Ritorno all'inizio fallito: {exc}", exc=exc))

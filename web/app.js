@@ -25,7 +25,7 @@ async function api(path, body, method = "POST") {
   try { data = await res.json(); } catch { /* risposta vuota */ }
   if (!res.ok) {
     const d = data && data.detail;
-    throw new Error(typeof d === "string" ? d : Array.isArray(d) ? "Valore non valido" : res.statusText);
+    throw new Error(typeof d === "string" ? d : Array.isArray(d) ? t("Valore non valido") : res.statusText);
   }
   return data;
 }
@@ -45,7 +45,7 @@ async function act(btn, fn, okMsg) {
 
 const num = (id) => Number($(id).value);
 const optNum = (id) => ($(id).value.trim() === "" ? null : Number($(id).value));
-const fmtInt = (n) => (n == null ? "—" : Number(n).toLocaleString("it-IT"));
+const fmtInt = (n) => (n == null ? "—" : Number(n).toLocaleString(LOCALE));
 const fmtTime = (s) => {
   if (s == null || !isFinite(s)) return "—";
   s = Math.round(s);
@@ -56,7 +56,7 @@ const umPerStep = () => (S && S.um_per_step) || 0;
 const fmtUm = (steps) => {
   const um = steps * umPerStep();
   if (!umPerStep()) return "";
-  return Math.abs(um) >= 1000 ? `${(um / 1000).toFixed(3)} mm` : `${um.toFixed(Math.abs(um) < 10 ? 2 : 1)} µm`;
+  return Math.abs(um) >= 1000 ? `${fmtNum(um / 1000, 3)} mm` : `${fmtNum(um, Math.abs(um) < 10 ? 2 : 1)} µm`;
 };
 const running = () => S && ["running", "paused", "stopping"].includes(S.sequence.state);
 const towardSign = () => (S && S.settings.toward_specimen === "increasing" ? 1 : -1);
@@ -88,7 +88,7 @@ async function checkServer() {
     if (!serverStopped) {
       serverStopped = true;
       if (viewerWin && !viewerWin.closed) viewerWin.close();
-      document.title = updatingApp ? "Focus Stack — aggiornamento" : "Focus Stack — server spento";
+      document.title = updatingApp ? t("Focus Stack — aggiornamento") : t("Focus Stack — server spento");
       $("shutdown-screen").classList.remove("hidden");
     }
     setTimeout(checkServer, 2000);
@@ -109,9 +109,11 @@ function render() {
   if (!S.settings.mechanics || !("bounds" in f || !f.connected)) {
     // server avviato con una versione precedente del codice
     $("alarm").classList.remove("hidden");
-    $("alarm-text").textContent = "Il server in esecuzione è di una versione precedente: chiudi Focus Stack e riaprilo.";
+    $("alarm-text").textContent = t("Il server in esecuzione è di una versione precedente: chiudi Focus Stack e riaprilo.");
     return;
   }
+  // lingua cambiata (anche da un'altra finestra): ricarica per avere testi e numeri nella lingua nuova
+  if (S.language && S.language !== LANG) { location.reload(); return; }
   if (!formLoaded) safe("form", () => loadForms(S.settings));
 
   // barra superiore
@@ -119,9 +121,9 @@ function render() {
   setDot("st-camera", c.connected ? (c.busy ? "busy" : "on") : "");
   const hasTemp = f.connected && f.temperature != null;
   $("st-temp").classList.toggle("hidden", !hasTemp);
-  if (hasTemp) $("st-temp").textContent = `${f.temperature.toFixed(1)} °C`;
+  if (hasTemp) $("st-temp").textContent = `${fmtNum(f.temperature, 1)} °C`;
   const alarm = S.alarm || (S.code_stale
-    ? "Il codice dell'app è cambiato: chiudi Focus Stack e riaprilo, poi ricarica la pagina." : "");
+    ? t("Il codice dell'app è cambiato: chiudi Focus Stack e riaprilo, poi ricarica la pagina.") : "");
   $("alarm").classList.toggle("hidden", !alarm);
   $("alarm-text").textContent = alarm;
 
@@ -139,29 +141,31 @@ function render() {
 // ---------------- aggiornamenti (app da GitHub, firmware incluso nell'app) ----------------
 function renderUpdates() {
   const a = S.app || {}, fw = S.firmware_update || {}, f = S.focuser;
-  $("up-app").textContent = a.available ? `${a.version} → disponibile ${a.latest}`
-    : a.error ? `${a.version ?? "?"} (controllo non riuscito: verifica la connessione a internet)`
-    : `${a.version ?? "?"}${a.latest ? " (aggiornata)" : ""}`;
+  const ver = a.version ?? "?";
+  $("up-app").textContent = a.available ? t("{v} → disponibile {latest}", { v: ver, latest: a.latest })
+    : a.error ? t("{v} (controllo non riuscito: verifica la connessione a internet)", { v: ver })
+    : a.latest ? t("{v} (aggiornata)", { v: ver }) : ver;
+  const fwAvail = fw.bundled ? " → " + t("disponibile build {b}", { b: fw.bundled }) : "";
   let fwText;
-  if (!f.connected || f.simulated) fwText = "collega il focheggiatore per controllarlo";
-  else if (fw.installed == null) fwText = `originale myFocuserPro2 ${f.firmware ?? ""}${fw.bundled ? ` → disponibile build ${fw.bundled}` : ""}`;
-  else fwText = `build ${fw.installed}${fw.available ? ` → disponibile build ${fw.bundled}` : " (aggiornato)"}`;
+  if (!f.connected || f.simulated) fwText = t("collega il focheggiatore per controllarlo");
+  else if (fw.installed == null) fwText = t("originale myFocuserPro2 {fw}", { fw: f.firmware ?? "" }) + fwAvail;
+  else fwText = t("build {b}", { b: fw.installed }) + (fw.available ? fwAvail : " " + t("(aggiornato)"));
   $("up-fw").textContent = fwText;
   $("fw-update").disabled = !fw.available || fw.busy || running();
   $("fw-progress-box").classList.toggle("hidden", !fw.busy && !fw.error);
   $("fw-progress").style.width = `${Math.round((fw.progress || 0) * 100)}%`;
-  $("fw-phase").textContent = fw.error ? `Errore: ${fw.error}` : fw.busy ? `${fw.phase}… ${Math.round((fw.progress || 0) * 100)}%` : "";
+  $("fw-phase").textContent = fw.error ? t("Errore: {e}", { e: fw.error }) : fw.busy ? `${fw.phase}… ${Math.round((fw.progress || 0) * 100)}%` : "";
 
   // barra in alto: prima l'app, poi il firmware
   const bar = $("update-bar"), btn = $("update-btn");
   if (a.available && !a.installing) {
-    $("update-text").textContent = `È disponibile Focus Stack ${a.latest} (installata ${a.version}).`;
-    btn.textContent = a.can_install ? "Aggiorna e riavvia" : "Scarica da GitHub";
+    $("update-text").textContent = t("È disponibile Focus Stack {latest} (installata {v}).", { latest: a.latest, v: a.version });
+    btn.textContent = a.can_install ? t("Aggiorna e riavvia") : t("Scarica da GitHub");
     btn.onclick = a.can_install ? installAppUpdate : () => window.open("https://github.com/teoteo/focus-stack/releases/latest");
     bar.classList.remove("hidden");
   } else if (fw.available && !fw.busy) {
-    $("update-text").textContent = `È disponibile un aggiornamento del firmware del focheggiatore (build ${fw.bundled}).`;
-    btn.textContent = "Vai agli aggiornamenti";
+    $("update-text").textContent = t("È disponibile un aggiornamento del firmware del focheggiatore (build {b}).", { b: fw.bundled });
+    btn.textContent = t("Vai agli aggiornamenti");
     btn.onclick = () => switchTab("config");
     bar.classList.remove("hidden");
   } else bar.classList.add("hidden");
@@ -169,8 +173,9 @@ function renderUpdates() {
 
 let updatingApp = false;
 async function installAppUpdate() {
-  if (running()) return toast("Attendi la fine della sequenza", true);
-  if (!confirm(`Installare Focus Stack ${S.app.latest}?\n\nL'app si chiude e si riapre da sola; focheggiatore e fotocamera andranno ricollegati.`)) return;
+  if (running()) return toast(t("Attendi la fine della sequenza"), true);
+  if (!confirm(t("Installare Focus Stack {v}?", { v: S.app.latest }) + "\n\n" +
+    t("L'app si chiude e si riapre da sola; focheggiatore e fotocamera andranno ricollegati."))) return;
   $("update-btn").disabled = true;
   try {
     await api("/api/app/update");
@@ -179,25 +184,27 @@ async function installAppUpdate() {
     return toast(e.message, true);
   }
   updatingApp = true;
-  $("shutdown-title").textContent = "Aggiornamento in corso…";
-  $("shutdown-text").textContent = "Focus Stack si chiude, installa la nuova versione e si riapre da solo. Questa pagina si ricaricherà.";
+  $("shutdown-title").textContent = t("Aggiornamento in corso…");
+  $("shutdown-text").textContent = t("Focus Stack si chiude, installa la nuova versione e si riapre da solo. Questa pagina si ricaricherà.");
   $("shutdown-hint").textContent = "";
   $("shutdown-screen").classList.remove("hidden");
 }
 
 async function updateFirmware() {
   const fw = S.firmware_update;
-  if (!confirm(`Aggiornare il firmware del focheggiatore alla build ${fw.bundled}?\n\nDurante l'aggiornamento (circa 20 secondi) non scollegare il cavo USB. Le impostazioni del focheggiatore restano.`)) return;
+  if (!confirm(t("Aggiornare il firmware del focheggiatore alla build {b}?", { b: fw.bundled }) + "\n\n" +
+    t("Durante l'aggiornamento (circa 20 secondi) non scollegare il cavo USB. Le impostazioni del focheggiatore restano."))) return;
   try { await api("/api/firmware/update"); } catch (e) { toast(e.message, true); }
 }
 
 function renderFocuser(f, run) {
-  setChip("f-chip", !f.connected ? "Disconnesso" : f.moving ? "In movimento" : "Fermo",
+  setChip("f-chip", !f.connected ? t("Disconnesso") : f.moving ? t("In movimento") : t("Fermo"),
     !f.connected ? "" : f.moving ? "busy" : "ok");
   $("f-connect-box").classList.toggle("hidden", f.connected);
   $("f-connected-line").classList.toggle("hidden", !f.connected);
   if (f.connected) {
-    $("f-info").textContent = `${f.simulated ? "Simulatore" : f.port} · firmware ${f.firmware ?? "?"} · max ${fmtInt(f.max_step)}`;
+    $("f-info").textContent = t("{port} · firmware {fw} · max {max}",
+      { port: f.simulated ? t("Simulatore") : f.port, fw: f.firmware ?? "?", max: fmtInt(f.max_step) });
   }
   $("f-pos").textContent = f.connected ? fmtInt(f.position) : "—";
   $("f-pos-um").innerHTML = f.connected && umPerStep() ? fmtUm(f.position) : "&nbsp;";
@@ -206,16 +213,16 @@ function renderFocuser(f, run) {
   $("f-limits").textContent = `${fmtInt(lo)} – ${hi == null ? "∞" : fmtInt(hi)}`;
   if (f.connected && hi != null) {
     const towardDist = towardSign() < 0 ? f.position - lo : hi - f.position;
-    $("f-range-left").textContent = `verso il campione: ${fmtInt(towardDist)} passi${umPerStep() ? " · " + fmtUm(towardDist) : ""}`;
+    $("f-range-left").textContent = t("verso il campione: {n} passi", { n: fmtInt(towardDist) }) + (umPerStep() ? " · " + fmtUm(towardDist) : "");
   } else $("f-range-left").innerHTML = "&nbsp;";
 
   renderRail(f, lo, hi);
 
   renderJogSizes();
   const away = towardSign() < 0 ? "+" : "−", toward = towardSign() < 0 ? "−" : "+";
-  $("jog-away-label").textContent = `Allontana  ${away}${fmtInt(jogSize)}`;
-  $("jog-toward-label").textContent = `Avvicina  ${toward}${fmtInt(jogSize)}`;
-  $("jog-um").innerHTML = umPerStep() ? `${fmtInt(jogSize)} passi = ${fmtUm(jogSize)}` : "&nbsp;";
+  $("jog-away-label").textContent = `${t("Allontana")}  ${away}${fmtInt(jogSize)}`;
+  $("jog-toward-label").textContent = `${t("Avvicina")}  ${toward}${fmtInt(jogSize)}`;
+  $("jog-um").innerHTML = umPerStep() ? t("{n} passi = {um}", { n: fmtInt(jogSize), um: fmtUm(jogSize) }) : "&nbsp;";
 
   const dis = !f.connected || run;
   ["jog-away", "jog-toward", "f-goto-btn", "f-goto"].forEach((id) => ($(id).disabled = dis));
@@ -257,19 +264,19 @@ function renderRail(f, lo, hi) {
       }
     }
   }
-  $("rail-lo").textContent = `min ${fmtInt(lo)}`;
-  $("rail-hi").textContent = hi == null ? "max firmware" : `max ${fmtInt(hi)}`;
-  $("rail-dir").textContent = towardSign() < 0 ? "◀ campione" : "campione ▶";
+  $("rail-lo").textContent = t("min {n}", { n: fmtInt(lo) });
+  $("rail-hi").textContent = hi == null ? t("max firmware") : t("max {n}", { n: fmtInt(hi) });
+  $("rail-dir").textContent = towardSign() < 0 ? t("◀ campione") : t("campione ▶");
 }
 
 const CAM_FIELDS = { shutterspeed: "c-shutter", iso: "c-iso", aperture: "c-aperture", imageformat: "c-format", capturetarget: "c-target" };
 
 function renderCamera(c, run) {
   $("gp-missing").classList.toggle("hidden", S.gphoto);
-  setChip("c-chip", !c.connected ? "Disconnessa" : c.busy ? "Scatto…" : "Pronta", !c.connected ? "" : c.busy ? "busy" : "ok");
+  setChip("c-chip", !c.connected ? t("Disconnessa") : c.busy ? t("Scatto…") : t("Pronta"), !c.connected ? "" : c.busy ? "busy" : "ok");
   $("c-connect-box").classList.toggle("hidden", c.connected);
   $("c-connected-line").classList.toggle("hidden", !c.connected);
-  if (c.connected) $("c-info").textContent = c.model + (c.simulated ? " (simulata)" : "");
+  if (c.connected) $("c-info").textContent = c.model;   // la fotocamera simulata si chiama già così
   ["c-reload", "c-test"].forEach((id) => ($(id).disabled = !c.connected || run || c.busy));
   $("c-mirror").disabled = run;
   renderMirrorHint();
@@ -281,7 +288,7 @@ function renderCamera(c, run) {
   for (const [name, id] of Object.entries(CAM_FIELDS)) {
     const sel = $(id), s = settings[name];
     sel.innerHTML = "";
-    if (!s) { sel.add(new Option(c.connected ? "non disponibile" : "—", "")); sel.disabled = true; continue; }
+    if (!s) { sel.add(new Option(c.connected ? t("non disponibile") : "—", "")); sel.disabled = true; continue; }
     const choices = s.choices.length ? [...s.choices] : [s.current];
     if (!choices.includes(s.current)) choices.unshift(s.current);
     for (const ch of choices) sel.add(new Option(ch, ch, false, ch === s.current));
@@ -291,9 +298,9 @@ function renderCamera(c, run) {
 }
 
 const MIRROR_HINTS = {
-  nikon: "Nikon: l'app imposta il “ritardo di esposizione” della fotocamera al valore disponibile più vicino.",
-  canon: "Canon: attiva il “blocco dello specchio” nel menu della fotocamera (funzioni personalizzate). L'app solleva lo specchio, attende e poi scatta.",
-  none: "Questa fotocamera non ha un ritardo dello specchio controllabile da remoto: l'impostazione viene ignorata.",
+  nikon: t("Nikon: l'app imposta il “ritardo di esposizione” della fotocamera al valore disponibile più vicino."),
+  canon: t("Canon: attiva il “blocco dello specchio” nel menu della fotocamera (funzioni personalizzate). L'app solleva lo specchio, attende e poi scatta."),
+  none: t("Questa fotocamera non ha un ritardo dello specchio controllabile da remoto: l'impostazione viene ignorata."),
 };
 
 function renderMirrorHint() {
@@ -304,14 +311,14 @@ function renderMirrorHint() {
 }
 
 function renderSequence(f, c, q, run) {
-  const labels = { idle: "Pronta", running: "In corso", paused: "In pausa", stopping: "Arresto…", done: "Completata", error: "Errore" };
+  const labels = { idle: t("Pronta"), running: t("In corso"), paused: t("In pausa"), stopping: t("Arresto…"), done: t("Completata"), error: t("Errore") };
   setChip("s-chip", labels[q.state] || q.state,
     { running: "busy", paused: "busy", stopping: "busy", done: "ok", error: "bad" }[q.state] || "");
   const bothOk = f.connected && c.connected;
   $("s-start-btn").disabled = run || !bothOk;
-  $("s-start-btn").title = bothOk ? "" : "Connetti focheggiatore e fotocamera";
+  $("s-start-btn").title = bothOk ? "" : t("Connetti focheggiatore e fotocamera");
   $("s-pause-btn").disabled = !run || q.state === "stopping";
-  $("s-pause-btn").innerHTML = q.state === "paused" ? "▶&nbsp; Riprendi" : "❚❚&nbsp; Pausa";
+  $("s-pause-btn").innerHTML = q.state === "paused" ? `▶&nbsp; ${t("Riprendi")}` : `❚❚&nbsp; ${t("Pausa")}`;
   $("s-stop-btn").disabled = !run;
   $$("[data-mark]").forEach((b) => (b.disabled = !f.connected || run));
   $("s-helicon").disabled = !q.folder || run;
@@ -328,10 +335,10 @@ function renderSequence(f, c, q, run) {
 
   const total = q.total || shotCount();
   $("s-count-label").textContent = `${q.state === "idle" && !q.total ? 0 : q.index} / ${total}`;
-  $("s-eta").textContent = run && q.eta_s != null ? `restano ~${fmtTime(q.eta_s)}` : "";
+  $("s-eta").textContent = run && q.eta_s != null ? t("restano ~{t}", { t: fmtTime(q.eta_s) }) : "";
   $("s-bar").style.width = `${q.total ? (q.index / q.total) * 100 : 0}%`;
   let txt = "";
-  if (run && q.current_target != null) txt = `Posizione ${fmtInt(q.current_target)}`;
+  if (run && q.current_target != null) txt = t("Posizione {n}", { n: fmtInt(q.current_target) });
   if (q.message) txt += (txt ? " · " : "") + q.message;
   if (q.folder && !run) txt += (txt ? " · " : "") + q.folder;
   $("s-progress").textContent = txt;
@@ -350,9 +357,9 @@ function renderLastShot() {
     img.onerror = () => { if (tries++ < 5) setTimeout(() => (img.src = `/api/shots/${shot.id}/image?size=preview&v=${shot.key}&r=${tries}`), 800); };
     img.src = `/api/shots/${shot.id}/image?size=preview&v=${shot.key}`;
     const parts = [`<span><b>${shot.name}</b></span>`];
-    if (shot.kind === "sequence") parts.push(`<span>scatto <b>${shot.index}</b></span>`);
-    if (shot.position != null) parts.push(`<span>posizione <b>${fmtInt(shot.position)}</b></span>`);
-    if (shot.temperature != null) parts.push(`<span><b>${shot.temperature.toFixed(1)}</b> °C</span>`);
+    if (shot.kind === "sequence") parts.push(`<span>${t("scatto <b>{n}</b>", { n: shot.index })}</span>`);
+    if (shot.position != null) parts.push(`<span>${t("posizione <b>{n}</b>", { n: fmtInt(shot.position) })}</span>`);
+    if (shot.temperature != null) parts.push(`<span><b>${fmtNum(shot.temperature, 1)}</b> °C</span>`);
     parts.push(`<span>${shot.time}</span>`);
     $("last-meta").innerHTML = parts.join("");
   }
@@ -372,8 +379,8 @@ function setLive(on) {
     (document.exitFullscreen || document.webkitExitFullscreen).call(document);
   }
   $("live-btn").setAttribute("aria-pressed", String(on));
-  $("live-btn").textContent = on ? "■ Ferma live" : "● Live";
-  $("last-title").textContent = on ? "Live view" : "Ultimo scatto";
+  $("live-btn").textContent = on ? t("■ Ferma live") : t("● Live");
+  $("last-title").textContent = on ? t("Live view") : t("Ultimo scatto");
   for (const id of ["last-thumb", "last-meta"]) $(id).classList.toggle("hidden", on);
   for (const id of ["live-box", "live-meta"]) $(id).classList.toggle("hidden", !on);
   if (S) renderLive(S.camera, running());
@@ -391,11 +398,11 @@ function renderLive(c, run) {
   }
   const paused = run || c.busy;
   const badge = $("live-badge");
-  badge.textContent = run ? "IN PAUSA" : c.busy ? "SCATTO…" : "LIVE";
+  badge.textContent = run ? t("IN PAUSA") : c.busy ? t("SCATTO…") : t("LIVE");
   badge.classList.toggle("paused", paused);
   $("live-meta").innerHTML = run
-    ? "<span>Live view in pausa durante la sequenza</span>"
-    : `<span><b>${c.model}</b></span><span>doppio clic: schermo intero</span>`;
+    ? `<span>${t("Live view in pausa durante la sequenza")}</span>`
+    : `<span><b>${c.model}</b></span><span>${t("doppio clic: schermo intero")}</span>`;
 }
 
 function toggleLiveFullscreen() {
@@ -409,9 +416,9 @@ function toggleLiveFullscreen() {
 
 function renderConfig(f) {
   const lo = S.settings.limit_min, hi = S.settings.limit_max;
-  setChip("lim-chip", hi == null ? "Superiore = max firmware" : `${fmtInt(lo)} – ${fmtInt(hi)}`, hi == null ? "busy" : "ok");
+  setChip("lim-chip", hi == null ? t("Superiore = max firmware") : `${fmtInt(lo)} – ${fmtInt(hi)}`, hi == null ? "busy" : "ok");
   $$("[data-limit-here], #lim-zero, #lim-fw, #mo-reload").forEach((b) => (b.disabled = !f.connected || running()));
-  $("lim-fw-info").textContent = f.connected ? `Max attuale nel firmware: ${fmtInt(f.max_step)}` : "";
+  $("lim-fw-info").textContent = f.connected ? t("Max attuale nel firmware: {n}", { n: fmtInt(f.max_step) }) : "";
 
   // motore
   const motor = (f.connected && f.motor) || {};
@@ -433,19 +440,19 @@ function renderConfig(f) {
       el.disabled = !(name in motor);
       el.value = name in motor ? motor[name] : "";
     }
-    $("m-micro").value = motor.step_mode ? (motor.step_mode === 1 ? "passo intero" : `1/${motor.step_mode}`) : "1 (non letto)";
+    $("m-micro").value = motor.step_mode ? (motor.step_mode === 1 ? t("passo intero") : `1/${motor.step_mode}`) : t("1 (non letto)");
     updateMechResult();
   }
 
   // temperatura
   const hist = S.temp_history || [];
   const hasProbe = f.connected && f.temperature != null;
-  $("t-value").textContent = hasProbe ? `${f.temperature.toFixed(2)} °C` : f.connected ? "Sonda assente" : "—";
+  $("t-value").textContent = hasProbe ? `${fmtNum(f.temperature, 2)} °C` : f.connected ? t("Sonda assente") : "—";
   if (hist.length > 1) {
     const mn = Math.min(...hist), mx = Math.max(...hist);
-    setChip("t-chip", `${mn.toFixed(1)} – ${mx.toFixed(1)} °C`, mx - mn > 1 ? "busy" : "ok");
+    setChip("t-chip", `${fmtNum(mn, 1)} – ${fmtNum(mx, 1)} °C`, mx - mn > 1 ? "busy" : "ok");
     $("t-spark").innerHTML = sparkline(hist, 300, 70);
-  } else setChip("t-chip", hasProbe ? "in raccolta…" : "—");
+  } else setChip("t-chip", hasProbe ? t("in raccolta…") : "—");
 }
 
 function sparkline(values, w, h) {
@@ -475,6 +482,7 @@ function loadForms(cfg) {
   $("s-mode").value = q.capture_mode; $("s-name").value = q.session_name; $("s-return").checked = q.return_to_start;
   $("c-bulb").value = q.bulb_s || 0;
   $("c-mirror").value = String(q.mirror_delay_ms || 0);
+  $("lang-select").value = cfg.language || "auto";
   if (cfg.focuser_port) $("f-port").dataset.saved = cfg.focuser_port;
   loadLimitForm(cfg);
   const m = cfg.mechanics;
@@ -520,16 +528,19 @@ function updateSummary() {
   if (!formLoaded || !S) return;
   const p = formParams(), n = shotCount(p), span = Math.abs(p.end - p.start);
   const perShot = (p.settle_ms + p.post_shot_ms + p.mirror_delay_ms) / 1000 + (p.bulb_s || shutterSeconds()) + 1.5 + p.step / 400;
-  let html = `<b>${n}</b> scatti · escursione <b>${fmtInt(span)}</b> passi`;
-  if (umPerStep()) html += ` = <b>${fmtUm(span)}</b> · passo <b>${fmtUm(p.step)}</b>`;
-  html += `<br>Durata stimata <b>~${fmtTime(n * perShot)}</b>`;
+  let html = t("<b>{n}</b> scatti · escursione <b>{span}</b> passi", { n, span: fmtInt(span) });
+  if (umPerStep()) html += " " + t("= <b>{um}</b> · passo <b>{step}</b>", { um: fmtUm(span), step: fmtUm(p.step) });
+  html += "<br>" + t("Durata stimata <b>~{t}</b>", { t: fmtTime(n * perShot) });
   // controllo fine corsa lato interfaccia (il server ricontrolla comunque)
   const [lo, hi] = S.focuser.connected ? S.focuser.bounds : [S.settings.limit_min, S.settings.limit_max];
   const dir = p.end >= p.start ? 1 : -1;
   const approach = p.backlash > 0 ? p.start - dir * p.backlash : null;
   const out = [p.start, p.end, approach].filter((v) => v != null && (v < lo || (hi != null && v > hi)));
-  if (out.length) html += `<span class="bad-text">⚠ La sequenza${approach != null && out.includes(approach) ? " (con la compensazione del gioco)" : ""} esce dai fine corsa ${fmtInt(lo)} – ${hi == null ? "∞" : fmtInt(hi)}</span>`;
-  if (p.capture_mode === "trigger") html += `<span class="warn-text">In modalità trigger imposta la destinazione su scheda.</span>`;
+  const lim = { lo: fmtInt(lo), hi: hi == null ? "∞" : fmtInt(hi) };
+  if (out.length) html += `<span class="bad-text">${approach != null && out.includes(approach)
+    ? t("⚠ La sequenza (con la compensazione del gioco) esce dai fine corsa {lo} – {hi}", lim)
+    : t("⚠ La sequenza esce dai fine corsa {lo} – {hi}", lim)}</span>`;
+  if (p.capture_mode === "trigger") html += `<span class="warn-text">${t("In modalità trigger imposta la destinazione su scheda.")}</span>`;
   $("s-summary").innerHTML = html;
 }
 
@@ -550,19 +561,20 @@ function mechUmPerStep() {
 }
 function updateMechResult() {
   const u = mechUmPerStep();
-  if (!(u > 0)) { $("m-result").textContent = "Inserisci valori validi"; return; }
-  $("m-result").innerHTML = `Risoluzione: <b>${u.toFixed(4)} µm/passo</b> · 1 µm = <b>${(1 / u).toFixed(2)}</b> passi · 1000 passi = <b>${(u * 1000).toFixed(1)} µm</b>`;
+  if (!(u > 0)) { $("m-result").textContent = t("Inserisci valori validi"); return; }
+  $("m-result").innerHTML = t("Risoluzione: <b>{u} µm/passo</b> · 1 µm = <b>{p}</b> passi · 1000 passi = <b>{k} µm</b>",
+    { u: fmtNum(u, 4), p: fmtNum(1 / u, 2), k: fmtNum(u * 1000, 1) });
 }
 
 // ---------------- profondità di campo ----------------
 // Formula di Berek/Shillaber: DOF = λ·n/NA² + n·e/(M·NA)
 function dof() {
   const na = num("d-na"), mag = num("d-mag"), px = num("d-px"), ov = num("d-ov") / 100;
-  if (!(na > 0 && mag > 0)) { $("d-result").textContent = "Inserisci NA e ingrandimento"; return 0; }
+  if (!(na > 0 && mag > 0)) { $("d-result").textContent = t("Inserisci NA e ingrandimento"); return 0; }
   const d = (0.55 * 1.0) / (na * na) + (1.0 * px) / (mag * na);
   const step = d * (1 - ov), um = umPerStep();
-  $("d-result").innerHTML = `Profondità di campo ≈ <b>${d.toFixed(2)} µm</b> · passo consigliato <b>${step.toFixed(2)} µm</b>`
-    + (um ? ` = <b>${Math.max(1, Math.round(step / um))} passi</b>` : " · configura la meccanica per convertirlo in passi");
+  $("d-result").innerHTML = t("Profondità di campo ≈ <b>{d} µm</b> · passo consigliato <b>{s} µm</b>", { d: fmtNum(d, 2), s: fmtNum(step, 2) })
+    + (um ? " = " + t("<b>{n} passi</b>", { n: Math.max(1, Math.round(step / um)) }) : " · " + t("configura la meccanica per convertirlo in passi"));
   return step;
 }
 
@@ -585,7 +597,7 @@ async function refreshPorts() {
     const ports = await api("/api/ports", undefined, "GET");
     const sel = $("f-port"), saved = sel.dataset.saved || (S && S.settings.focuser_port);
     sel.innerHTML = "";
-    if (!ports.length) sel.add(new Option("Nessuna porta USB trovata", ""));
+    if (!ports.length) sel.add(new Option(t("Nessuna porta USB trovata"), ""));
     for (const p of ports) {
       const label = p.description && p.description !== "n/a" ? `${p.device} — ${p.description}` : p.device;
       sel.add(new Option(label, p.device, false, p.device === saved));
@@ -598,7 +610,7 @@ async function detectCameras() {
   if (!cams) return;
   const sel = $("c-model");
   sel.innerHTML = "";
-  if (!cams.length) { sel.add(new Option("Nessuna fotocamera trovata", "")); toast("Nessuna fotocamera rilevata", true); return; }
+  if (!cams.length) { sel.add(new Option(t("Nessuna fotocamera trovata"), "")); toast(t("Nessuna fotocamera rilevata"), true); return; }
   for (const c of cams) sel.add(new Option(`${c.model} (${c.port})`, JSON.stringify(c)));
 }
 
@@ -621,8 +633,8 @@ function renderJogSizes() {
     jogSize = sizes.includes(100) ? 100 : sizes[sizes.length - 1];
     $$("#jog-size button").forEach((b) => b.setAttribute("aria-checked", Number(b.dataset.size) === jogSize));
   }
-  $("jog-keys").innerHTML = `Tastiera: ↑ ↓ muovi · ⇧ ×10 · 1–${sizes.length} ampiezza · <kbd>Esc</kbd> stop` +
-    (hold ? "<br>Tieni premuto un pulsante per muovere senza fermarti" : "");
+  $("jog-keys").innerHTML = t("Tastiera: ↑ ↓ muovi · ⇧ ×10 · 1–{n} ampiezza · <kbd>Esc</kbd> stop", { n: sizes.length }) +
+    (hold ? "<br>" + t("Tieni premuto un pulsante per muovere senza fermarti") : "");
   $$("#jog-max button").forEach((b) => b.setAttribute("aria-checked", Number(b.dataset.max) === sizes[sizes.length - 1]));
   $("jog-hold").checked = hold;
 }
@@ -669,7 +681,7 @@ function bindJogButton(btn, signFn) {
 function jog(sign) {
   if (!S || !S.focuser.connected || running()) return;
   api("/api/focuser/jog", { delta: sign * jogSize })
-    .then((r) => r && r.clamped && toast("Fermato al fine corsa"))
+    .then((r) => r && r.clamped && toast(t("Fermato al fine corsa")))
     .catch((e) => toast(e.message, true));
 }
 
@@ -690,7 +702,7 @@ function switchTab(name) {
 function bind() {
   $$(".tabs button").forEach((b) => (b.onclick = () => switchTab(b.dataset.tab)));
   $("fw-update").onclick = updateFirmware;
-  $("up-check").onclick = () => api("/api/app/check").then((a) => toast(a.error || (a.available ? `Disponibile la versione ${a.latest}` : "Nessun aggiornamento"), !!a.error)).catch((e) => toast(e.message, true));
+  $("up-check").onclick = () => api("/api/app/check").then((a) => toast(a.error || (a.available ? t("Disponibile la versione {v}", { v: a.latest }) : t("Nessun aggiornamento")), !!a.error)).catch((e) => toast(e.message, true));
   $("theme-btn").onclick = () => {
     const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
     applyTheme(t);
@@ -706,14 +718,14 @@ function bind() {
   $$("#jog-max button").forEach((b) => (b.onclick = () => act(null, async () => {
     S.settings = await api("/api/settings", { jog_max: Number(b.dataset.max) });
     render();
-  }, "Ampiezze aggiornate")));
+  }, t("Ampiezze aggiornate"))));
   $("jog-hold").onchange = (e) => act(null, async () => {
     S.settings = await api("/api/settings", { jog_hold: e.target.checked });
     render();
   });
   $("f-goto-btn").onclick = (e) => act(e.target, () => api("/api/focuser/move", { position: num("f-goto") }));
   $("f-goto").onkeydown = (e) => { if (e.key === "Enter") $("f-goto-btn").click(); };
-  $("f-halt").onclick = () => act(null, () => api("/api/focuser/halt"), "Stop");
+  $("f-halt").onclick = () => act(null, () => api("/api/focuser/halt"), t("Stop"));
 
   // fotocamera
   $("c-detect").onclick = detectCameras;
@@ -730,7 +742,7 @@ function bind() {
     });
   }
   $("c-reload").onclick = (e) => act(e.target, () => api("/api/camera/settings/reload"));
-  $("c-test").onclick = (e) => act(e.target, () => api("/api/camera/test", { bulb_s: num("c-bulb"), mirror_delay_ms: num("c-mirror") }), "Scatto completato");
+  $("c-test").onclick = (e) => act(e.target, () => api("/api/camera/test", { bulb_s: num("c-bulb"), mirror_delay_ms: num("c-mirror") }), t("Scatto completato"));
 
   // ultimo scatto / visualizzatore
   $("last-thumb").onclick = () => S && S.last_shot && openViewer(S.last_shot.id);
@@ -752,14 +764,14 @@ function bind() {
   });
   ["s-settle", "s-post", "s-backlash", "s-mode", "c-bulb", "c-shutter"].forEach((id) => $(id).addEventListener("input", updateSummary));
   $("c-mirror").addEventListener("change", () => { updateSummary(); renderMirrorHint(); });
-  $("s-start-btn").onclick = (e) => act(e.target, () => api("/api/sequence/start", formParams()), "Sequenza avviata");
+  $("s-start-btn").onclick = (e) => act(e.target, () => api("/api/sequence/start", formParams()), t("Sequenza avviata"));
   $("s-pause-btn").onclick = (e) => act(e.target, () => api(S.sequence.state === "paused" ? "/api/sequence/resume" : "/api/sequence/pause"));
   $("s-stop-btn").onclick = (e) => act(e.target, () => api("/api/sequence/stop"));
   $("s-open").onclick = () => act(null, () => api("/api/open-folder"));
   $("s-root-choose").onclick = (e) => act(e.target, async () => {
-    toast("Scegli la cartella nella finestra del Finder…");
+    toast(t("Scegli la cartella nella finestra del Finder…"));
     const r = await api("/api/choose-folder");
-    if (r && r.path) { S.settings.output_root = r.path; toast("Cartella di salvataggio aggiornata"); }
+    if (r && r.path) { S.settings.output_root = r.path; toast(t("Cartella di salvataggio aggiornata")); }
   });
   $("s-helicon").onclick = (e) => act(e.target, () => api("/api/open-helicon"));
 
@@ -774,43 +786,43 @@ function bind() {
     syncCount(); updateSummary();
   };
   $("s-preset-save").onclick = () => {
-    const name = window.prompt("Nome del preset (es. obiettivo 10×)", $("s-preset").value || "");
+    const name = window.prompt(t("Nome del preset (es. obiettivo 10×)"), $("s-preset").value || "");
     if (!name) return;
     const { output_root, ...data } = formParams();
-    act(null, async () => { S.settings.presets = await api("/api/presets/save", { name, data }); presetSig = ""; renderPresets(); }, "Preset salvato");
+    act(null, async () => { S.settings.presets = await api("/api/presets/save", { name, data }); presetSig = ""; renderPresets(); }, t("Preset salvato"));
   };
   $("s-preset-del").onclick = () => {
     const name = $("s-preset").value;
     if (!name) return;
-    act(null, async () => { S.settings.presets = await api("/api/presets/delete", { name }); presetSig = ""; renderPresets(); }, "Preset eliminato");
+    act(null, async () => { S.settings.presets = await api("/api/presets/delete", { name }); presetSig = ""; renderPresets(); }, t("Preset eliminato"));
   };
 
   // fine corsa
   $$("[data-limit-here]").forEach((b) => (b.onclick = () => {
     $(b.dataset.limitHere === "min" ? "lim-min" : "lim-max").value = S.focuser.position;
-    toast("Valore copiato: premi Salva fine corsa per applicarlo");
+    toast(t("Valore copiato: premi Salva fine corsa per applicarlo"));
   }));
   $("lim-save").onclick = (e) => act(e.target, () => api("/api/limits", {
     limit_min: num("lim-min"), limit_max: optNum("lim-max"), toward_specimen: $("lim-dir").value,
-  }), "Fine corsa salvati");
+  }), t("Fine corsa salvati"));
   $("lim-zero").onclick = (e) => {
-    if (!confirm(`La posizione attuale (${fmtInt(S.focuser.position)}) diventerà 0. Fine corsa e sequenza verranno traslati di conseguenza. Continuare?`)) return;
+    if (!confirm(t("La posizione attuale ({p}) diventerà 0. Fine corsa e sequenza verranno traslati di conseguenza. Continuare?", { p: fmtInt(S.focuser.position) }))) return;
     act(e.target, async () => {
       await api("/api/limits/zero-here");
       const st = await api("/api/state", undefined, "GET");
       loadLimitForm(st.settings);
       $("s-start").value = st.settings.sequence.start; $("s-end").value = st.settings.sequence.end;
-    }, "Zero impostato");
+    }, t("Zero impostato"));
   };
   $("lim-fw").onclick = (e) => {
     const v = optNum("lim-max");
-    if (v == null) return toast("Imposta prima il fine corsa superiore", true);
-    if (!confirm(`Scrivere ${fmtInt(v)} come massimo nel firmware? Anche i pulsanti fisici non potranno superarlo.`)) return;
+    if (v == null) return toast(t("Imposta prima il fine corsa superiore"), true);
+    if (!confirm(t("Scrivere {v} come massimo nel firmware? Anche i pulsanti fisici non potranno superarlo.", { v: fmtInt(v) }))) return;
     act(e.target, async () => {
       const f = await api("/api/focuser/maxstep", { position: v });
-      if (f.max_step !== v) throw new Error(`Il firmware ha mantenuto ${fmtInt(f.max_step)}: potrebbe avere un minimo ammesso`);
+      if (f.max_step !== v) throw new Error(t("Il firmware ha mantenuto {v}: potrebbe avere un minimo ammesso", { v: fmtInt(f.max_step) }));
       await api("/api/limits", { limit_min: num("lim-min"), limit_max: v, toward_specimen: $("lim-dir").value });
-    }, "Massimo scritto nel firmware");
+    }, t("Massimo scritto nel firmware"));
   };
 
   // meccanica
@@ -819,45 +831,51 @@ function bind() {
   $("m-save").onclick = (e) => act(e.target, () => api("/api/mechanics", {
     mode: mechMode, motor_steps_per_rev: num("m-spr"), gear_ratio: num("m-gear"), um_per_knob_rev: num("m-umrev"),
     um_per_step: mechMode === "manual" ? num("m-umstep") : null,
-  }), "Meccanica salvata");
+  }), t("Meccanica salvata"));
 
   // motore
   $("mo-reload").onclick = (e) => act(e.target, () => api("/api/focuser/motor/reload"));
   for (const name of ["step_mode", "speed"]) {
     $(`mo-${name}`).onchange = (e) => {
-      if (name === "step_mode" && !confirm("Cambiare il microstep cambia la scala delle posizioni e dei fine corsa. Continuare?")) {
+      if (name === "step_mode" && !confirm(t("Cambiare il microstep cambia la scala delle posizioni e dei fine corsa. Continuare?"))) {
         motorSig = ""; return;
       }
-      act(e.target, () => api("/api/focuser/motor", { name, value: Number(e.target.value) }), "Impostazione inviata");
+      act(e.target, () => api("/api/focuser/motor", { name, value: Number(e.target.value) }), t("Impostazione inviata"));
     };
   }
   for (const name of ["coil_power", "reverse", "backlash_in_enabled", "backlash_out_enabled"]) {
-    $(`mo-${name}`).onchange = (e) => act(e.target, () => api("/api/focuser/motor", { name, value: e.target.checked }), "Impostazione inviata");
+    $(`mo-${name}`).onchange = (e) => act(e.target, () => api("/api/focuser/motor", { name, value: e.target.checked }), t("Impostazione inviata"));
   }
   for (const name of ["backlash_in_steps", "backlash_out_steps"]) {
     $(`mo-${name}`).onchange = (e) => {
       const v = Number(e.target.value);
       if (e.target.value.trim() === "" || !Number.isInteger(v) || v < 0 || v > 255) {
-        toast("Il gioco del firmware va da 0 a 255 passi", true); motorSig = ""; return;
+        toast(t("Il gioco del firmware va da 0 a 255 passi"), true); motorSig = ""; return;
       }
-      act(e.target, () => api("/api/focuser/motor", { name, value: v }), "Gioco salvato nel firmware");
+      act(e.target, () => api("/api/focuser/motor", { name, value: v }), t("Gioco salvato nel firmware"));
     };
   }
+
+  // lingua: la sceglie il server (anche per messaggi e registro); la pagina si ricarica nella lingua nuova
+  $("lang-select").onchange = (e) => act(e.target, async () => {
+    await api("/api/settings", { language: e.target.value });
+    location.reload();
+  });
 
   // profondità di campo
   ["d-na", "d-mag", "d-px", "d-ov"].forEach((id) => $(id).addEventListener("input", dof));
   $("d-apply").onclick = () => {
-    if (!umPerStep()) return toast("Configura prima la meccanica (µm per passo)", true);
+    if (!umPerStep()) return toast(t("Configura prima la meccanica (µm per passo)"), true);
     $("s-step").value = Math.max(1, Math.round(dof() / umPerStep()));
     syncCount(); updateSummary();
     switchTab("session");
-    toast("Passo della sequenza aggiornato");
+    toast(t("Passo della sequenza aggiornato"));
   };
 
   // tastiera
   document.addEventListener("keydown", (e) => {
     if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName) || e.metaKey || e.ctrlKey) return;
-    if (e.key === "Escape") { api("/api/focuser/halt").catch(() => {}); toast("Stop"); return; }
+    if (e.key === "Escape") { api("/api/focuser/halt").catch(() => {}); toast(t("Stop")); return; }
     const sizes = jogSizes();
     if (/^[1-9]$/.test(e.key) && Number(e.key) <= sizes.length) { setJogSize(sizes[Number(e.key) - 1]); return; }
     if (e.key === "ArrowUp" || e.key === "ArrowDown") {
@@ -878,7 +896,7 @@ function renderPresets() {
   if (sig === presetSig) return;
   presetSig = sig;
   const sel = $("s-preset"), cur = sel.value;
-  sel.innerHTML = '<option value="">Preset…</option>';
+  sel.innerHTML = `<option value="">${t("Preset…")}</option>`;
   for (const name of Object.keys(presets).sort()) sel.add(new Option(name, name, false, name === cur));
 }
 

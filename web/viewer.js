@@ -12,6 +12,7 @@ let currentKey = null;   // chiave unica dello scatto mostrato (gli id ripartono
 let follow = true;       // segue automaticamente l'ultimo scatto
 let lockView = true;     // mantiene zoom/pan cambiando scatto
 let lastCount = -1;
+let bootSignature = null; // versione del codice del server alla prima connessione
 
 // Vista: scale = pixel CSS per pixel immagine (naturale), tx/ty = traslazione in pixel CSS
 const view = { scale: 1, tx: 0, ty: 0, mode: "fit" };   // mode: fit | free
@@ -26,7 +27,7 @@ function apply() {
   // % riferita alla piena risoluzione e ai pixel fisici dello schermo
   const ratio = fullW && natW ? natW / fullW : 1;
   const devicePct = view.scale * ratio * DPR() * 100;
-  $("z-val").textContent = natW ? `${devicePct >= 10 ? Math.round(devicePct) : devicePct.toFixed(1)}%` : "—";
+  $("z-val").textContent = natW ? `${fmtNum(devicePct, devicePct >= 10 ? 0 : 1)}%` : "—";
   img.classList.toggle("pixelated", devicePct > 150);
   $("z-fit").setAttribute("aria-pressed", view.mode === "fit");
 }
@@ -100,7 +101,7 @@ function show(id, { keepView = lockView } = {}) {
   };
   preview.onload = () => { if (!fullDone) swap(preview, false); };
   full.onload = () => { fullDone = true; swap(full, true); };
-  full.onerror = () => { $("loading").textContent = "Piena risoluzione non disponibile"; };
+  full.onerror = () => { $("loading").textContent = t("Piena risoluzione non disponibile"); };
   preview.src = `/api/shots/${id}/image?size=preview&v=${shot.key}`;
   full.src = `/api/shots/${id}/image?size=full&v=${shot.key}`;
 }
@@ -109,14 +110,14 @@ function renderMeta(shot) {
   $("v-name").textContent = shot.name;
   const pos = shots.indexOf(shot) + 1;
   const parts = [`${pos} / ${shots.length}`];
-  parts.push(shot.kind === "sequence" ? `sequenza · scatto ${shot.index}` : "scatto di prova");
-  if (shot.position != null) parts.push(`posizione ${shot.position.toLocaleString("it-IT")}`);
-  if (shot.temperature != null) parts.push(`${shot.temperature.toFixed(1)} °C`);
+  parts.push(shot.kind === "sequence" ? t("sequenza · scatto {n}", { n: shot.index }) : t("scatto di prova"));
+  if (shot.position != null) parts.push(t("posizione {n}", { n: fmtNum(shot.position) }));
+  if (shot.temperature != null) parts.push(`${fmtNum(shot.temperature, 1)} °C`);
   parts.push(shot.time);
   $("v-meta").textContent = parts.join(" · ");
   $("prev").disabled = pos <= 1;
   $("next").disabled = pos >= shots.length;
-  document.title = `${shot.name} — Visualizzatore`;
+  document.title = `${shot.name} — ${t("Visualizzatore")}`;
 }
 
 // ---------------- striscia miniature ----------------
@@ -132,7 +133,7 @@ function renderStrip() {
     b.dataset.id = s.id;
     b.dataset.key = s.key;
     b.title = s.name;
-    b.innerHTML = `<img loading="lazy" alt="" src="/api/shots/${s.id}/image?size=preview&v=${s.key}"><span>${s.kind === "sequence" ? s.index : "P"}</span>`;
+    b.innerHTML = `<img loading="lazy" alt="" src="/api/shots/${s.id}/image?size=preview&v=${s.key}"><span>${s.kind === "sequence" ? s.index : t("P")}</span>`;
     b.onclick = () => { setLiveView(false, { restore: false }); setFollow(s.id === shots[shots.length - 1].id); show(s.id); };
     strip.appendChild(b);
   }
@@ -163,7 +164,7 @@ async function fetchShots() {
       natW = natH = fullW = 0;
       img.removeAttribute("src");
       $("msg").classList.remove("hidden");
-      $("v-name").textContent = "Nessuno scatto";
+      $("v-name").textContent = t("Nessuno scatto");
       $("v-meta").textContent = "";
       try { history.replaceState(null, "", location.pathname); } catch { /* opzionale */ }
     }
@@ -185,6 +186,10 @@ function connectWS() {
   const ws = new WebSocket(`ws://${location.host}/ws`);
   ws.onmessage = (ev) => {
     const st = JSON.parse(ev.data);
+    // server ripartito con codice nuovo (aggiornamento dell'app): ricarica la pagina per avere i comandi nuovi
+    if (bootSignature != null && st.boot_signature !== bootSignature) { location.reload(); return; }
+    bootSignature = st.boot_signature;
+    if (st.language && st.language !== LANG) { location.reload(); return; }   // lingua cambiata in Configurazione
     camState = st.camera;
     seqRunning = ["running", "paused", "stopping"].includes(st.sequence.state);
     if (wantLive && camState.connected) setLiveView(true);
@@ -218,7 +223,7 @@ function setLiveView(on, { restore = true } = {}) {
   natW = natH = fullW = 0;
   $("loading").classList.add("hidden");
   $("liveview").setAttribute("aria-pressed", String(on));
-  $("liveview").textContent = on ? "■ Ferma live" : "● Live";
+  $("liveview").textContent = on ? t("■ Ferma live") : t("● Live");
   $("live-badge").classList.toggle("hidden", !on);
   $("reveal").disabled = on;
   markStrip();
@@ -226,7 +231,7 @@ function setLiveView(on, { restore = true } = {}) {
     $("notice").classList.add("hidden");
     img.style.visibility = "hidden";   // niente scatto vecchio finché non arriva il primo fotogramma
     img.src = `/api/camera/live?t=${liveStartedAt}`;
-    $("msg").textContent = "Avvio del live view…";
+    $("msg").textContent = t("Avvio del live view…");
     $("msg").classList.remove("hidden");
     try { history.replaceState(null, "", "#live"); } catch { /* opzionale */ }
     // l'evento load di uno stream MJPEG non è affidabile: si controllano le dimensioni del fotogramma
@@ -237,11 +242,11 @@ function setLiveView(on, { restore = true } = {}) {
   // togliere src chiude la connessione: il server spegne il live view della fotocamera
   img.removeAttribute("src");
   img.style.visibility = "";
-  $("msg").textContent = "In attesa del primo scatto…";
+  $("msg").textContent = t("In attesa del primo scatto…");
   $("msg").classList.remove("hidden");
-  $("v-name").textContent = "Nessuno scatto";
+  $("v-name").textContent = t("Nessuno scatto");
   $("v-meta").textContent = "";
-  document.title = "Visualizzatore";
+  document.title = t("Visualizzatore");
   try { history.replaceState(null, "", location.pathname); } catch { /* opzionale */ }
   if (restore && shots.length) {
     const back = !follow && shots.some((s) => s.id === current) ? current : shots[shots.length - 1].id;
@@ -265,7 +270,7 @@ function checkLiveFrame() {
 function renderLiveView() {
   $("liveview").disabled = !camState.connected;
   if (!liveOn) return;
-  if (!camState.connected) { setLiveView(false); notice("Fotocamera scollegata: live view chiuso"); return; }
+  if (!camState.connected) { setLiveView(false); notice(t("Fotocamera scollegata: live view chiuso")); return; }
   // l'errore di uno stream precedente può arrivare ancora per un attimo dopo il riavvio
   if (camState.live_error && Date.now() - liveStartedAt > 2000) {
     const err = camState.live_error;
@@ -274,12 +279,12 @@ function renderLiveView() {
     return;
   }
   const badge = $("live-badge");
-  badge.textContent = seqRunning ? "IN PAUSA" : camState.busy ? "SCATTO…" : "LIVE";
+  badge.textContent = seqRunning ? t("IN PAUSA") : camState.busy ? t("SCATTO…") : t("LIVE");
   badge.classList.toggle("paused", seqRunning || camState.busy);
-  $("v-name").textContent = "Live view";
-  $("v-meta").textContent = seqRunning ? "In pausa durante la sequenza" : camState.model || "";
+  $("v-name").textContent = t("Live view");
+  $("v-meta").textContent = seqRunning ? t("In pausa durante la sequenza") : camState.model || "";
   $("prev").disabled = $("next").disabled = !shots.length;
-  document.title = "Live view — Visualizzatore";
+  document.title = `${t("Live view")} — ${t("Visualizzatore")}`;
 }
 
 // ---------------- interazione ----------------

@@ -42,8 +42,9 @@ end idle
 on quit
 	if serverAlive() then
 		if sequenceBusy() then
+			set cancelLabel to tx({"Annulla", "Cancel", "Annuler", "Abbrechen", "Cancelar"})
 			try
-				display dialog "È in corso una sequenza di scatti. Chiudendo Focus Stack la sequenza viene interrotta e il motore fermato." buttons {"Annulla", "Chiudi"} default button "Annulla" cancel button "Annulla" with title "Focus Stack" with icon caution
+				display dialog tx({"È in corso una sequenza di scatti. Chiudendo Focus Stack la sequenza viene interrotta e il motore fermato.", "A shooting sequence is running. Quitting Focus Stack stops the sequence and the motor.", "Une séquence de prises de vue est en cours. Quitter Focus Stack arrête la séquence et le moteur.", "Eine Aufnahmeserie läuft. Wenn Sie Focus Stack beenden, werden die Serie und der Motor gestoppt.", "Hay una secuencia de disparos en curso. Al salir de Focus Stack se detienen la secuencia y el motor."}) buttons {cancelLabel, tx({"Chiudi", "Quit", "Quitter", "Beenden", "Salir"})} default button cancelLabel cancel button cancelLabel with title "Focus Stack" with icon caution
 			on error number -128
 				return -- l'utente ha annullato: l'app resta aperta
 			end try
@@ -79,9 +80,29 @@ on startServer(res)
 	try
 		set tailLog to do shell script "tail -5 " & quoted form of logFile
 	end try
-	display alert "Focus Stack" message "Il server non è partito. Dettagli nel registro: " & logFile & return & return & tailLog as critical
+	display alert "Focus Stack" message tx({"Il server non è partito. Dettagli nel registro: ", "The server did not start. Details in the log: ", "Le serveur n'a pas démarré. Détails dans le journal : ", "Der Server ist nicht gestartet. Details im Protokoll: ", "El servidor no se ha iniciado. Detalles en el registro: "}) & logFile & return & return & tailLog as critical
 	quit
 end startServer
+
+-- lingua dei dialoghi: quella scelta in Configurazione (settings.json: it, en, fr, de, es),
+-- altrimenti la prima lingua di macOS se è una di queste, se no l'inglese
+on appLanguage()
+	try
+		return do shell script "l=$(plutil -extract language raw -o - \"$HOME/Library/Application Support/MyFocuserStack/settings.json\" 2>/dev/null); case \"$l\" in it|en|fr|de|es) echo \"$l\";; *) s=$(defaults read -g AppleLanguages 2>/dev/null | sed -n 2p | tr -d ' \",' | cut -c1-2); case \"$s\" in it|en|fr|de|es) echo \"$s\";; *) echo en;; esac;; esac"
+	on error
+		return "en"
+	end try
+end appLanguage
+
+-- testi = {italiano, inglese, francese, tedesco, spagnolo}
+on tx(texts)
+	set langs to {"it", "en", "fr", "de", "es"}
+	set code to appLanguage()
+	repeat with i from 1 to count of langs
+		if item i of langs is code then return item i of texts
+	end repeat
+	return item 2 of texts
+end tx
 
 on serverAlive()
 	try

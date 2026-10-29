@@ -5,3 +5,8 @@ __pycache__/
 build/
 firmware/build/
 firmware-backup/
+
+# guida: si rigenera con docs/guida/cattura_schermate.py e genera_guida.py; i PDF vanno allegati alla release
+docs/*.pdf
+docs/guida/img/
+docs/guida/guida-*.html
