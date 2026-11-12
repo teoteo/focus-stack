@@ -47,7 +47,7 @@ add(f"""
   <h1 class="title">Focus Stack</h1>
   <div class="sub">Bedienungsanleitung<br>Motorisierter Fokussierer und Kamera für Focus-Stacking am Mikroskop</div>
   <div class="shot-c"><img src="{IMG}/sessione.png" alt=""></div>
-  <div class="meta"><span>App-Version {VERSION}</span><span>Oktober 2026</span></div>
+  <div class="meta"><span>App-Version {VERSION}</span><span>November 2026</span></div>
 </section>
 """)
 
@@ -56,11 +56,11 @@ add("""
 <div class="toc"><ol>
 <li><span>1</span>Was ist Focus Stack?<em>Funktionsweise, was Sie brauchen</em></li>
 <li><span>2</span>Installation, Start und Updates</li>
-<li><span>3</span>Die Oberfläche im Überblick<em>die drei Bereiche und die obere Leiste</em></li>
+<li><span>3</span>Die Oberfläche im Überblick<em>die vier Bereiche und die obere Leiste</em></li>
 <li><span>4</span>Fokussierer und Kamera verbinden<em>Einstellungen der Nikon D5600 und anderer Kameras</em></li>
 <li><span>5</span>Der Fokussierer: Position, Bewegungen, STOP</li>
 <li><span>6</span>Kamera, Testaufnahme und Live-View</li>
-<li><span>7</span>Die Stacking-Serie</li>
+<li><span>7</span>Die Stacking-Serie<em>Optik- und Filterprofile, mehrere Aufnahmen pro Position, die Dateien des Stapels</em></li>
 <li><span>8</span>Der Betrachter</li>
 <li><span>9</span>Sicherheitsgrenzen</li>
 <li><span>10</span>Mechanik einrichten: die Berechnungen<em>Auflösung in µm pro Schritt, Kontrollmessung, Verfahrweg, Geschwindigkeit, Spiel</em></li>
@@ -149,18 +149,20 @@ Oberfläche, Meldungen und Protokoll, und diese Anleitung gibt es in denselben S
 # 3
 add(f"""
 <h1><span class="n">3</span>Die Oberfläche im Überblick</h1>
-<p>Die Seite hat drei Bereiche, die Sie oben auswählen:</p>
+<p>Die Seite hat vier Bereiche, die Sie oben auswählen:</p>
 <ul>
 <li><b>{ui("Sessione")}</b>: die Arbeit am Mikroskop. Fokussierer, Serie, Kamera und letzte Aufnahme.</li>
-<li><b>{ui("Configurazione")}</b>: Grenzen, Mechanik, manuelle Steuerung, Motor, Updates, Temperatur und der
-  Schärfentiefe-Rechner. Wird einmal eingestellt und danach nur selten angefasst.</li>
+<li><b>{ui("Ottica")}</b>: die <b>Profile</b> für Objektiv, Filter und Beleuchtung, die in die Daten jedes Stapels
+  geschrieben werden, und der Schärfentiefe-Rechner (Kapitel 7.2 und 11).</li>
+<li><b>{ui("Configurazione")}</b>: Grenzen, Mechanik, manuelle Steuerung, Motor, Updates und Temperatur. Wird einmal
+  eingestellt und danach nur selten angefasst.</li>
 <li><b>{ui("Registro")}</b>: eine Liste mit Uhrzeit von allem, was in der Sitzung passiert ist. Hier sollten Sie als
   Erstes nachsehen, wenn etwas nicht funktioniert.</li>
 </ul>
 {fig("sessione", layout="full", caption=f"Der Bereich {ui('Sessione')}: links der Fokussierer, in der Mitte die Serie, rechts Kamera und letzte Aufnahme.")}
 <h2>Obere Leiste</h2>
 {fig("barra-superiore", [
-    f"<b>Bereiche</b> {ui('Sessione')}, {ui('Configurazione')} und {ui('Registro')}.",
+    f"<b>Bereiche</b> {ui('Sessione')}, {ui('Ottica')}, {ui('Configurazione')} und {ui('Registro')}.",
     f"<b>Verbindungsstatus</b>: {ui('Server')}, {ui('Focheggiatore')} und {ui('Fotocamera')}. Grün = verbunden, grau = getrennt, rot = Fehler.",
     "<b>Temperatur</b>, gemessen vom Fühler des Fokussierers.",
     "<b>Design</b>, dunkel oder hell. Das dunkle Design ermüdet bei langen Sitzungen am Mikroskop weniger.",
@@ -271,13 +273,16 @@ können Sie auf 100 % und mehr vergrößern und zum gewünschten Detail verschie
 TORNA = ui("Torna all'inizio a fine sequenza")
 add(f"""
 <h1><span class="n">7</span>Die Stacking-Serie</h1>
+<h2 style="margin-top:0">7.1 Die Serie einstellen</h2>
 {fig("sequenza", [
     f"<b>Status</b>: {ui('Pronta')}, {ui('In corso')}, {ui('In pausa')}, {ui('Completata')}, {ui('Errore')}.",
     f"<b>{ui('Inizio')}</b> und <b>{ui('Fine')}</b> in Schritten. <span class='ui'>{ui('⌖ qui')}</span> übernimmt die aktuelle Position.",
     "<b>Schrittweite</b> zwischen zwei Aufnahmen, in Motorschritten (Kapitel 11).",
     f"<b>{ui('Numero di scatti')}</b>: mit der Schrittweite gekoppelt; ändern Sie einen Wert, wird der andere neu berechnet.",
-    "<b>Übersicht</b>: Aufnahmen, Bereich in Schritten und µm, Schrittweite in µm, geschätzte Dauer. Liegt die Serie außerhalb der Grenzen, erscheint ein roter Hinweis und sie startet nicht.",
+    f"<b>{ui('Ottica e filtro (profilo)')}</b>: das Profil für Objektiv, Filter und Beleuchtung, das in die Daten des Stapels geschrieben wird (7.2). <span class='ui'>{ui('Modifica')}</span> öffnet es im Bereich {ui('Ottica')}. Ohne Profil wird der Stapel als „{ui('nessun filtro')}“ vermerkt.",
+    "<b>Übersicht</b>: Aufnahmen, Bereich in Schritten und µm, Schrittweite in µm, geschätzte Dauer und verwendetes Optikprofil. Liegt die Serie außerhalb der Grenzen, erscheint ein roter Hinweis und sie startet nicht.",
     f"<b>{ui('Salva in')}</b>: der Ordner für die Fotos. <span class='ui'>{ui('Scegli…')}</span> öffnet das Finder-Fenster, <span class='ui'>{ui('Apri')}</span> zeigt ihn im Finder.",
+    f"<b>{ui('Scatti per posizione')}</b>: wie viele Fotos an jeder Position entstehen (Standard 1). Bei mehreren Aufnahmen kann die Fusionssoftware sie mitteln und so das Rauschen verringern (7.3).",
     "<b>Wartezeit nach Bewegung</b>: zum Abklingen der Vibrationen vor der Aufnahme (1–3 s am Mikroskop). <b>Pause nach Aufnahme</b>: zum Schreiben auf die Karte und Laden des Blitzes.",
     "<b>Spielausgleich</b>: Vor der ersten Aufnahme fährt der Motor so viele Schritte zurück und wieder vor, damit jede Aufnahme aus derselben Richtung angefahren wird.",
     f"<b>{ui('Modalità di scatto')}</b>: <i>{ui('Scarica sul Mac')}</i> (empfohlen), <i>{ui('Solo sulla scheda')}</i>, <i>Nur auslösen</i> (schneller: Speicherziel auf Karte).",
@@ -286,11 +291,10 @@ add(f"""
     f"<b>{ui('Preset')}</b>: speichert und lädt die Einstellungen der Serie, z. B. eines pro Objektiv.",
     "<b>Fortschritt</b>: erstellte Aufnahmen, verbleibende Zeit, Position.",
     f"<b>{ui('▶ Avvia sequenza')}</b>, <b>{ui('❚❚ Pausa')}</b>/<b>{ui('Riprendi')}</b> und <b>{ui('■ Interrompi')}</b>.",
-    f"<b>{ui('Apri in Helicon Focus')}</b>: lädt nach der Serie alle Fotos in Helicon Focus.",
+    f"<b>{ui('Apri nel Finder')}</b>: öffnet nach der Serie den Ordner des Stapels mit den Fotos, <code>sequence.json</code> und <code>sequence.txt</code> (7.4).",
 ])}
-<p>Die Einstellungen für Zeiten und Spiel befinden sich im einklappbaren Abschnitt
-<span class="ui">{ui('Tempi, gioco e nome della sessione')}</span>. Im Fotoordner speichert die App außerdem
-<code>sequence.json</code> mit den verwendeten Parametern sowie Position und Temperatur jeder Aufnahme.</p>
+<p>Aufnahmen pro Position, Zeiten und Spiel befinden sich im einklappbaren Abschnitt
+<span class="ui">{ui('Tempi, gioco, scatti per posizione e nome della sessione')}</span>.</p>
 <h2>Während die Serie läuft</h2>
 {fig("sequenza-in-corso", [
     f"Der Status wechselt zu <b>{ui('In corso')}</b> (bernsteinfarben).",
@@ -303,6 +307,54 @@ add(f"""
 <li>Die Felder der Serie sind gesperrt, solange die Serie läuft.</li>
 <li>Jedes neue Foto erscheint in „{ui('Ultimo scatto')}“ und im Betrachter.</li>
 </ul>
+
+<h2>7.2 Optik und Filter: die Profile</h2>
+<p>Die Fusionssoftware arbeitet besser, wenn sie weiß, womit die Fotos aufgenommen wurden: Mit der Vergrößerung und der
+Pixelgröße des Sensors kann sie die Tiefenkarte und die 3D-Ansicht in echten Mikrometern liefern. Diese Daten speichern
+Sie im Bereich <b>{ui('Ottica')}</b> als benannte <b>Profile</b>, eines für jede Kombination aus Objektiv, Filter und
+Beleuchtung (zum Beispiel „10× GFP“, „4× Hellfeld“), und wählen sie in der Serie aus (Nummer 5 in der Abbildung oben).</p>
+{fig("ottica", [
+    f"<b>{ui('Profilo da modificare')}</b>: Wählen Sie es, um seine Werte zu laden; <i>{ui('— nuovo profilo —')}</i> beginnt mit einem leeren Formular.",
+    f"<b>{ui('Salva come nuovo profilo…')}</b>: fragt nach einem Namen und speichert eine Kopie; das Ausgangsprofil bleibt unverändert.",
+    f"<b>{ui('Elimina profilo')}</b>, nach einer Rückfrage.",
+    f"<b>{ui('Obiettivo (nome)')}</b>: ein frei wählbarer Name, so wie er auf dem Objektiv eingraviert ist.",
+    f"<b>{ui('Ingrandimento sul sensore')}</b>: Objektivvergrößerung × Faktor des Kameraadapters.",
+    f"<b>{ui('Apertura numerica (NA)')}</b>: die zweite auf dem Objektiv eingravierte Zahl (10×/<b>0,25</b>).",
+    f"<b>{ui('Immersione')}</b>: {ui('Aria (a secco)')}, {ui('Acqua')}, {ui('Olio')}, {ui('Glicerina')} oder {ui('Silicone')}.",
+    f"<b>{ui('Pixel del sensore (µm)')}</b>. Nikon D5600: <b>3,9 µm</b> (23,5 mm ÷ 6.000 Pixel).",
+    f"<b>{ui('µm per pixel sul campione, misurati (facoltativo)')}</b> mit einem Objektmikrometer: Falls vorhanden, hat dieser Wert Vorrang vor der Berechnung.",
+    "Der <b>Maßstab am Präparat</b>: der gemessene Wert oder Sensorpixel ÷ Vergrößerung.",
+    f"<b>{ui('Filtro')}</b>: <i>{ui('Non indicato')}</i> (unbekannt), <i>{ui('Nessun filtro')}</i> oder <i>{ui('Filtro montato')}</i>.",
+    f"<b>{ui('Nome')}</b> und <b>{ui('Tipo')}</b> des Filters: {ui('Passa banda')}, {ui('Long pass')}, {ui('Short pass')}, {ui('Neutro (ND)')}, {ui('Polarizzatore')}, {ui('Altro')}.",
+    f"<b>{ui('Centro (nm)')}</b> und <b>{ui('Larghezza di banda (nm)')}</b> bei einem Bandpass; bei Lang- und Kurzpass die Kantenwellenlänge.",
+    f"<b>{ui('Illuminazione')}</b> (freier Text, mit Vorschlägen) und <b>{ui('Intensità (%)')}</b>.",
+    f"Freie <b>{ui('Note')}</b>, die in die Daten des Stapels geschrieben werden.",
+    f"<b>{ui('Salva profilo')}</b>: überschreibt das gewählte Profil; bei einem neuen Profil fragt die App nach dem Namen.",
+    "Das geöffnete <b>Profil</b>; bernsteinfarben, wenn es ungespeicherte Änderungen gibt.",
+], layout="full")}
+<p>Ein leeres Feld bedeutet „nicht angegeben“ und wird nicht geschrieben. Wählen Sie in der Serie kein Profil, wird der
+Stapel als <b>ohne Filter</b> und ohne optische Daten vermerkt. Dieselben Werte für NA, Vergrößerung und Pixelgröße
+verwendet auch der Schärfentiefe-Rechner (Kapitel 11). Denken Sie daran, das Profil zu wechseln, wenn Sie Objektiv oder
+Filter wechseln: Die Übersicht der Serie zeigt immer an, was geschrieben wird.</p>
+
+<h2>7.3 Mehrere Aufnahmen pro Position</h2>
+<p>Ist <span class="ui">{ui('Scatti per posizione')}</span> größer als 1, löst die Kamera an jeder Position mehrmals aus,
+ohne dass sich der Motor zwischen den Aufnahmen bewegt: Die Wartezeit gegen Vibrationen gibt es nur nach der Bewegung,
+zwischen den Aufnahmen nur die Pause nach der Aufnahme. Die Fusionssoftware mittelt die Aufnahmen: Bei 4 Aufnahmen
+halbiert sich das Rauschen. Die Dateien heißen <code>stack_0001_1</code>, <code>stack_0001_2</code> …; bei nur einer
+Aufnahme bleibt es bei <code>stack_0001</code>, <code>stack_0002</code> … Die Übersicht zeigt Positionen × Aufnahmen
+und die richtige Dauer.</p>
+
+<h2>7.4 Die Dateien des Stapels</h2>
+<p>Im Ordner des Stapels schreibt die App neben die Fotos zwei Dateien. Sie werden nach jeder Aufnahme neu geschrieben
+und sind daher auch gültig, wenn die Serie abgebrochen wird. Die Fotos selbst werden nie verändert.</p>
+<ul>
+<li><code>sequence.json</code>: alle Daten für die <b>Fusionssoftware</b>: Position jeder Aufnahme in Schritten und µm,
+  Uhrzeit, Temperatur, Führung, Kamera, Optikprofil, Filter und Beleuchtung. Das Format ist in
+  <code>docs/sequence-json.md</code> auf GitHub beschrieben.</li>
+<li><code>sequence.txt</code>: eine <b>lesbare Übersicht</b> in der Sprache der App. Zum Beispiel:</li>
+</ul>
+<div class="calc">{SEQ_TXT}</div>
 """)
 
 # 8
@@ -528,14 +580,13 @@ add(f"""
 <p class="lead">Jedes Foto ist nur in einer dünnen Schicht des Präparats scharf, der <b>Schärfentiefe</b>. Damit nach dem
 Stacking alles scharf ist, darf sich der Fokus zwischen zwei Aufnahmen nicht weiter als diese Schicht verschieben, mit
 etwas Überlappung.</p>
+<p>Der Rechner befindet sich unten im Bereich <b>{ui('Ottica')}</b> und verwendet die numerische Apertur, die
+Vergrößerung auf dem Sensor und die Pixelgröße des Sensors aus dem geöffneten Profil (Kapitel 7.2).</p>
 {fig("profondita", [
-    f"<b>{ui('Apertura numerica (NA)')}</b>: die zweite auf dem Objektiv eingravierte Zahl (10×/<b>0,25</b>).",
-    f"<b>{ui('Ingrandimento sul sensore')}</b>: Objektivvergrößerung × Faktor des Kameraadapters.",
-    f"<b>{ui('Pixel del sensore (µm)')}</b>. Nikon D5600: <b>3,9 µm</b> (23,5 mm ÷ 6.000 Pixel).",
     f"<b>{ui('Sovrapposizione (%)')}</b> zwischen einer scharfen Schicht und der nächsten; 20–30 % ist ein guter Wert.",
     "<b>Ergebnis</b>: Schärfentiefe, empfohlene Schrittweite in µm und in Motorschritten.",
     f"<b>{ui('Usa come passo della sequenza')}</b>: übernimmt den Wert in Schritten in das Feld Schrittweite der Serie.",
-])}
+], layout="side narrow")}
 <h2>11.1 Die Formel</h2>
 <p>Die App verwendet die Formel nach Berek, die in der Mikroskopie am weitesten verbreitet ist:</p>
 <div class="formula">Schärfentiefe (µm) = {frac("λ · n", "NA²")} + {frac("n · e", "M · NA")}
@@ -614,7 +665,7 @@ drücken.</p>
 <h2>{ui('Temperatura')}</h2>
 {fig("temperatura", [
     "Aktuelle Temperatur des Fühlers.",
-    "Verlauf der letzten 60 Minuten. Die Temperatur jeder Aufnahme wird in <code>sequence.json</code> gespeichert: nützlich, weil sich der Fokus durch Wärmeausdehnung verschiebt.",
+    "Verlauf der letzten 60 Minuten. Die Temperatur jeder Aufnahme wird in <code>sequence.json</code> gespeichert und in <code>sequence.txt</code> zusammengefasst: nützlich, weil sich der Fokus durch Wärmeausdehnung verschiebt.",
 ], layout="side")}
 """)
 
@@ -626,18 +677,21 @@ add(f"""
 <li><b>Mechanik</b>: Geben Sie die Daten ein und prüfen Sie die Auflösung mit einer Messung (Kapitel 10).</li>
 <li><b>Richtung des Präparats</b> und <b>Grenzen</b>, mit den in die Firmware geschriebenen Grenzen (Kapitel 9).</li>
 <li><b>Spiel</b>: Messen Sie es mit dem Live-View und entscheiden Sie, wo es ausgeglichen wird (Serie oder Firmware).</li>
-<li><b>Presets</b>: Berechnen Sie für jedes Objektiv die Schrittweite aus der Schärfentiefe und speichern Sie ein Preset.</li>
+<li><b>Optikprofile</b>: Speichern Sie im Bereich {ui('Ottica')} ein Profil für jede Kombination aus Objektiv, Filter und
+  Beleuchtung (Kapitel 7.2).</li>
+<li><b>Presets</b>: Berechnen Sie für jedes Objektiv die Schrittweite aus der Schärfentiefe und speichern Sie ein Preset;
+  das Preset merkt sich auch das Optikprofil.</li>
 </ol>
 <h2>Bei jeder Sitzung</h2>
 <ol class="steps">
 <li>Schalten Sie Fokussierer und Kamera ein (Modus M), schließen Sie die Kabel an und öffnen Sie Focus Stack.</li>
 <li>Verbinden Sie Fokussierer und Kamera im Bereich {ui('Sessione')}.</li>
 <li>Stellen Sie Belichtungszeit, ISO und Format ein; machen Sie eine <b>Testaufnahme</b> und prüfen Sie sie im Betrachter bei 100 %.</li>
-<li>Wählen Sie das <b>Preset</b> des Objektivs (oder die Schrittweite).</li>
+<li>Wählen Sie das <b>Preset</b> des Objektivs (oder die Schrittweite) und prüfen Sie das <b>Optikprofil</b> in der Serie.</li>
 <li>Suchen Sie mit dem <b>Live-View</b> und der Tastatur <b>Ende</b> und <b>Anfang</b> der Serie und klicken Sie jeweils auf {ui('⌖ qui')}.</li>
 <li>Prüfen Sie die Übersicht: Anzahl der Aufnahmen, Bereich, Dauer, kein roter Hinweis.</li>
 <li><b>{ui('▶ Avvia sequenza')}</b>. Berühren Sie das Mikroskop nicht: Vibrationen verderben die Aufnahmen.</li>
-<li>Klicken Sie nach Ende der Serie auf <b>{ui('Apri in Helicon Focus')}</b>.</li>
+<li>Klicken Sie nach Ende der Serie auf <b>{ui('Apri nel Finder')}</b> und öffnen Sie den Ordner in der Fusionssoftware.</li>
 </ol>
 """)
 

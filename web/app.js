@@ -134,6 +134,7 @@ function render() {
   safe("live view", () => renderLive(c, run));
   safe("configurazione", () => renderConfig(f));
   safe("preset", renderPresets);
+  safe("profili ottici", renderOpticsProfiles);
   safe("registro", renderLog);
   safe("aggiornamenti", renderUpdates);
 }
@@ -321,7 +322,7 @@ function renderSequence(f, c, q, run) {
   $("s-pause-btn").innerHTML = q.state === "paused" ? `▶&nbsp; ${t("Riprendi")}` : `❚❚&nbsp; ${t("Pausa")}`;
   $("s-stop-btn").disabled = !run;
   $$("[data-mark]").forEach((b) => (b.disabled = !f.connected || run));
-  $("s-helicon").disabled = !q.folder || run;
+  $("s-finder").disabled = !q.folder || run;
   $$("#card-seq input, #card-seq select").forEach((el) => (el.disabled = run));
 
   const root = S.settings.output_root || "";
@@ -357,7 +358,7 @@ function renderLastShot() {
     img.onerror = () => { if (tries++ < 5) setTimeout(() => (img.src = `/api/shots/${shot.id}/image?size=preview&v=${shot.key}&r=${tries}`), 800); };
     img.src = `/api/shots/${shot.id}/image?size=preview&v=${shot.key}`;
     const parts = [`<span><b>${shot.name}</b></span>`];
-    if (shot.kind === "sequence") parts.push(`<span>${t("scatto <b>{n}</b>", { n: shot.index })}</span>`);
+    if (shot.kind === "sequence") parts.push(`<span>${t("scatto <b>{n}</b>", { n: shotLabel(shot) })}</span>`);
     if (shot.position != null) parts.push(`<span>${t("posizione <b>{n}</b>", { n: fmtInt(shot.position) })}</span>`);
     if (shot.temperature != null) parts.push(`<span><b>${fmtNum(shot.temperature, 1)}</b> °C</span>`);
     parts.push(`<span>${shot.time}</span>`);
@@ -480,6 +481,10 @@ function loadForms(cfg) {
   $("s-start").value = q.start; $("s-end").value = q.end; $("s-step").value = q.step;
   $("s-settle").value = q.settle_ms; $("s-post").value = q.post_shot_ms; $("s-backlash").value = q.backlash;
   $("s-mode").value = q.capture_mode; $("s-name").value = q.session_name; $("s-return").checked = q.return_to_start;
+  $("s-repeats").value = q.shots_per_position || 1;
+  renderOpticsProfiles();
+  $("s-optics").value = opticsProfiles()[q.optics_profile] ? q.optics_profile : "";
+  editProfile($("s-optics").value);
   $("c-bulb").value = q.bulb_s || 0;
   $("c-mirror").value = String(q.mirror_delay_ms || 0);
   $("lang-select").value = cfg.language || "auto";
@@ -508,6 +513,8 @@ function formParams() {
     return_to_start: $("s-return").checked, capture_mode: $("s-mode").value,
     session_name: $("s-name").value.trim() || "stack", output_root: (S && S.settings.output_root) || "",
     bulb_s: num("c-bulb"), mirror_delay_ms: num("c-mirror"),
+    shots_per_position: Math.max(1, Math.round(num("s-repeats") || 1)),
+    optics_profile: $("s-optics").value,
   };
 }
 
@@ -526,11 +533,15 @@ function shutterSeconds() {
 
 function updateSummary() {
   if (!formLoaded || !S) return;
-  const p = formParams(), n = shotCount(p), span = Math.abs(p.end - p.start);
-  const perShot = (p.settle_ms + p.post_shot_ms + p.mirror_delay_ms) / 1000 + (p.bulb_s || shutterSeconds()) + 1.5 + p.step / 400;
-  let html = t("<b>{n}</b> scatti · escursione <b>{span}</b> passi", { n, span: fmtInt(span) });
+  const p = formParams(), n = shotCount(p), span = Math.abs(p.end - p.start), k = p.shots_per_position;
+  const perShot = (p.post_shot_ms + p.mirror_delay_ms) / 1000 + (p.bulb_s || shutterSeconds()) + 1.5;
+  const perPos = p.settle_ms / 1000 + p.step / 400 + k * perShot;
+  let html = k > 1
+    ? t("<b>{n}</b> posizioni × <b>{k}</b> = <b>{tot}</b> scatti · escursione <b>{span}</b> passi", { n, k, tot: fmtInt(n * k), span: fmtInt(span) })
+    : t("<b>{n}</b> scatti · escursione <b>{span}</b> passi", { n, span: fmtInt(span) });
   if (umPerStep()) html += " " + t("= <b>{um}</b> · passo <b>{step}</b>", { um: fmtUm(span), step: fmtUm(p.step) });
-  html += "<br>" + t("Durata stimata <b>~{t}</b>", { t: fmtTime(n * perShot) });
+  html += "<br>" + t("Durata stimata <b>~{t}</b>", { t: fmtTime(n * perPos) });
+  html += `<span class="optics-line">${opticsSummary()}</span>`;
   // controllo fine corsa lato interfaccia (il server ricontrolla comunque)
   const [lo, hi] = S.focuser.connected ? S.focuser.bounds : [S.settings.limit_min, S.settings.limit_max];
   const dir = p.end >= p.start ? 1 : -1;
@@ -576,6 +587,165 @@ function dof() {
   $("d-result").innerHTML = t("Profondità di campo ≈ <b>{d} µm</b> · passo consigliato <b>{s} µm</b>", { d: fmtNum(d, 2), s: fmtNum(step, 2) })
     + (um ? " = " + t("<b>{n} passi</b>", { n: Math.max(1, Math.round(step / um)) }) : " · " + t("configura la meccanica per convertirlo in passi"));
   return step;
+}
+
+// ---------------- profili di ottica, filtro e illuminazione (finiscono in sequence.json) ----------------
+// Il tab Ottica modifica i profili; la card Sequenza sceglie quale usare ("" = nessun filtro).
+const shotLabel = (shot) => (shot.repeat ? `${shot.index}.${shot.repeat}` : shot.index);
+let filterMode = "unknown", editingProfile = "", opticsSaved = "", profileSig = null;
+const FILTER_TYPE_LABELS = () => ({ bandpass: t("Passa banda"), longpass: t("Long pass"), shortpass: t("Short pass"),
+  neutral_density: t("Neutro (ND)"), polarizer: t("Polarizzatore"), other: t("Altro") });
+// suggerimenti per il campo Illuminazione (testo libero)
+const ILLUMINATION_SUGGESTIONS = () => [t("Campo chiaro (luce trasmessa)"), t("Luce riflessa"), t("LED ad anello"),
+  t("Epifluorescenza"), t("Campo scuro"), t("Luce polarizzata")];
+const opticsProfiles = () => (S && S.settings.optics_profiles) || {};
+const BLANK_OPTICS = { dof_overlap: 30, filter_mode: "unknown", filter: { type: "bandpass" }, illumination: {} };
+
+function setFilterMode(mode) {
+  filterMode = mode;
+  $$("#o-filter-mode button").forEach((b) => b.setAttribute("aria-checked", b.dataset.fmode === mode));
+  $("o-filter-fields").classList.toggle("hidden", mode !== "filter");
+  const type = $("o-ftype").value;
+  $$("#o-filter-fields .f-band").forEach((el) => el.classList.toggle("hidden", type !== "bandpass"));
+  $$("#o-filter-fields .f-edge").forEach((el) => el.classList.toggle("hidden", type !== "longpass" && type !== "shortpass"));
+}
+
+function loadOptics(o) {
+  const f = o.filter || {}, il = o.illumination || {};
+  const set = (id, v) => ($(id).value = v == null ? "" : v);
+  set("o-objective", o.objective); set("d-mag", o.magnification); set("d-na", o.na);
+  $("o-immersion").value = o.immersion || "";
+  set("d-px", o.sensor_pixel_um); set("o-pxcal", o.pixel_size_um); set("d-ov", o.dof_overlap ?? 30);
+  set("o-fname", f.name); $("o-ftype").value = f.type || "bandpass";
+  set("o-fcenter", f.center_nm); set("o-fwidth", f.bandwidth_nm); set("o-fedge", f.edge_nm);
+  set("o-illum", il.type); set("o-level", il.level_percent); set("o-notes", o.notes);
+  setFilterMode(o.filter_mode || "unknown");
+}
+
+// carica nell'editor un profilo ("" = nuovo profilo vuoto)
+function editProfile(name) {
+  editingProfile = opticsProfiles()[name] ? name : "";
+  $("o-profile").value = editingProfile;
+  loadOptics(opticsProfiles()[editingProfile] || BLANK_OPTICS);
+  opticsSaved = JSON.stringify(opticsForm());
+  updateOptics();
+  dof();
+}
+
+function opticsForm() {
+  return {
+    objective: $("o-objective").value.trim(), magnification: optNum("d-mag"), na: optNum("d-na"),
+    immersion: $("o-immersion").value, sensor_pixel_um: optNum("d-px"), pixel_size_um: optNum("o-pxcal"),
+    dof_overlap: optNum("d-ov") ?? 30, filter_mode: filterMode,
+    filter: { name: $("o-fname").value.trim(), type: $("o-ftype").value, center_nm: optNum("o-fcenter"),
+      bandwidth_nm: optNum("o-fwidth"), edge_nm: optNum("o-fedge") },
+    illumination: { type: $("o-illum").value.trim(), level_percent: optNum("o-level") },
+    notes: $("o-notes").value.trim(),
+  };
+}
+
+// testo breve di un profilo: obiettivo · NA · filtro
+function opticsText(o) {
+  const parts = [];
+  if (o.objective) parts.push(o.objective);
+  else if (o.magnification) parts.push(`${fmtNum(o.magnification, 1)}×`);
+  if (o.na) parts.push(`NA ${fmtNum(o.na, 2)}`);
+  const f = o.filter || {};
+  if (o.filter_mode === "none") parts.push(t("nessun filtro"));
+  else if (o.filter_mode === "filter") parts.push(t("filtro {name}", { name: f.name || FILTER_TYPE_LABELS()[f.type] || t("Altro") }));
+  else parts.push(t("filtro non indicato"));
+  return parts.join(" · ");
+}
+
+// riga nel riepilogo della sequenza: cosa finirà in sequence.json
+function opticsSummary() {
+  const name = $("s-optics").value, o = opticsProfiles()[name];
+  if (!o) return t("Nessun profilo ottico: in sequence.json il filtro risulterà «nessuno»");
+  return t("Profilo «{name}»: {txt}", { name: escapeHtml(name), txt: escapeHtml(opticsText(o)) });
+}
+const escapeHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function updateOptics() {
+  const o = opticsForm();
+  let txt;
+  if (o.pixel_size_um) txt = t("Sul campione: <b>{v} µm/pixel</b> (misurato)", { v: fmtNum(o.pixel_size_um, 4) });
+  else if (o.sensor_pixel_um && o.magnification)
+    txt = t("Sul campione: <b>{v} µm/pixel</b> (pixel del sensore ÷ ingrandimento)", { v: fmtNum(o.sensor_pixel_um / o.magnification, 4) });
+  else txt = t("Indica ingrandimento e pixel del sensore per avere la scala in µm");
+  $("o-pxresult").innerHTML = txt;
+  const dirty = JSON.stringify(o) !== opticsSaved;
+  setChip("o-chip", editingProfile || t("Nuovo profilo"), editingProfile ? (dirty ? "busy" : "ok") : "");
+  $("o-dirty").textContent = dirty ? t("Modifiche non salvate") : "";
+  $("o-profile-del").disabled = !editingProfile;
+}
+
+// riempie i due menu dei profili (editor e sequenza) solo quando l'elenco cambia
+function renderOpticsProfiles() {
+  const names = Object.keys(opticsProfiles()).sort((a, b) => a.localeCompare(b));
+  const sig = names.join("|") + "#" + LANG;
+  if (sig === profileSig) return;
+  profileSig = sig;
+  const fill = (sel, emptyLabel) => {
+    const cur = sel.value;
+    sel.innerHTML = "";
+    sel.add(new Option(emptyLabel, ""));
+    for (const n of names) sel.add(new Option(n, n));
+    sel.value = names.includes(cur) ? cur : "";
+  };
+  fill($("o-profile"), t("— nuovo profilo —"));
+  fill($("s-optics"), t("Nessun profilo (nessun filtro)"));
+}
+
+async function saveProfile(name) {
+  const profiles = await api("/api/optics/profiles/save", { name, optics: opticsForm() });
+  S.settings.optics_profiles = profiles;
+  renderOpticsProfiles();
+  editProfile(name);
+  // primo profilo creato: lo propone subito anche per la sequenza
+  if (!$("s-optics").value && Object.keys(opticsProfiles()).length === 1) $("s-optics").value = name;
+  updateSummary();
+}
+
+function bindOptics() {
+  const list = $("o-illum-list");
+  for (const v of ILLUMINATION_SUGGESTIONS()) list.append(new Option(v, v));
+  $$("#o-filter-mode button").forEach((b) => (b.onclick = () => { setFilterMode(b.dataset.fmode); updateOptics(); }));
+  $("o-ftype").addEventListener("change", () => setFilterMode(filterMode));
+  $$("#card-optics input, #card-optics select:not(#o-profile)").forEach((el) => {
+    el.addEventListener("input", updateOptics);
+    el.addEventListener("change", updateOptics);
+  });
+  $("o-profile").onchange = (e) => {
+    if ($("o-dirty").textContent && !window.confirm(t("Le modifiche non salvate andranno perse. Continuare?"))) {
+      e.target.value = editingProfile;
+      return;
+    }
+    editProfile(e.target.value);
+  };
+  $("o-save").onclick = (e) => {
+    const name = editingProfile || (window.prompt(t("Nome del profilo (es. 10× GFP)"), "") || "").trim();
+    if (name) act(e.target, () => saveProfile(name), t("Profilo salvato"));
+  };
+  $("o-profile-save").onclick = (e) => {
+    const name = (window.prompt(t("Nome del nuovo profilo"), editingProfile) || "").trim();
+    if (name) act(e.target, () => saveProfile(name), t("Profilo salvato"));
+  };
+  $("o-profile-del").onclick = (e) => {
+    const name = editingProfile;
+    if (!name || !window.confirm(t("Eliminare il profilo «{name}»?", { name }))) return;
+    act(e.target, async () => {
+      const profiles = await api("/api/optics/profiles/delete", { name });
+      S.settings.optics_profiles = profiles;
+      renderOpticsProfiles();
+      editProfile("");
+      updateSummary();
+    }, t("Profilo eliminato"));
+  };
+  $("s-optics").addEventListener("change", updateSummary);
+  $("s-optics-edit").onclick = () => {
+    switchTab("optics");
+    if (!$("o-dirty").textContent) editProfile($("s-optics").value);
+  };
 }
 
 // ---------------- visualizzatore ----------------
@@ -762,7 +932,7 @@ function bind() {
     $("s-step").value = Math.max(1, Math.round(span / (n - 1)));
     syncCount(); updateSummary();
   });
-  ["s-settle", "s-post", "s-backlash", "s-mode", "c-bulb", "c-shutter"].forEach((id) => $(id).addEventListener("input", updateSummary));
+  ["s-settle", "s-post", "s-backlash", "s-mode", "s-repeats", "c-bulb", "c-shutter"].forEach((id) => $(id).addEventListener("input", updateSummary));
   $("c-mirror").addEventListener("change", () => { updateSummary(); renderMirrorHint(); });
   $("s-start-btn").onclick = (e) => act(e.target, () => api("/api/sequence/start", formParams()), t("Sequenza avviata"));
   $("s-pause-btn").onclick = (e) => act(e.target, () => api(S.sequence.state === "paused" ? "/api/sequence/resume" : "/api/sequence/pause"));
@@ -773,14 +943,15 @@ function bind() {
     const r = await api("/api/choose-folder");
     if (r && r.path) { S.settings.output_root = r.path; toast(t("Cartella di salvataggio aggiornata")); }
   });
-  $("s-helicon").onclick = (e) => act(e.target, () => api("/api/open-helicon"));
+  $("s-finder").onclick = (e) => act(e.target, () => api("/api/open-stack-folder"));
 
   // preset
   $("s-preset").onchange = () => {
     const p = S.settings.presets[$("s-preset").value];
     if (!p) return;
     const map = { start: "s-start", end: "s-end", step: "s-step", settle_ms: "s-settle", post_shot_ms: "s-post",
-      backlash: "s-backlash", capture_mode: "s-mode", session_name: "s-name", bulb_s: "c-bulb", mirror_delay_ms: "c-mirror" };
+      backlash: "s-backlash", capture_mode: "s-mode", session_name: "s-name", bulb_s: "c-bulb", mirror_delay_ms: "c-mirror",
+      shots_per_position: "s-repeats", optics_profile: "s-optics" };
     for (const [k, id] of Object.entries(map)) if (p[k] !== undefined) $(id).value = p[k];
     if (p.return_to_start !== undefined) $("s-return").checked = p.return_to_start;
     syncCount(); updateSummary();
@@ -789,12 +960,12 @@ function bind() {
     const name = window.prompt(t("Nome del preset (es. obiettivo 10×)"), $("s-preset").value || "");
     if (!name) return;
     const { output_root, ...data } = formParams();
-    act(null, async () => { S.settings.presets = await api("/api/presets/save", { name, data }); presetSig = ""; renderPresets(); }, t("Preset salvato"));
+    act(null, async () => { const r = await api("/api/presets/save", { name, data }); S.settings.presets = r; presetSig = ""; renderPresets(); }, t("Preset salvato"));
   };
   $("s-preset-del").onclick = () => {
     const name = $("s-preset").value;
     if (!name) return;
-    act(null, async () => { S.settings.presets = await api("/api/presets/delete", { name }); presetSig = ""; renderPresets(); }, t("Preset eliminato"));
+    act(null, async () => { const r = await api("/api/presets/delete", { name }); S.settings.presets = r; presetSig = ""; renderPresets(); }, t("Preset eliminato"));
   };
 
   // fine corsa
@@ -864,6 +1035,7 @@ function bind() {
 
   // profondità di campo
   ["d-na", "d-mag", "d-px", "d-ov"].forEach((id) => $(id).addEventListener("input", dof));
+  bindOptics();
   $("d-apply").onclick = () => {
     if (!umPerStep()) return toast(t("Configura prima la meccanica (µm per passo)"), true);
     $("s-step").value = Math.max(1, Math.round(dof() / umPerStep()));
@@ -904,7 +1076,7 @@ bind();
 try {
   setJogSize(Number(localStorage.getItem("fs-jog")) || 100);
   const hashTab = location.hash.slice(1);
-  switchTab(["session", "config", "log"].includes(hashTab) ? hashTab : localStorage.getItem("fs-tab") || "session");
+  switchTab(["session", "optics", "config", "log"].includes(hashTab) ? hashTab : localStorage.getItem("fs-tab") || "session");
 } catch { setJogSize(100); }
 refreshPorts();
 connectWS();

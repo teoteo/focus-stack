@@ -23,7 +23,7 @@ from .i18n import tr
 from .camera import GPHOTO_AVAILABLE, CameraError, GPhotoCamera, SimulatedCamera
 from .focuser import FocuserError, LimitError, MyFocuserPro2, SimulatedFocuser, list_serial_ports
 from .sequence import SequenceParams, SequenceRunner
-from .updater import AppUpdater, bundled_firmware
+from .updater import AppUpdater, app_version, bundled_firmware
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 CACHE_DIR = Path.home() / "Library" / "Caches" / "MyFocuserStack"
@@ -88,7 +88,7 @@ class App:
 
     # ---------- galleria ----------
     def add_shot(self, files: list[str], kind: str, position: int | None, temperature: float | None,
-                 index: int | None = None) -> None:
+                 index: int | None = None, repeat: int | None = None) -> None:
         if not files:
             return
         # file per il browser: preferisce il JPEG se la fotocamera salva RAW+JPEG
@@ -102,11 +102,82 @@ class App:
         key = hashlib.sha1(f"{BOOT_ID}:{display}:{mtime}".encode()).hexdigest()[:16]
         self.shots.append({"id": len(self.shots), "key": key, "kind": kind, "file": display, "files": files,
                            "name": Path(display).name, "position": position, "temperature": temperature,
-                           "index": index, "time": time.strftime("%H:%M:%S")})
+                           "index": index, "repeat": repeat, "time": time.strftime("%H:%M:%S")})
         asyncio.get_running_loop().create_task(warm_cache(display))
 
     def add_sequence_shot(self, record: dict) -> None:
-        self.add_shot(record["files"], "sequence", record["position"], record["temperature"], record["index"])
+        self.add_shot(record["files"], "sequence", record["position"], record["temperature"], record["index"],
+                      record.get("repeat") if record.get("repeats", 1) > 1 else None)
+
+    def manifest_context(self, profile: str | None = None) -> dict:
+        """Dati per il manifesto sequence.json (vedi sequence.build_manifest)."""
+        f, cam = self.focuser, self.camera
+        ctx: dict = {
+            "software": f"Focus Stack {app_version()}",
+            "um_per_step": round(self.um_per_step(), 6),
+            "um_per_step_source": "computed_from_mechanics" if self.cfg["mechanics"].get("mode") == "computed"
+            else "entered",
+            # z positivo verso l'obiettivo: con "decreasing" i passi crescenti allontanano l'obiettivo
+            # dal campione, quindi il piano di fuoco sale
+            "z_sign": 1 if self.cfg.get("toward_specimen", "decreasing") == "decreasing" else -1,
+        }
+        if f:
+            ctx["rail_model"] = "Simulator" if f.simulated else \
+                {"ardufocus": "Ardufocus", "myfp2": "myFocuserPro2"}.get(f.board, f.board)
+            fw = " ".join(str(x) for x in (f.firmware, f"build {f.fs_build}" if f.fs_build else None) if x)
+            ctx["firmware"] = fw or None
+            ctx["microstep"] = (f.motor or {}).get("step_mode")
+        if cam:
+            info = {"model": cam.model or None}
+            for key in ("iso", "shutterspeed", "aperture", "imageformat"):
+                cur = (cam.settings.get(key) or {}).get("current")
+                if cur:
+                    info[key] = cur
+            ctx["camera"] = {k: v for k, v in info.items() if v is not None}
+        # Profilo di ottica/filtro scelto nella sequenza; nessun profilo = nessun filtro.
+        name = (self.cfg["sequence"].get("optics_profile") or "") if profile is None else profile
+        o = (self.cfg.get("optics_profiles") or {}).get(name) if name else None
+        if o is None:
+            ctx["filter"] = None
+            return ctx
+        ctx["optics_profile"] = name
+        optics: dict = {}
+        if o.get("objective"):
+            optics["objective"] = o["objective"]
+        for key in ("magnification", "na"):
+            if o.get(key):
+                optics[key] = o[key]
+        if o.get("immersion"):
+            optics["immersion"] = o["immersion"]
+        if o.get("sensor_pixel_um"):
+            optics["sensor_pixel_um"] = o["sensor_pixel_um"]
+        if o.get("pixel_size_um"):
+            optics["pixel_size_um"] = o["pixel_size_um"]
+            optics["pixel_size_source"] = "calibrated"
+        elif o.get("sensor_pixel_um") and o.get("magnification"):
+            optics["pixel_size_um"] = round(o["sensor_pixel_um"] / o["magnification"], 5)
+            optics["pixel_size_source"] = "sensor_pixel / magnification"
+        if optics:
+            ctx["optics"] = optics
+        mode = o.get("filter_mode", "unknown")
+        if mode == "none":
+            ctx["filter"] = None
+        elif mode == "filter":
+            fl = o.get("filter") or {}
+            data = {"name": fl.get("name") or None, "type": fl.get("type") or None}
+            if fl.get("type") == "bandpass":
+                data.update(center_nm=fl.get("center_nm"), bandwidth_nm=fl.get("bandwidth_nm"))
+            elif fl.get("type") in ("longpass", "shortpass"):
+                data["edge_nm"] = fl.get("edge_nm")
+            ctx["filter"] = {k: v for k, v in data.items() if v not in (None, "")}
+        il = o.get("illumination") or {}
+        illum = {k: v for k, v in (("type", il.get("type")), ("level_percent", il.get("level_percent")))
+                 if v not in (None, "")}
+        if illum:
+            ctx["illumination"] = illum
+        if o.get("notes"):
+            ctx["notes"] = o["notes"]
+        return ctx
 
     def state(self) -> dict:
         st = self.runner.status
@@ -933,6 +1004,8 @@ class SequenceBody(BaseModel):
     session_name: str = "stack"
     output_root: str = ""
     bulb_s: float = 0
+    shots_per_position: int = 1
+    optics_profile: str = ""      # profilo di ottica/filtro (tab Ottica); "" = nessun filtro
 
 
 @api.post("/api/sequence/start")
@@ -944,11 +1017,17 @@ async def sequence_start(body: SequenceBody):
     if body.capture_mode not in ("download", "card", "trigger"):
         raise ValueError(tr("Modalità di scatto non valida"))
     check_mirror_delay(body.mirror_delay_ms)
+    if not 1 <= body.shots_per_position <= MAX_SHOTS_PER_POSITION:
+        raise ValueError(tr("Scatti per posizione: da 1 a {max}", max=MAX_SHOTS_PER_POSITION))
+    if body.optics_profile and body.optics_profile not in app_state.cfg["optics_profiles"]:
+        raise ValueError(tr("Il profilo ottico «{name}» non esiste più: scegline un altro", name=body.optics_profile))
     need_focuser()
     data["output_root"] = (validate_output_root(body.output_root or app_state.cfg["output_root"])
                            if body.capture_mode == "download" else body.output_root or app_state.cfg["output_root"])
-    app_state.runner.start(SequenceParams(**data))   # verifica anche i fine corsa
-    app_state.cfg["sequence"].update({k: v for k, v in data.items() if k != "output_root"})
+    profile = data.pop("optics_profile")
+    app_state.runner.start(SequenceParams(**data), app_state.manifest_context(profile))   # verifica anche i fine corsa
+    app_state.cfg["sequence"].update({k: v for k, v in data.items() if k != "output_root"},
+                                     optics_profile=profile)
     app_state.cfg["output_root"] = data["output_root"]
     store.save(app_state.cfg)
     return {"ok": True}
@@ -978,6 +1057,43 @@ class SettingsBody(BaseModel):
     jog_max: int | None = None
     jog_hold: bool | None = None
     language: str | None = None   # "auto" (lingua di macOS) oppure un codice di i18n.SUPPORTED
+
+
+MAX_SHOTS_PER_POSITION = 32
+IMMERSIONS = ("", "air", "water", "oil", "glycerol", "silicone")
+FILTER_TYPES = ("bandpass", "longpass", "shortpass", "neutral_density", "polarizer", "other")
+
+
+class FilterBody(BaseModel):
+    name: str = ""
+    type: str = "bandpass"
+    center_nm: float | None = None
+    bandwidth_nm: float | None = None
+    edge_nm: float | None = None
+
+
+class IlluminationBody(BaseModel):
+    type: str = ""
+    level_percent: float | None = None
+
+
+class OpticsBody(BaseModel):
+    objective: str = ""
+    magnification: float | None = None
+    na: float | None = None
+    immersion: str = ""
+    sensor_pixel_um: float | None = None
+    pixel_size_um: float | None = None
+    dof_overlap: float = 30
+    filter_mode: str = "unknown"
+    filter: FilterBody = FilterBody()
+    illumination: IlluminationBody = IlluminationBody()
+    notes: str = ""
+
+
+class OpticsProfileBody(BaseModel):
+    name: str
+    optics: OpticsBody | None = None
 
 
 class PresetBody(BaseModel):
@@ -1019,6 +1135,53 @@ async def save_settings(body: SettingsBody):
         app_state.cfg["jog_hold"] = body.jog_hold
     store.save(app_state.cfg)
     return app_state.cfg
+
+
+def clean_optics(body: OpticsBody) -> dict:
+    """Verifica e normalizza ottica, filtro e illuminazione (senza il nome del profilo)."""
+    if body.immersion not in IMMERSIONS:
+        raise ValueError(tr("Mezzo di immersione non valido"))
+    if body.filter_mode not in ("unknown", "none", "filter"):
+        raise ValueError(tr("Scelta del filtro non valida"))
+    if body.filter.type not in FILTER_TYPES:
+        raise ValueError(tr("Tipo di filtro non valido"))
+    for value in (body.magnification, body.sensor_pixel_um, body.pixel_size_um, body.filter.center_nm,
+                  body.filter.bandwidth_nm, body.filter.edge_nm):
+        if value is not None and value <= 0:
+            raise ValueError(tr("I valori dell'ottica devono essere positivi"))
+    if body.na is not None and not 0 < body.na <= 1.7:
+        raise ValueError(tr("Apertura numerica non valida (0–1,7)"))
+    if body.illumination.level_percent is not None and not 0 <= body.illumination.level_percent <= 100:
+        raise ValueError(tr("Livello dell'illuminazione: da 0 a 100 %"))
+    data = body.model_dump()
+    for key in ("objective", "immersion", "notes"):
+        data[key] = data[key].strip()
+    data["filter"]["name"] = data["filter"]["name"].strip()
+    data["illumination"]["type"] = data["illumination"]["type"].strip()
+    return data
+
+
+@api.post("/api/optics/profiles/save")
+@guard
+async def save_optics_profile(body: OpticsProfileBody):
+    """Crea o sovrascrive un profilo di ottica, filtro e illuminazione."""
+    name = body.name.strip()
+    if not name or body.optics is None:
+        raise ValueError(tr("Nome e dati obbligatori"))
+    app_state.cfg["optics_profiles"][name] = clean_optics(body.optics)
+    store.save(app_state.cfg)
+    app_state.log(tr("Profilo ottico salvato: {name}", name=name))
+    return app_state.cfg["optics_profiles"]
+
+
+@api.post("/api/optics/profiles/delete")
+@guard
+async def delete_optics_profile(body: OpticsProfileBody):
+    app_state.cfg["optics_profiles"].pop(body.name, None)
+    if app_state.cfg["sequence"].get("optics_profile") == body.name:
+        app_state.cfg["sequence"]["optics_profile"] = ""
+    store.save(app_state.cfg)
+    return app_state.cfg["optics_profiles"]
 
 
 @api.post("/api/choose-folder")
@@ -1066,7 +1229,7 @@ async def preset_delete(body: PresetBody):
     return app_state.cfg["presets"]
 
 
-# ---------------- integrazione Finder / Helicon Focus ----------------
+# ---------------- integrazione Finder ----------------
 @api.post("/api/open-folder")
 async def open_folder():
     folder = app_state.runner.status.folder
@@ -1076,21 +1239,14 @@ async def open_folder():
     return {"ok": True}
 
 
-@api.post("/api/open-helicon")
-async def open_helicon():
+@api.post("/api/open-stack-folder")
+async def open_stack_folder():
+    """Apre nel Finder la cartella dell'ultima pila (immagini e sequence.json)."""
     folder = app_state.runner.status.folder
     if not folder or not Path(folder).exists():
-        raise HTTPException(400, tr("Nessuna sequenza scaricata da aprire"))
-    images = sorted(p for p in Path(folder).iterdir()
-                    if p.suffix.lower() != ".json" and not p.name.startswith("."))
-    if not images:
-        raise HTTPException(400, tr("La cartella non contiene immagini"))
-    for app_name in ("Helicon Focus 8", "Helicon Focus 7", "Helicon Focus", "HeliconFocus"):
-        proc = subprocess.run(["open", "-a", app_name, *map(str, images)], capture_output=True)
-        if proc.returncode == 0:
-            app_state.log(tr("Aperte {n} immagini in {app}", n=len(images), app=app_name))
-            return {"ok": True}
-    raise HTTPException(400, tr("Helicon Focus non trovato in /Applications"))
+        raise HTTPException(400, tr("Nessuna pila da aprire"))
+    subprocess.Popen(["open", folder])
+    return {"ok": True}
 
 
 # ---------------- file statici (PWA) ----------------

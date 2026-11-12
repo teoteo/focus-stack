@@ -15,6 +15,7 @@ META = {
 # To be aligned with the app's real English strings (web/lang/en-*.json) once they are final.
 UI = {
     "Sessione": "Session",
+    "Ottica": "Optics",
     "Configurazione": "Configuration",
     "Registro": "Log",
     "Simulatore": "Simulator",
@@ -61,7 +62,23 @@ UI = {
     "Salva in": "Save to",
     "Scegli…": "Choose…",
     "Apri": "Open",
-    "Tempi, gioco e nome della sessione": "Timing, backlash and session name",
+    "Tempi, gioco, scatti per posizione e nome della sessione": "Timing, backlash, shots per position and session name",
+    "Scatti per posizione": "Shots per position",
+    "Ottica e filtro (profilo)": "Optics and filter (profile)",
+    "Modifica": "Edit",
+    "Profilo da modificare": "Profile to edit",
+    "— nuovo profilo —": "— new profile —",
+    "Salva come nuovo profilo…": "Save as new profile…",
+    "Elimina profilo": "Delete profile",
+    "Salva profilo": "Save profile",
+    "Obiettivo": "Objective",
+    "Immersione": "Immersion",
+    "Filtro": "Filter",
+    "Non indicato": "Not specified",
+    "Nessun filtro": "No filter",
+    "Filtro montato": "Filter fitted",
+    "Illuminazione": "Illumination",
+    "Note": "Notes",
     "Attesa dopo il movimento (ms)": "Settle time after moving (ms)",
     "Pausa dopo lo scatto (ms)": "Pause after the shot (ms)",
     "Compensazione gioco (passi)": "Backlash compensation (steps)",
@@ -77,7 +94,7 @@ UI = {
     "❚❚ Pausa": "❚❚ Pause",
     "Riprendi": "Resume",
     "■ Interrompi": "■ Abort",
-    "Apri in Helicon Focus": "Open in Helicon Focus",
+    "Apri nel Finder": "Open in the Finder",
     "Adatta": "Fit",
     "Reset": "Reset",
     "Segui ultimo": "Follow latest",
@@ -150,7 +167,7 @@ add(f"""
   <h1 class="title">Focus Stack</h1>
   <div class="sub">User Guide<br>motorized focuser and camera for focus stacking on the microscope</div>
   <div class="shot-c"><img src="{IMG}/sessione.png" alt=""></div>
-  <div class="meta"><span>App version {VERSION}</span><span>October 2026</span></div>
+  <div class="meta"><span>App version {VERSION}</span><span>November 2026</span></div>
 </section>
 """)
 
@@ -159,11 +176,11 @@ add("""
 <div class="toc"><ol>
 <li><span>1</span>What Focus Stack is<em>how it works, what you need</em></li>
 <li><span>2</span>Installing, starting and updating</li>
-<li><span>3</span>The interface at a glance<em>the three tabs and the top bar</em></li>
+<li><span>3</span>The interface at a glance<em>the four tabs and the top bar</em></li>
 <li><span>4</span>Connecting the focuser and the camera<em>settings for the Nikon D5600 and other cameras</em></li>
 <li><span>5</span>The focuser: position, moves, STOP</li>
 <li><span>6</span>Camera, test shot and live view</li>
-<li><span>7</span>The stacking sequence</li>
+<li><span>7</span>The stacking sequence<em>optics and filter profiles, several shots per position, the stack files</em></li>
 <li><span>8</span>The viewer</li>
 <li><span>9</span>Safety limits</li>
 <li><span>10</span>Mechanical setup: the calculations<em>resolution in µm per step, verification, travel, speed, backlash</em></li>
@@ -250,18 +267,20 @@ this guide exists in the same languages.</p>
 # 3
 add(f"""
 <h1><span class="n">3</span>The interface at a glance</h1>
-<p>The page has three tabs, chosen at the top:</p>
+<p>The page has four tabs, chosen at the top:</p>
 <ul>
 <li><b>{ui("Sessione")}</b>: the work at the microscope. Focuser, sequence, camera and latest shot.</li>
-<li><b>{ui("Configurazione")}</b>: limits, mechanics, manual controls, motor, updates, temperature and the
-  depth-of-field calculator. Set up once, then rarely touched.</li>
+<li><b>{ui("Ottica")}</b>: the <b>profiles</b> for objective, filter and illumination, which are recorded in the data
+  of every stack, and the depth-of-field calculator (chapters 7.2 and 11).</li>
+<li><b>{ui("Configurazione")}</b>: limits, mechanics, manual controls, motor, updates and temperature.
+  Set up once, then rarely touched.</li>
 <li><b>{ui("Registro")}</b>: a timestamped list of everything that happened in the session. The first place to look
   when something goes wrong.</li>
 </ul>
 {fig("sessione", layout="full", caption="The Session tab: focuser on the left, sequence in the middle, camera and latest shot on the right.")}
 <h2>Top bar</h2>
 {fig("barra-superiore", [
-    f"<b>Tabs</b> {ui('Sessione')}, {ui('Configurazione')} and {ui('Registro')}.",
+    f"<b>Tabs</b> {ui('Sessione')}, {ui('Ottica')}, {ui('Configurazione')} and {ui('Registro')}.",
     "<b>Connection status</b>: Server, Focuser and Camera. Green = connected, grey = disconnected, red = error.",
     "<b>Temperature</b> read by the focuser's probe.",
     "<b>Theme</b>, dark or light. The dark theme is easier on the eyes during long sessions at the microscope.",
@@ -371,13 +390,16 @@ to 100% and beyond and pan to the detail you care about (chapter 8).</div>
 # 7
 add(f"""
 <h1><span class="n">7</span>The stacking sequence</h1>
+<h2 style="margin-top:0">7.1 Setting up the sequence</h2>
 {fig("sequenza", [
     "<b>Status</b>: Ready, Running, Paused, Completed, Error.",
     f"<b>{ui('Inizio')}</b> and <b>{ui('Fine')}</b> in steps. <span class='ui'>{ui('⌖ qui')}</span> copies the current position.",
     "<b>Step</b> between one shot and the next, in motor steps (chapter 11).",
     "<b>Number of shots</b>. It is linked to the step: change one and the other is recalculated.",
-    "<b>Summary</b>: shots, travel in steps and in µm, step in µm, estimated duration. If the sequence goes beyond the limits a red warning appears and the sequence won't start.",
+    f"<b>{ui('Ottica e filtro (profilo)')}</b>: the objective, filter and illumination profile to record in the stack's data (7.2). <span class='ui'>{ui('Modifica')}</span> opens it in the {ui('Ottica')} tab. Without a profile the stack is recorded as “no filter”.",
+    "<b>Summary</b>: shots, travel in steps and in µm, step in µm, estimated duration and the optics profile used. If the sequence goes beyond the limits a red warning appears and the sequence won't start.",
     f"<b>{ui('Salva in')}</b>: the photo folder. <span class='ui'>{ui('Scegli…')}</span> opens the Finder panel, <span class='ui'>{ui('Apri')}</span> shows it in the Finder.",
+    f"<b>{ui('Scatti per posizione')}</b>: how many photos to take at each position (default 1). With several shots the fusion software can average them and reduce noise (7.3).",
     "<b>Settle time after move</b>: time for vibrations to die down before the shot (1–3 s on a microscope). <b>Pause after shot</b>: time to write to the card and recharge the flash.",
     "<b>Backlash compensation</b>: before the first shot the motor backs off by this many steps and then moves forward, so every shot is reached from the same direction.",
     f"<b>{ui('Modalità di scatto')}</b>: <i>{ui('Scarica sul Mac')}</i> (recommended), <i>{ui('Solo sulla scheda')}</i>, <i>{ui('Solo trigger (veloce)')}</i> (faster: set the destination to card).",
@@ -386,11 +408,10 @@ add(f"""
     "<b>Presets</b>: save and recall the sequence settings, for example one per objective.",
     "<b>Progress</b>: shots taken, time left, position.",
     f"<b>Start</b>, <b>Pause</b>/<b>{ui('Riprendi')}</b> and <b>Abort</b>.",
-    f"<b>{ui('Apri in Helicon Focus')}</b>: when the sequence ends, loads all the photos into Helicon Focus.",
+    f"<b>{ui('Apri nel Finder')}</b>: when the sequence ends, opens the stack folder, with the photos, <code>sequence.json</code> and <code>sequence.txt</code> (7.4).",
 ])}
-<p>Timing and backlash settings are in the collapsible <span class="ui">{ui('Tempi, gioco e nome della sessione')}</span>
-section. In the photo folder the app also saves <code>sequence.json</code>, with the parameters used and the
-position and temperature of every shot.</p>
+<p>Shots per position, timing and backlash are in the collapsible <span class="ui">{ui('Tempi, gioco, scatti per posizione e nome della sessione')}</span>
+section.</p>
 <h2>While the sequence runs</h2>
 {fig("sequenza-in-corso", [
     "The status turns to <b>Running</b> (amber).",
@@ -403,6 +424,53 @@ position and temperature of every shot.</p>
 <li>The sequence fields are locked while the sequence runs.</li>
 <li>Every new photo appears in Latest shot and in the viewer.</li>
 </ul>
+
+<h2>7.2 Optics and filter: the profiles</h2>
+<p>The fusion software works better when it knows what the photos were taken with: given the magnification and the
+sensor pixel it can produce the depth map and the 3D view in real micrometres. These data are saved in the
+<b>{ui('Ottica')}</b> tab as named <b>profiles</b>, one for each combination of objective, filter and illumination
+(for example “10× GFP”, “4× brightfield”), and chosen in the sequence (number 5 in the figure above).</p>
+{fig("ottica", [
+    f"<b>{ui('Profilo da modificare')}</b>: choose one to load its values; <i>{ui('— nuovo profilo —')}</i> starts from an empty form.",
+    f"<b>{ui('Salva come nuovo profilo…')}</b>: asks for a name and saves a copy, leaving the original profile as it was.",
+    f"<b>{ui('Elimina profilo')}</b>, after a confirmation.",
+    f"<b>{ui('Obiettivo')}</b>: any name, for example as engraved on the objective.",
+    f"<b>{ui('Ingrandimento sul sensore')}</b>: objective magnification × the camera adapter's factor.",
+    f"<b>{ui('Apertura numerica (NA)')}</b>: the second number engraved on the objective (10×/<b>0.25</b>).",
+    f"<b>{ui('Immersione')}</b>: air, water, oil, glycerol or silicone.",
+    "<b>Sensor pixel</b> in µm. Nikon D5600: <b>3.9 µm</b> (23.5 mm ÷ 6,000 pixels).",
+    "<b>µm per pixel on the specimen, measured</b> with a stage micrometer: if present, it takes precedence over the calculation.",
+    "The <b>scale on the specimen</b>: the measured value, or sensor pixel ÷ magnification.",
+    f"<b>{ui('Filtro')}</b>: <i>{ui('Non indicato')}</i> (unknown), <i>{ui('Nessun filtro')}</i> or <i>{ui('Filtro montato')}</i>.",
+    "Filter <b>name</b> and <b>type</b>: band pass, long pass, short pass, neutral density, polarizer, other.",
+    "<b>Centre</b> and <b>bandwidth</b> in nm for a band pass; for long pass and short pass, the cut-off wavelength.",
+    f"<b>{ui('Illuminazione')}</b> (free text, with suggestions) and <b>intensity</b> in %.",
+    f"Free <b>{ui('Note')}</b>, recorded in the stack's data.",
+    f"<b>{ui('Salva profilo')}</b>: overwrites the chosen profile; if it is a new one, asks for a name.",
+    "The open <b>profile</b>; amber if there are unsaved changes.",
+], layout="full")}
+<p>An empty field means “not specified” and is not written. If you choose no profile in the sequence, the stack is
+recorded as taken <b>without a filter</b> and with no optical data. The same NA, magnification and pixel values are
+also used by the depth-of-field calculator (chapter 11). Remember to change profile when you change objective or
+filter: the sequence summary always shows what will be recorded.</p>
+
+<h2>7.3 Several shots per position</h2>
+<p>With <span class="ui">{ui('Scatti per posizione')}</span> above 1 the camera shoots several times at each position,
+without moving the motor in between: the settle time against vibrations applies only after a move, and between the
+shots there is only the pause after the shot. The fusion software averages them: with 4 shots the noise is halved.
+The files are named <code>stack_0001_1</code>, <code>stack_0001_2</code>…; with a single shot they stay
+<code>stack_0001</code>, <code>stack_0002</code>… The summary shows positions × shots and the correct duration.</p>
+
+<h2>7.4 The stack files</h2>
+<p>In the stack folder, next to the photos, the app writes two files. It rewrites them after every shot, so they are
+valid even if the sequence is aborted. The photos themselves are never modified.</p>
+<ul>
+<li><code>sequence.json</code>: all the data for the <b>fusion software</b>: position of every shot in steps and in µm,
+  time, temperature, guide, camera, optics profile, filter and illumination. The format is described in
+  <code>docs/sequence-json.md</code> on GitHub.</li>
+<li><code>sequence.txt</code>: a <b>human-readable summary</b>, in the app's language. For example:</li>
+</ul>
+<div class="calc">{SEQ_TXT}</div>
 """)
 
 # 8
@@ -622,14 +690,13 @@ add(f"""
 <p class="lead">Each photo is sharp only in a thin layer of the specimen, the <b>depth of field</b>. To have
 everything in focus after stacking, the focus must not move more than that layer between one shot and the next,
 with a little overlap.</p>
+<p>The calculator is at the bottom of the <b>{ui('Ottica')}</b> tab and uses the numerical aperture, the magnification on
+the sensor and the sensor pixel of the open profile (chapter 7.2).</p>
 {fig("profondita", [
-    f"<b>{ui('Apertura numerica (NA)')}</b>: the second number engraved on the objective (10×/<b>0.25</b>).",
-    f"<b>{ui('Ingrandimento sul sensore')}</b>: objective magnification × the camera adapter's factor.",
-    "<b>Sensor pixel</b> in µm. Nikon D5600: <b>3.9 µm</b> (23.5 mm ÷ 6,000 pixels).",
     "<b>Overlap</b> between one sharp layer and the next; 20–30% is a good value.",
     "<b>Result</b>: depth of field, recommended step in µm and in motor steps.",
     f"<b>{ui('Usa come passo della sequenza')}</b>: copies the value in steps into the sequence's Step field.",
-])}
+], layout="side narrow")}
 <h2>11.1 The formula</h2>
 <p>The app uses Berek's formula, the most widely used in microscopy:</p>
 <div class="formula">depth of field (µm) = {frac("λ · n", "NA²")} + {frac("n · e", "M · NA")}
@@ -706,7 +773,7 @@ not restart over the USB cable: during the update the app asks you to press the 
 <h2>{ui('Temperatura')}</h2>
 {fig("temperatura", [
     "Current probe temperature.",
-    "The last 60 minutes. The temperature of every shot is saved in <code>sequence.json</code>: useful because focus drifts with thermal expansion.",
+    "The last 60 minutes. The temperature of every shot is saved in <code>sequence.json</code> and summarised in <code>sequence.txt</code>: useful because focus drifts with thermal expansion.",
 ], layout="side")}
 """)
 
@@ -718,18 +785,21 @@ add(f"""
 <li><b>Mechanics</b>: enter the data and check the resolution with a measurement (chapter 10).</li>
 <li><b>Specimen direction</b> and <b>limits</b>, with the limits written to the firmware (chapter 9).</li>
 <li><b>Backlash</b>: measure it with live view and choose where to compensate it (sequence or firmware).</li>
-<li><b>Presets</b>: for each objective, work out the step from the depth of field and save a preset.</li>
+<li><b>Optics profiles</b>: in the {ui('Ottica')} tab, save a profile for each combination of objective, filter and
+  illumination (chapter 7.2).</li>
+<li><b>Presets</b>: for each objective, work out the step from the depth of field and save a preset; the preset
+  also remembers the optics profile.</li>
 </ol>
 <h2>Every session</h2>
 <ol class="steps">
 <li>Switch on the focuser and the camera (mode M), plug in the cables and open Focus Stack.</li>
 <li>Connect the focuser and the camera from the {ui('Sessione')} tab.</li>
 <li>Set shutter speed, ISO and format; take a <b>test shot</b> and check it in the viewer at 100%.</li>
-<li>Choose the objective's <b>preset</b> (or the step).</li>
+<li>Choose the objective's <b>preset</b> (or the step) and check the <b>optics profile</b> in the sequence.</li>
 <li>Using <b>live view</b> and the keyboard, find the <b>end</b> and the <b>start</b> of the sequence and click {ui('⌖ qui')}.</li>
 <li>Check the summary: number of shots, travel, duration, no red warning.</li>
 <li><b>{ui('▶ Avvia sequenza')}</b>. Don't touch the microscope: vibrations spoil the shots.</li>
-<li>When the sequence ends, click <b>{ui('Apri in Helicon Focus')}</b>.</li>
+<li>When the sequence ends, click <b>{ui('Apri nel Finder')}</b> and open the folder in the fusion software.</li>
 </ol>
 """)
 

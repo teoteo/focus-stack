@@ -47,7 +47,7 @@ add(f"""
   <h1 class="title">Focus Stack</h1>
   <div class="sub">Guide d'utilisation<br>focuser motorisé et appareil photo pour le focus stacking au microscope</div>
   <div class="shot-c"><img src="{IMG}/sessione.png" alt=""></div>
-  <div class="meta"><span>Version de l'app {VERSION}</span><span>Octobre 2026</span></div>
+  <div class="meta"><span>Version de l'app {VERSION}</span><span>Novembre 2026</span></div>
 </section>
 """)
 
@@ -56,11 +56,11 @@ add("""
 <div class="toc"><ol>
 <li><span>1</span>Qu'est-ce que Focus Stack<em>principe de fonctionnement, matériel nécessaire</em></li>
 <li><span>2</span>Installation, lancement et mises à jour</li>
-<li><span>3</span>L'interface en bref<em>les trois onglets et la barre supérieure</em></li>
+<li><span>3</span>L'interface en bref<em>les quatre onglets et la barre supérieure</em></li>
 <li><span>4</span>Connecter le focuser et l'appareil photo<em>réglages du Nikon D5600 et des autres appareils</em></li>
 <li><span>5</span>Le focuser : position, déplacements, STOP</li>
 <li><span>6</span>Appareil photo, photo test et visée en direct</li>
-<li><span>7</span>La séquence de stacking</li>
+<li><span>7</span>La séquence de stacking<em>profils d'optique et de filtre, plusieurs prises par position, les fichiers de la pile</em></li>
 <li><span>8</span>La visionneuse</li>
 <li><span>9</span>Limites de sécurité</li>
 <li><span>10</span>Configuration mécanique : les calculs<em>résolution en µm par pas, mesure de contrôle, course, vitesse, jeu</em></li>
@@ -149,18 +149,20 @@ l'interface, aux messages et au journal, et ce guide existe dans les mêmes lang
 # 3
 add(f"""
 <h1><span class="n">3</span>L'interface en bref</h1>
-<p>La page comporte trois onglets, que l'on choisit en haut :</p>
+<p>La page comporte quatre onglets, que l'on choisit en haut :</p>
 <ul>
 <li><b>{ui("Sessione")}</b> : le travail au microscope. Focuser, séquence, appareil photo et dernière photo.</li>
-<li><b>{ui("Configurazione")}</b> : limites, mécanique, commandes manuelles, moteur, mises à jour, température et
-  calcul de la profondeur de champ. On le règle une fois, puis on y touche rarement.</li>
+<li><b>{ui("Ottica")}</b> : les <b>profils</b> d'objectif, de filtre et d'éclairage, qui sont enregistrés dans les
+  données de chaque pile, et le calcul de la profondeur de champ (chapitres 7.2 et 11).</li>
+<li><b>{ui("Configurazione")}</b> : limites, mécanique, commandes manuelles, moteur, mises à jour et température.
+  On le règle une fois, puis on y touche rarement.</li>
 <li><b>{ui("Registro")}</b> : la liste horodatée de tout ce qui s'est passé pendant la session. C'est le premier
   endroit à consulter en cas de problème.</li>
 </ul>
 {fig("sessione", layout="full", caption="L'onglet Session : à gauche le focuser, au centre la séquence, à droite l'appareil photo et la dernière photo.")}
 <h2>Barre supérieure</h2>
 {fig("barra-superiore", [
-    f"<b>Onglets</b> {ui('Sessione')}, {ui('Configurazione')} et {ui('Registro')}.",
+    f"<b>Onglets</b> {ui('Sessione')}, {ui('Ottica')}, {ui('Configurazione')} et {ui('Registro')}.",
     f"<b>État des connexions</b> : {ui('Server')}, {ui('Focheggiatore')} et {ui('Fotocamera')}. Vert = connecté, gris = déconnecté, rouge = erreur.",
     "<b>Température</b> lue par la sonde du focuser.",
     "<b>Thème</b> sombre ou clair. Le thème sombre fatigue moins les yeux pendant les longues sessions au microscope.",
@@ -273,13 +275,16 @@ reste levé tant que la visée en direct est active.</p>
 TORNA = ui("Torna all'inizio a fine sequenza")
 add(f"""
 <h1><span class="n">7</span>La séquence de stacking</h1>
+<h2 style="margin-top:0">7.1 Régler la séquence</h2>
 {fig("sequenza", [
     f"<b>État</b> : {ui('Pronta')}, {ui('In corso')}, {ui('In pausa')}, {ui('Completata')}, {ui('Errore')}.",
     f"<b>{ui('Inizio')}</b> et <b>{ui('Fine')}</b> en pas. <span class='ui'>{ui('⌖ qui')}</span> copie la position actuelle.",
     "<b>Pas</b> entre deux photos, en pas moteur (chapitre 11).",
     f"<b>{ui('Numero di scatti')}</b>, lié au pas : modifier l'un recalcule l'autre.",
-    "<b>Récapitulatif</b> : photos, course en pas et en µm, pas en µm, durée estimée. Si la séquence sort des limites, un avertissement rouge apparaît et elle ne démarre pas.",
+    f"<b>{ui('Ottica e filtro (profilo)')}</b> : le profil d'objectif, de filtre et d'éclairage à écrire dans les données de la pile (7.2). <span class='ui'>{ui('Modifica')}</span> l'ouvre dans l'onglet {ui('Ottica')}. Sans profil, la pile est notée « aucun filtre ».",
+    "<b>Récapitulatif</b> : photos, course en pas et en µm, pas en µm, durée estimée et profil optique utilisé. Si la séquence sort des limites, un avertissement rouge apparaît et elle ne démarre pas.",
     f"<b>{ui('Salva in')}</b> : le dossier des photos. <span class='ui'>{ui('Scegli…')}</span> ouvre le Finder, <span class='ui'>{ui('Apri')}</span> y affiche le dossier.",
+    f"<b>{ui('Scatti per posizione')}</b> : combien de photos prendre à chaque position (1 par défaut). Avec plusieurs prises, le logiciel de fusion peut en faire la moyenne et réduire le bruit (7.3).",
     "<b>Attente après le mouvement</b> : laisse les vibrations s'amortir avant la photo (1 à 3 s au microscope). <b>Pause après la photo</b> : écriture sur la carte, recharge du flash.",
     "<b>Compensation du jeu</b> : avant la première photo, le moteur recule de ce nombre de pas puis avance ; chaque photo est ainsi atteinte dans le même sens.",
     f"<b>{ui('Modalità di scatto')}</b> : <i>{ui('Scarica sul Mac')}</i> (recommandé), <i>{ui('Solo sulla scheda')}</i>, <i>{ui('Solo trigger (veloce)')}</i> (destination : carte).",
@@ -288,11 +293,10 @@ add(f"""
     "<b>Préréglages</b> : enregistrent et rappellent les réglages de la séquence, par exemple un par objectif.",
     "<b>Progression</b> : photos prises, temps restant, position.",
     f"<b>{ui('▶ Avvia sequenza')}</b>, <b>{ui('Pausa')}</b>/<b>{ui('Riprendi')}</b>, <b>{ui('■ Interrompi')}</b>.",
-    f"<b>{ui('Apri in Helicon Focus')}</b> : en fin de séquence, y charge toutes les photos.",
+    f"<b>{ui('Apri nel Finder')}</b> : en fin de séquence, ouvre le dossier de la pile, avec les photos, <code>sequence.json</code> et <code>sequence.txt</code> (7.4).",
 ])}
-<p>Les réglages de temps et de jeu se trouvent dans la section repliable <span class="ui">{ui('Tempi, gioco e nome della sessione')}</span>.
-Dans le dossier des photos, l'app enregistre aussi <code>sequence.json</code>, avec les paramètres utilisés ainsi que
-la position et la température de chaque photo.</p>
+<p>Les prises par position, les temps et le jeu se trouvent dans la section repliable
+<span class="ui">{ui('Tempi, gioco, scatti per posizione e nome della sessione')}</span>.</p>
 <h2>Pendant la séquence</h2>
 {fig("sequenza-in-corso", [
     f"L'état passe à <b>{ui('In corso')}</b> (orange).",
@@ -305,6 +309,55 @@ la position et la température de chaque photo.</p>
 <li>Les champs de la séquence sont verrouillés tant que la séquence est en cours.</li>
 <li>Chaque nouvelle photo s'affiche dans {ui('Ultimo scatto')} et dans la visionneuse.</li>
 </ul>
+
+<h2>7.2 Optique et filtre : les profils</h2>
+<p>Le logiciel de fusion travaille mieux s'il sait avec quoi les photos ont été prises : avec le grossissement et le
+pixel du capteur, il peut fournir la carte de profondeur et la vue 3D en vrais micromètres. Ces données s'enregistrent
+dans l'onglet <b>{ui('Ottica')}</b> sous forme de <b>profils</b> nommés, un pour chaque combinaison d'objectif, de filtre et
+d'éclairage (par exemple « 10× GFP », « 4× fond clair »), et se choisissent dans la séquence (repère 5 de la figure
+ci-dessus).</p>
+{fig("ottica", [
+    f"<b>{ui('Profilo da modificare')}</b> : choisissez-le pour charger ses valeurs ; <i>{ui('— nuovo profilo —')}</i> part d'un formulaire vide.",
+    f"<b>{ui('Salva come nuovo profilo…')}</b> : demande un nom et enregistre une copie, sans modifier le profil de départ.",
+    f"<b>{ui('Elimina profilo')}</b>, après confirmation.",
+    "<b>Objectif</b> : un nom libre, tel qu'il est gravé sur l'objectif.",
+    f"<b>{ui('Ingrandimento sul sensore')}</b> : grossissement de l'objectif × facteur de l'adaptateur de l'appareil photo.",
+    f"<b>{ui('Apertura numerica (NA)')}</b> : le second nombre gravé sur l'objectif (10×/<b>0,25</b>).",
+    f"<b>{ui('Immersione')}</b> : air, eau, huile, glycérine ou silicone.",
+    f"<b>{ui('Pixel del sensore (µm)')}</b>. Nikon D5600 : <b>3,9 µm</b> (23,5 mm ÷ 6000 pixels).",
+    "<b>µm par pixel sur l'échantillon, mesurés</b> avec un micromètre objet : s'il est indiqué, il prime sur le calcul.",
+    "L'<b>échelle sur l'échantillon</b> : la valeur mesurée, ou bien pixel du capteur ÷ grossissement.",
+    f"<b>{ui('Filtro')}</b> : <i>{ui('Non indicato')}</i> (on ne sait pas), <i>{ui('Nessun filtro')}</i> ou <i>{ui('Filtro montato')}</i>.",
+    "<b>Nom</b> et <b>type</b> du filtre : passe-bande, passe-haut (long pass), passe-bas (short pass), densité neutre, polariseur, autre.",
+    "<b>Centre</b> et <b>largeur de bande</b> en nm pour un passe-bande ; pour un passe-haut ou un passe-bas, la longueur d'onde de coupure.",
+    f"<b>{ui('Illuminazione')}</b> (texte libre, avec suggestions) et <b>intensité</b> en %.",
+    f"<b>{ui('Note')}</b> libres, qui sont enregistrées dans les données de la pile.",
+    f"<b>{ui('Salva profilo')}</b> : remplace le profil choisi ; s'il est nouveau, demande un nom.",
+    "Le <b>profil</b> ouvert ; en orange s'il y a des modifications non enregistrées.",
+], layout="full")}
+<p>Un champ vide signifie « non indiqué » et n'est pas écrit. Si vous ne choisissez aucun profil dans la séquence, la
+pile est notée <b>sans filtre</b> et sans données optiques. Les mêmes valeurs d'ouverture numérique, de grossissement et
+de pixel servent aussi au calcul de la profondeur de champ (chapitre 11). Pensez à changer de profil quand vous changez
+d'objectif ou de filtre : le récapitulatif de la séquence affiche toujours celui qui sera écrit.</p>
+
+<h2>7.3 Plusieurs prises par position</h2>
+<p>Avec <span class="ui">{ui('Scatti per posizione')}</span> supérieur à 1, l'appareil photo déclenche plusieurs fois à
+chaque position, sans déplacer le moteur entre deux prises : l'attente contre les vibrations n'a lieu qu'après le
+mouvement, et entre les prises il n'y a que la pause après la photo. Le logiciel de fusion en fait la moyenne : avec
+4 prises, le bruit est divisé par deux. Les fichiers s'appellent <code>stack_0001_1</code>, <code>stack_0001_2</code>… ;
+avec une seule prise, ils restent <code>stack_0001</code>, <code>stack_0002</code>… Le récapitulatif affiche
+positions × prises et la durée correspondante.</p>
+
+<h2>7.4 Les fichiers de la pile</h2>
+<p>Dans le dossier de la pile, à côté des photos, l'app écrit deux fichiers. Elle les réécrit après chaque photo : ils
+restent donc valables même si la séquence est interrompue. Les photos ne sont jamais modifiées.</p>
+<ul>
+<li><code>sequence.json</code> : toutes les données pour le <b>logiciel de fusion</b> : position de chaque photo en pas
+  et en µm, heure, température, guide, appareil photo, profil optique, filtre et éclairage. Le format est décrit dans
+  <code>docs/sequence-json.md</code> sur GitHub.</li>
+<li><code>sequence.txt</code> : un <b>récapitulatif à lire</b>, dans la langue de l'app. Par exemple :</li>
+</ul>
+<div class="calc">{SEQ_TXT}</div>
 """)
 
 # 8
@@ -534,14 +587,13 @@ add(f"""
 <p class="lead">Chaque photo n'est nette que dans une fine tranche de l'échantillon, la <b>profondeur de champ</b>.
 Pour que tout soit net après le stacking, la mise au point ne doit pas se déplacer de plus que cette tranche entre une
 photo et la suivante, avec un peu de chevauchement.</p>
+<p>Le calcul se trouve en bas de l'onglet <b>{ui('Ottica')}</b> et utilise l'ouverture numérique, le grossissement sur le
+capteur et le pixel du capteur du profil ouvert (chapitre 7.2).</p>
 {fig("profondita", [
-    f"<b>{ui('Apertura numerica (NA)')}</b> : le second nombre gravé sur l'objectif (10×/<b>0,25</b>).",
-    f"<b>{ui('Ingrandimento sul sensore')}</b> : grossissement de l'objectif × facteur de l'adaptateur de l'appareil photo.",
-    f"<b>{ui('Pixel del sensore (µm)')}</b>. Nikon D5600 : <b>3,9 µm</b> (23,5 mm ÷ 6000 pixels).",
     f"<b>{ui('Sovrapposizione (%)')}</b> entre une tranche nette et la suivante ; 20 à 30 % est une bonne valeur.",
     "<b>Résultat</b> : profondeur de champ, pas conseillé en µm et en pas moteur.",
     f"<b>{ui('Usa come passo della sequenza')}</b> : copie la valeur en pas dans le champ Pas de la séquence.",
-])}
+], layout="side narrow")}
 <h2>11.1 La formule</h2>
 <p>L'app utilise la formule de Berek, la plus utilisée en microscopie :</p>
 <div class="formula">profondeur de champ (µm) = {frac("λ · n", "ON²")} + {frac("n · e", "M · ON")}
@@ -621,7 +673,7 @@ carte.</p>
 <h2>{ui('Temperatura')}</h2>
 {fig("temperatura", [
     "Température actuelle de la sonde.",
-    "Évolution sur les 60 dernières minutes. La température de chaque photo est enregistrée dans <code>sequence.json</code> : utile, car la mise au point dérive avec la dilatation thermique.",
+    "Évolution sur les 60 dernières minutes. La température de chaque photo est enregistrée dans <code>sequence.json</code> et résumée dans <code>sequence.txt</code> : utile, car la mise au point dérive avec la dilatation thermique.",
 ], layout="side")}
 """)
 
@@ -633,18 +685,21 @@ add(f"""
 <li><b>Mécanique</b> : saisissez les données et vérifiez la résolution par une mesure (chapitre 10).</li>
 <li><b>Sens de l'échantillon</b> et <b>limites</b>, avec les limites écrites dans le firmware (chapitre 9).</li>
 <li><b>Jeu</b> : mesurez-le avec la visée en direct et choisissez où le compenser (séquence ou firmware).</li>
-<li><b>Préréglages</b> : pour chaque objectif, calculez le pas à partir de la profondeur de champ et enregistrez un préréglage.</li>
+<li><b>Profils optiques</b> : dans l'onglet {ui('Ottica')}, enregistrez un profil pour chaque combinaison d'objectif, de
+  filtre et d'éclairage (chapitre 7.2).</li>
+<li><b>Préréglages</b> : pour chaque objectif, calculez le pas à partir de la profondeur de champ et enregistrez un
+  préréglage ; le préréglage retient aussi le profil optique.</li>
 </ol>
 <h2>À chaque session</h2>
 <ol class="steps">
 <li>Allumez le focuser et l'appareil photo (mode M), branchez les câbles et ouvrez Focus Stack.</li>
 <li>Connectez le focuser et l'appareil photo depuis l'onglet {ui('Sessione')}.</li>
 <li>Réglez le temps de pose, l'ISO et le format ; faites une <b>photo test</b> et contrôlez-la dans la visionneuse à 100 %.</li>
-<li>Choisissez le <b>préréglage</b> de l'objectif (ou le pas).</li>
+<li>Choisissez le <b>préréglage</b> de l'objectif (ou le pas) et vérifiez le <b>profil optique</b> dans la séquence.</li>
 <li>Avec la <b>visée en direct</b> et le clavier, trouvez la <b>fin</b> et le <b>début</b> de la séquence et cliquez sur {ui('⌖ qui')}.</li>
 <li>Contrôlez le récapitulatif : nombre de photos, course, durée, aucun avertissement rouge.</li>
 <li><b>{ui('▶ Avvia sequenza')}</b>. Ne touchez pas le microscope : les vibrations gâchent les photos.</li>
-<li>En fin de séquence, cliquez sur <b>{ui('Apri in Helicon Focus')}</b>.</li>
+<li>En fin de séquence, cliquez sur <b>{ui('Apri nel Finder')}</b> et ouvrez le dossier dans le logiciel de fusion.</li>
 </ol>
 """)
 

@@ -110,7 +110,7 @@ function renderMeta(shot) {
   $("v-name").textContent = shot.name;
   const pos = shots.indexOf(shot) + 1;
   const parts = [`${pos} / ${shots.length}`];
-  parts.push(shot.kind === "sequence" ? t("sequenza · scatto {n}", { n: shot.index }) : t("scatto di prova"));
+  parts.push(shot.kind === "sequence" ? t("sequenza · scatto {n}", { n: shot.repeat ? `${shot.index}.${shot.repeat}` : shot.index }) : t("scatto di prova"));
   if (shot.position != null) parts.push(t("posizione {n}", { n: fmtNum(shot.position) }));
   if (shot.temperature != null) parts.push(`${fmtNum(shot.temperature, 1)} °C`);
   parts.push(shot.time);
@@ -133,7 +133,7 @@ function renderStrip() {
     b.dataset.id = s.id;
     b.dataset.key = s.key;
     b.title = s.name;
-    b.innerHTML = `<img loading="lazy" alt="" src="/api/shots/${s.id}/image?size=preview&v=${s.key}"><span>${s.kind === "sequence" ? s.index : t("P")}</span>`;
+    b.innerHTML = `<img loading="lazy" alt="" src="/api/shots/${s.id}/image?size=preview&v=${s.key}"><span>${s.kind === "sequence" ? (s.repeat ? `${s.index}.${s.repeat}` : s.index) : t("P")}</span>`;
     b.onclick = () => { setLiveView(false, { restore: false }); setFollow(s.id === shots[shots.length - 1].id); show(s.id); };
     strip.appendChild(b);
   }

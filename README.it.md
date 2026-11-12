@@ -250,8 +250,17 @@ salvarla, l'app verifica di poterci scrivere.
 
 Gli scatti vengono salvati nella cartella scelta (predefinita `~/Pictures/FocusStack`), in una
 sottocartella `<nome>_<data-ora>/`, con nomi
-`<nome>_0001.ARW`, `_0002…`. Nella stessa cartella c'è `sequence.json` con i parametri usati.
-A fine sequenza **Apri in Helicon Focus** carica direttamente tutte le immagini.
+`<nome>_0001.ARW`, `_0002…`. Con **Scatti per posizione** maggiore di 1 (predefinito 1) la fotocamera scatta
+più volte in ogni posizione e i file si chiamano `<nome>_0001_1.ARW`, `<nome>_0001_2.ARW`…: il software di
+fusione ne fa la media per ridurre il rumore.
+
+Nella stessa cartella c'è `sequence.json`, il manifesto della pila: posizioni in µm, orari, guida,
+fotocamera, ottica, filtro e illuminazione (*Configurazione › Ottica, filtro e illuminazione*). Viene
+riscritto dopo ogni scatto, quindi resta valido anche se la sequenza si interrompe; le immagini non vengono
+mai modificate. Il formato è descritto (in inglese) in [docs/sequence-json.md](docs/sequence-json.md). Accanto c'è
+`sequence.txt`, un breve riepilogo leggibile (nella lingua dell'app) della sequenza, delle impostazioni di scatto e
+dell'ottica.
+A fine sequenza **Apri nel Finder** apre la cartella della pila.
 
 Pausa, ripresa e interruzione sono sempre disponibili; **STOP** ferma subito anche il motore.
 Le sequenze si possono salvare come **preset**, ad esempio uno per obiettivo.

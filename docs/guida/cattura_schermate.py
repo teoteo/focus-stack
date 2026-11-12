@@ -4,12 +4,14 @@ e poi esegui (serve Playwright con Google Chrome), una volta per lingua:
     python3.11 docs/guida/cattura_schermate.py --lang it [URL] [cartella-sequenza]
     python3.11 docs/guida/cattura_schermate.py --lang en
 Salva le immagini in docs/guida/img/<lingua>/ e in img/<lingua>/annotazioni.json la posizione di ogni
-elemento numerato, relativa all'immagine (0–1). Imposta la lingua dell'app e alla fine la rimette su
-"auto". ATTENZIONE: modifica le impostazioni dell'app (meccanica, fine corsa, sequenza, lingua): farne
-prima una copia e ripristinarla dopo.
+elemento numerato, relativa all'immagine (0–1), più un sequence.txt d'esempio nella lingua.
+Imposta la lingua dell'app e alla fine la rimette su "auto". ATTENZIONE: modifica le impostazioni
+dell'app (meccanica, fine corsa, sequenza, profili ottici, lingua): avviare l'istanza di prova con una
+home separata, per esempio  HOME=/tmp/fs-home .venv/bin/python run.py --no-browser --port 8799
 """
 import argparse
 import json
+import sys
 import time
 import urllib.request
 from pathlib import Path
@@ -27,12 +29,18 @@ OUT.mkdir(parents=True, exist_ok=True)
 SEQ_DIR = ARGS.seq_dir or str(OUT.parent.parent / "_sequenza_prova")
 # testi d'esempio iniettati nella pagina, nella forma della lingua
 SAMPLE = {
-    "it": {"f_info": "/dev/cu.usbserial-110 · firmware 330 · max 50.000"},
-    "en": {"f_info": "/dev/cu.usbserial-110 · firmware 330 · max 50,000"},
-    "fr": {"f_info": "/dev/cu.usbserial-110 · firmware 330 · max 50\u202f000"},
-    "de": {"f_info": "/dev/cu.usbserial-110 · Firmware 330 · max. 50.000"},
-    "es": {"f_info": "/dev/cu.usbserial-110 · firmware 330 · máx. 50.000"},
+    "it": {"f_info": "/dev/cu.usbserial-110 · firmware 330 · max 50.000", "obj": "Plan 10×/0,25",
+           "illum": "Epifluorescenza", "notes": "ala di farfalla"},
+    "en": {"f_info": "/dev/cu.usbserial-110 · firmware 330 · max 50,000", "obj": "Plan 10×/0.25",
+           "illum": "Epifluorescence", "notes": "butterfly wing"},
+    "fr": {"f_info": "/dev/cu.usbserial-110 · firmware 330 · max 50\u202f000", "obj": "Plan 10×/0,25",
+           "illum": "Épifluorescence", "notes": "aile de papillon"},
+    "de": {"f_info": "/dev/cu.usbserial-110 · Firmware 330 · max. 50.000", "obj": "Plan 10×/0,25",
+           "illum": "Epifluoreszenz", "notes": "Schmetterlingsflügel"},
+    "es": {"f_info": "/dev/cu.usbserial-110 · firmware 330 · máx. 50.000", "obj": "Plan 10×/0,25",
+           "illum": "Epifluorescencia", "notes": "ala de mariposa"},
 }[LANG]
+PROFILE = "10× GFP"
 notes: dict = {}
 
 
@@ -98,6 +106,11 @@ with sync_playwright() as p:
     post("/api/mechanics", {"mode": "computed", "motor_steps_per_rev": 400, "gear_ratio": 3, "um_per_knob_rev": 100})
     post("/api/limits", {"limit_min": 2000, "limit_max": 45000, "toward_specimen": "decreasing"})
     post("/api/settings", {"jog_max": 10000, "jog_hold": True})
+    post("/api/optics/profiles/save", {"name": PROFILE, "optics": {
+        "objective": SAMPLE["obj"], "magnification": 10, "na": 0.25, "immersion": "air", "sensor_pixel_um": 3.9,
+        "dof_overlap": 30, "filter_mode": "filter",
+        "filter": {"name": "GFP", "type": "bandpass", "center_nm": 525, "bandwidth_nm": 50},
+        "illumination": {"type": SAMPLE["illum"], "level_percent": 80}, "notes": SAMPLE["notes"]}})
     for _ in range(3):
         post("/api/camera/test")
         time.sleep(1.2)
@@ -112,6 +125,8 @@ with sync_playwright() as p:
     page.fill("#s-settle", "1500"); page.dispatch_event("#s-settle", "input")
     page.fill("#s-post", "500"); page.dispatch_event("#s-post", "input")
     page.fill("#s-name", "stack"); page.dispatch_event("#s-name", "input")
+    page.fill("#s-repeats", "1"); page.dispatch_event("#s-repeats", "input")
+    page.select_option("#s-optics", PROFILE); page.dispatch_event("#s-optics", "change")
     page.wait_for_timeout(1200)
 
     # testi che nella guida devono sembrare quelli di un focheggiatore e una fotocamera veri
@@ -139,9 +154,10 @@ with sync_playwright() as p:
         (9, ".row.goto", "l"), (10, "#f-halt", "l")))
     shot(page, "sequenza", "#card-seq", m(
         (1, "#s-chip", "r"), (2, "#s-start", "l"), (3, "#s-step", "l"), (4, "#s-count", "l"),
-        (5, "#s-summary", "l"), (6, "#s-folder", "l"), (7, "#s-settle", "l"), (8, "#s-backlash", "l"),
-        (9, "#s-mode", "l"), (10, "#s-name", "l"), (11, "#s-return", "l"), (12, "#s-preset", "l"),
-        (13, ".progress-box", "l"), (14, ".seq-actions", "l"), (15, "#s-helicon", "l")))
+        (5, "#s-optics", "l"), (6, "#s-summary", "l"), (7, "#s-folder", "l"), (8, "#s-repeats", "l"),
+        (9, "#s-settle", "l"), (10, "#s-backlash", "l"), (11, "#s-mode", "l"), (12, "#s-name", "l"),
+        (13, "#s-return", "l"), (14, "#s-preset", "l"), (15, ".progress-box", "l"), (16, ".seq-actions", "l"),
+        (17, "#s-finder", "l")))
     shot(page, "fotocamera", "#card-camera", m(
         (1, "#c-chip", "r"), (2, "#c-connected-line", "l"), (3, "#c-shutter", "l"), (4, "#c-aperture", "l"),
         (5, "#c-target", "l"), (6, "#c-bulb", "l"), (7, "#c-mirror", "l"), (8, "#c-reload", "l"), (9, "#c-test", "r")))
@@ -151,6 +167,23 @@ with sync_playwright() as p:
     page.wait_for_timeout(2000)
     shot(page, "live", "#card-last", m((1, "#live-btn", "l"), (2, "#live-badge", "r"), (3, "#live-meta", "l")))
     page.click("#live-btn")
+
+    # ---- ottica: profili e profondità di campo ----
+    page.click(".tabs button[data-tab=optics]")
+    page.wait_for_timeout(800)
+    page.select_option("#o-profile", PROFILE); page.dispatch_event("#o-profile", "change")
+    page.evaluate("window.scrollTo(0, 0)")
+    page.wait_for_timeout(300)
+    page.evaluate("document.querySelector('#card-optics .subsection').style.display = 'none'")
+    shot(page, "ottica", "#card-optics", m(
+        (1, "#o-profile", "l"), (2, "#o-profile-save", "l"), (3, "#o-profile-del", "r"), (4, "#o-objective", "l"),
+        (5, "#d-mag", "l"), (6, "#d-na", "l"), (7, "#o-immersion", "l"), (8, "#d-px", "l"), (9, "#o-pxcal", "l"),
+        (10, "#o-pxresult", "l"), (11, "#o-filter-mode", "l"), (12, "#o-fname", "l"), (13, "#o-fcenter", "l"),
+        (14, "#o-illum", "l"), (15, "#o-notes", "l"), (16, "#o-save", "l"), (17, "#o-chip", "r")))
+    page.evaluate("document.querySelector('#card-optics .subsection').style.display = ''")
+    shot(page, "profondita", "#card-optics .subsection", m(
+        (1, "#d-ov", "l"), (2, "#d-result", "l"), (3, "#d-apply", "l")), pad=10)
+    notes["profondita"]["text"] = page.inner_text("#d-result")
 
     # ---- configurazione ----
     page.click(".tabs button[data-tab=config]")
@@ -173,9 +206,6 @@ with sync_playwright() as p:
         (5, "#mo-backlash_in_enabled", "l"), (6, "#mo-backlash_in_steps", "l"), (7, "#mo-reload", "r")))
     shot(page, "aggiornamenti", "#card-updates", m((1, "#up-app", "l"), (2, "#up-fw", "l"), (3, "#fw-update", "l"), (4, "#up-check", "r")))
     shot(page, "temperatura", "#card-temp", m((1, "#t-value", "l"), (2, "#t-spark", "l")))
-    shot(page, "profondita", "#card-dof", m(
-        (1, "#d-na", "l"), (2, "#d-mag", "l"), (3, "#d-px", "l"), (4, "#d-ov", "l"), (5, "#d-result", "l"), (6, "#d-apply", "l")))
-    notes["profondita"]["text"] = page.inner_text("#d-result")
     notes["meccanica"]["text"] = page.inner_text("#m-result")
 
     page.click(".tabs button[data-tab=log]")
@@ -202,15 +232,38 @@ with sync_playwright() as p:
     page.wait_for_timeout(500)
     st = state()["settings"]["sequence"]
     post("/api/sequence/start", {**st, "start": 24000, "end": 26000, "step": 87, "backlash": 200,
-                                 "settle_ms": 800, "post_shot_ms": 200, "output_root": SEQ_DIR, "session_name": "stack"})
+                                 "settle_ms": 800, "post_shot_ms": 200, "output_root": SEQ_DIR, "session_name": "stack",
+                                 "optics_profile": PROFILE})
     page.wait_for_timeout(9000)
     shot(page, "sequenza-in-corso", "#card-seq", m(
         (1, "#s-chip", "r"), (2, ".progress-box", "l"), (3, ".seq-actions", "l")))
     shot(page, "barra-posizione", "#card-focuser .position", pad=0)
     shot(page, "binario", "#rail", m((1, "#rail-forb-l", "l"), (2, "#rail-seq", "t"), (3, "#rail-pos", "t")), pad=6)
     post("/api/sequence/stop")
-    time.sleep(1)
+    time.sleep(1.5)
     browser.close()
+
+# ---- sequence.txt d'esempio: breve sequenza completa, 2 scatti per posizione ----
+st = state()["settings"]["sequence"]
+post("/api/sequence/start", {**st, "start": 24000, "end": 24435, "step": 87, "backlash": 200, "settle_ms": 300,
+                             "post_shot_ms": 100, "shots_per_position": 2, "output_root": SEQ_DIR,
+                             "session_name": "stack", "optics_profile": PROFILE})
+for _ in range(240):
+    time.sleep(0.5)
+    if state()["sequence"]["state"] in ("done", "error", "idle"):
+        break
+manifest = json.loads((Path(state()["sequence"]["folder"]) / "sequence.json").read_text(encoding="utf-8"))
+# dati che nella guida devono sembrare quelli di un focheggiatore e una fotocamera veri
+manifest["rail"].update(model="myFocuserPro2", firmware="330 build 3")
+manifest["camera"] = {"model": "Nikon DSC D5600", "iso": "100", "shutterspeed": "1/60", "imageformat": "NEF (Raw)"}
+for frame in manifest["frames"]:
+    for exp in frame["exposures"]:
+        exp["files"] = [f.rsplit(".", 1)[0] + ".NEF" for f in exp["files"]]
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from backend import i18n, summary  # noqa: E402
+i18n.set_language(LANG)
+(OUT / "sequence.txt").write_text(summary.render(manifest), encoding="utf-8")
+print("ok sequence.txt")
 
 post("/api/settings", {"language": "auto"})
 

@@ -247,8 +247,16 @@ by the server. If the folder does not exist it is created and, before saving it,
 can write there.
 
 Shots are saved in the chosen folder (default `~/Pictures/FocusStack`), in a `<name>_<date-time>/`
-subfolder, named `<name>_0001.ARW`, `_0002…`. The same folder holds `sequence.json` with the parameters
-used. At the end of the sequence **Open in Helicon Focus** loads all the images directly.
+subfolder, named `<name>_0001.ARW`, `_0002…`. With **Shots per position** greater than 1 (default 1) the
+camera fires several times at each position and the files are named `<name>_0001_1.ARW`, `<name>_0001_2.ARW`…:
+the fusion software averages them to reduce noise.
+
+The same folder holds `sequence.json`, the stack manifest: positions in µm, times, rail, camera,
+optics, filter and illumination (*Settings › Optics, filter and illumination*). It is rewritten after
+every shot, so it stays valid even if the sequence is interrupted; the images are never modified. The
+format is described in [docs/sequence-json.md](docs/sequence-json.md). Next to it, `sequence.txt` is a short
+human-readable summary (in the app language) of the sequence, the shooting settings and the optics.
+At the end of the sequence **Open in Finder** opens the stack folder.
 
 Pause, resume and abort are always available; **STOP** also halts the motor at once.
 Sequences can be saved as **presets**, for example one per objective.

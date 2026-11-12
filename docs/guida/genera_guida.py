@@ -6,6 +6,7 @@ cattura_schermate.py --lang <lingua>. Se mancano le schermate di una lingua usa 
 """
 import json
 import sys
+from html import escape as html_escape
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -225,10 +226,12 @@ def build(lang):
         print(f"ATTENZIONE: mancano le schermate in {img_dir}/, uso quelle italiane")
         img_dir = "img/it"
     notes = json.loads((HERE / img_dir / "annotazioni.json").read_text(encoding="utf-8"))
+    seq_txt = HERE / img_dir / "sequence.txt"   # esempio di riepilogo, prodotto da cattura_schermate.py
+    seq_txt = html_escape(seq_txt.read_text(encoding="utf-8")) if seq_txt.exists() else ""
     ns = {"fig": make_fig(notes, img_dir), "frac": frac, "table": table, "num": make_num(lang), "diagram": diagram,
           "APP": app_strings(lang),
           "VERSION": VERSION, "ICON": ICON, "IMG": img_dir, "UA": UA, "UB": UB, "GEAR17": GEAR17,
-          "um_step": um_step, "dof": dof, "OBJ": OBJ}
+          "um_step": um_step, "dof": dof, "OBJ": OBJ, "SEQ_TXT": seq_txt}
     path = HERE / f"testo_{lang}.py"
     exec(compile(path.read_text(encoding="utf-8"), str(path), "exec"), ns)
     meta = ns["META"]

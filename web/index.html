@@ -21,6 +21,7 @@
   </div>
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="session" aria-selected="true">Sessione</button>
+    <button role="tab" data-tab="optics">Ottica</button>
     <button role="tab" data-tab="config">Configurazione</button>
     <button role="tab" data-tab="log">Registro</button>
   </nav>
@@ -126,6 +127,9 @@
       </label>
       <label>Passo (passi motore)<input type="number" id="s-step" min="1"></label>
       <label>Numero di scatti<input type="number" id="s-count" min="2" title="Modifica per ricalcolare il passo"></label>
+      <label class="span-all">Ottica e filtro (profilo)
+        <span class="field-with-btn"><select id="s-optics"><option value="">Nessun profilo (nessun filtro)</option></select><button class="btn ghost small" id="s-optics-edit" title="Crea o modifica i profili nel tab Ottica">Modifica</button></span>
+      </label>
     </div>
 
     <div class="summary" id="s-summary"></div>
@@ -141,8 +145,9 @@
     </div>
 
     <details class="more" id="s-more">
-      <summary>Tempi, gioco e nome della sessione</summary>
+      <summary>Tempi, gioco, scatti per posizione e nome della sessione</summary>
       <div class="fields two">
+        <label>Scatti per posizione<input type="number" id="s-repeats" min="1" max="32" step="1" title="Più scatti nella stessa posizione: il software di fusione ne fa la media per ridurre il rumore"></label>
         <label>Attesa dopo il movimento (ms)<input type="number" id="s-settle" min="0" step="100"></label>
         <label>Pausa dopo lo scatto (ms)<input type="number" id="s-post" min="0" step="100"></label>
         <label>Compensazione gioco (passi)<input type="number" id="s-backlash" min="0"></label>
@@ -178,7 +183,7 @@
       <button class="btn danger big" id="s-stop-btn">■  Interrompi</button>
     </div>
     <div class="row">
-      <button class="btn ghost small" id="s-helicon">Apri in Helicon Focus</button>
+      <button class="btn ghost small" id="s-finder" title="Apre la cartella della pila con le immagini e sequence.json">Apri nel Finder</button>
     </div>
   </section>
 
@@ -253,6 +258,89 @@
       <div class="last-meta hidden" id="live-meta"></div>
     </section>
   </div>
+</main>
+
+<!-- ================================ OTTICA ================================ -->
+<main class="view grid-config hidden" id="view-optics">
+
+  <section class="card span2" id="card-optics">
+    <header class="card-head"><h2>Ottica, filtro e illuminazione</h2><span class="chip" id="o-chip">—</span></header>
+    <p class="lead" data-i18n-html>Questi dati vengono scritti in <code>sequence.json</code> accanto alle immagini di ogni pila, per il software di fusione. Un campo vuoto vuol dire «non indicato». Salva ogni combinazione di obiettivo, filtro e illuminazione come <b>profilo</b> e sceglila nella card <b>Sequenza di stacking</b>: senza profilo la pila risulta «nessun filtro».</p>
+    <div class="profile-bar">
+      <label class="profile-select">Profilo da modificare
+        <select id="o-profile"><option value="">— nuovo profilo —</option></select>
+      </label>
+      <button class="btn ghost small" id="o-profile-save">Salva come nuovo profilo…</button>
+      <button class="btn ghost small" id="o-profile-del">Elimina profilo</button>
+    </div>
+    <div class="optics-grid">
+      <div>
+        <h3>Obiettivo e sensore</h3>
+        <div class="fields two">
+          <label class="span-all">Obiettivo (nome)<input type="text" id="o-objective" autocomplete="off" placeholder="es. Plan 10×/0,25"></label>
+          <label>Ingrandimento sul sensore<input type="number" id="d-mag" step="0.1" min="0" placeholder="es. 10" title="Obiettivo × adattatore della fotocamera"></label>
+          <label>Apertura numerica (NA)<input type="number" id="d-na" step="0.01" min="0" placeholder="es. 0.25"></label>
+          <label>Immersione
+            <select id="o-immersion">
+              <option value="">Non indicata</option>
+              <option value="air">Aria (a secco)</option>
+              <option value="water">Acqua</option>
+              <option value="oil">Olio</option>
+              <option value="glycerol">Glicerina</option>
+              <option value="silicone">Silicone</option>
+            </select>
+          </label>
+          <label>Pixel del sensore (µm)<input type="number" id="d-px" step="0.01" min="0" placeholder="es. 3.9"></label>
+          <label class="span-all">µm per pixel sul campione, misurati (facoltativo)<input type="number" id="o-pxcal" step="0.0001" min="0" title="Misurato con un micrometro oggetto: ha la precedenza sul valore calcolato"></label>
+        </div>
+        <p class="result" id="o-pxresult"></p>
+      </div>
+      <div>
+        <h3>Filtro</h3>
+        <div class="seg wide" id="o-filter-mode" role="radiogroup" aria-label="Filtro">
+          <button data-fmode="unknown">Non indicato</button>
+          <button data-fmode="none">Nessun filtro</button>
+          <button data-fmode="filter">Filtro montato</button>
+        </div>
+        <div class="fields two" id="o-filter-fields">
+          <label>Nome<input type="text" id="o-fname" autocomplete="off" placeholder="es. GFP"></label>
+          <label>Tipo
+            <select id="o-ftype">
+              <option value="bandpass">Passa banda</option>
+              <option value="longpass">Long pass (lascia passare le λ lunghe)</option>
+              <option value="shortpass">Short pass (lascia passare le λ corte)</option>
+              <option value="neutral_density">Neutro (ND)</option>
+              <option value="polarizer">Polarizzatore</option>
+              <option value="other">Altro</option>
+            </select>
+          </label>
+          <label class="f-band">Centro (nm)<input type="number" id="o-fcenter" step="1" min="0" placeholder="es. 525"></label>
+          <label class="f-band">Larghezza di banda (nm)<input type="number" id="o-fwidth" step="1" min="0" placeholder="es. 50"></label>
+          <label class="f-edge">Lunghezza d'onda di taglio (nm)<input type="number" id="o-fedge" step="1" min="0" placeholder="es. 590"></label>
+        </div>
+        <h3>Illuminazione e note</h3>
+        <div class="fields two">
+          <label>Illuminazione<input type="text" id="o-illum" list="o-illum-list" autocomplete="off" placeholder="es. LED ad anello"></label>
+          <label>Intensità (%)<input type="number" id="o-level" step="1" min="0" max="100" placeholder="es. 60"></label>
+          <label class="span-all">Note<input type="text" id="o-notes" autocomplete="off"></label>
+        </div>
+        <datalist id="o-illum-list"></datalist>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="o-save">Salva profilo</button>
+      <span class="hint" id="o-dirty"></span>
+    </div>
+
+    <div class="subsection">
+      <h3>Profondità di campo</h3>
+      <div class="fields two">
+        <label>Sovrapposizione (%)<input type="number" id="d-ov" step="5" min="0" max="90"></label>
+      </div>
+      <p class="result" id="d-result"></p>
+      <button class="btn ghost" id="d-apply">Usa come passo della sequenza</button>
+    </div>
+  </section>
 </main>
 
 <!-- ============================ CONFIGURAZIONE ============================ -->
@@ -411,17 +499,6 @@
     <p class="hint" id="t-range" data-i18n-html>Ultimi 60 minuti. La temperatura di ogni scatto viene salvata in <code>sequence.json</code>.</p>
   </section>
 
-  <section class="card" id="card-dof">
-    <header class="card-head"><h2>Profondità di campo</h2></header>
-    <div class="fields two">
-      <label>Apertura numerica (NA)<input type="number" id="d-na" step="0.01" value="0.25"></label>
-      <label>Ingrandimento sul sensore<input type="number" id="d-mag" step="0.1" value="10"></label>
-      <label>Pixel del sensore (µm)<input type="number" id="d-px" step="0.1" value="3.9"></label>
-      <label>Sovrapposizione (%)<input type="number" id="d-ov" step="5" value="30"></label>
-    </div>
-    <p class="result" id="d-result"></p>
-    <button class="btn ghost" id="d-apply">Usa come passo della sequenza</button>
-  </section>
 </main>
 
 <!-- ================================ REGISTRO ================================ -->

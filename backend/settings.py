@@ -39,7 +39,15 @@ DEFAULTS: dict = {
         "return_to_start": True,
         "capture_mode": "download",
         "session_name": "stack",
+        "shots_per_position": 1,
+        "optics_profile": "",      # profilo di ottica/filtro usato dalla sequenza ("" = nessun filtro)
     },
+    # Profili di ottica, filtro e illuminazione (tab Ottica), scritti nel manifesto sequence.json.
+    # nome -> {objective, magnification (totale sul sensore), na, immersion (air|water|oil|glycerol|silicone),
+    #          sensor_pixel_um, pixel_size_um (misurato, ha la precedenza), dof_overlap,
+    #          filter_mode (unknown|none|filter), filter {name, type, center_nm, bandwidth_nm, edge_nm},
+    #          illumination {type, level_percent}, notes}. None/"" = non indicato.
+    "optics_profiles": {},
     "presets": {},
     # lingua dell'interfaccia: "auto" = quella di macOS, oppure "it" / "en"
     "language": "auto",
