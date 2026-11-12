@@ -107,6 +107,7 @@ code, kbd { font: 13px ui-monospace, "SF Mono", Menlo, monospace; background: va
   background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; }
 .profile-select { flex: 1 1 260px; min-width: 0; }
 .optics-line a { color: inherit; }
+.hint a { color: var(--accent); text-underline-offset: 2px; }
 .subsection { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
 .optics-line { display: block; margin-top: 4px; color: var(--muted); }
 @media (max-width: 860px) { .optics-grid { grid-template-columns: 1fr; } }

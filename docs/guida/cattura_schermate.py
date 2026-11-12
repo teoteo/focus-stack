@@ -30,17 +30,18 @@ SEQ_DIR = ARGS.seq_dir or str(OUT.parent.parent / "_sequenza_prova")
 # testi d'esempio iniettati nella pagina, nella forma della lingua
 SAMPLE = {
     "it": {"f_info": "/dev/cu.usbserial-110 · firmware 330 · max 50.000", "obj": "Plan 10×/0,25",
-           "illum": "Epifluorescenza", "notes": "ala di farfalla"},
+           "illum": "Epifluorescenza", "notes": "ala di farfalla", "relay": "raccordo T2"},
     "en": {"f_info": "/dev/cu.usbserial-110 · firmware 330 · max 50,000", "obj": "Plan 10×/0.25",
-           "illum": "Epifluorescence", "notes": "butterfly wing"},
+           "illum": "Epifluorescence", "notes": "butterfly wing", "relay": "T2 adapter"},
     "fr": {"f_info": "/dev/cu.usbserial-110 · firmware 330 · max 50\u202f000", "obj": "Plan 10×/0,25",
-           "illum": "Épifluorescence", "notes": "aile de papillon"},
+           "illum": "Épifluorescence", "notes": "aile de papillon", "relay": "bague T2"},
     "de": {"f_info": "/dev/cu.usbserial-110 · Firmware 330 · max. 50.000", "obj": "Plan 10×/0,25",
-           "illum": "Epifluoreszenz", "notes": "Schmetterlingsflügel"},
+           "illum": "Epifluoreszenz", "notes": "Schmetterlingsflügel", "relay": "T2-Adapter"},
     "es": {"f_info": "/dev/cu.usbserial-110 · firmware 330 · máx. 50.000", "obj": "Plan 10×/0,25",
-           "illum": "Epifluorescencia", "notes": "ala de mariposa"},
+           "illum": "Epifluorescencia", "notes": "ala de mariposa", "relay": "adaptador T2"},
 }[LANG]
 PROFILE = "10× GFP"
+PROFILE_OPTOVAR = "10× GFP + Optovar 1,6×" if LANG != "en" else "10× GFP + Optovar 1.6×"
 notes: dict = {}
 
 
@@ -106,11 +107,16 @@ with sync_playwright() as p:
     post("/api/mechanics", {"mode": "computed", "motor_steps_per_rev": 400, "gear_ratio": 3, "um_per_knob_rev": 100})
     post("/api/limits", {"limit_min": 2000, "limit_max": 45000, "toward_specimen": "decreasing"})
     post("/api/settings", {"jog_max": 10000, "jog_hold": True})
-    post("/api/optics/profiles/save", {"name": PROFILE, "optics": {
-        "objective": SAMPLE["obj"], "magnification": 10, "na": 0.25, "immersion": "air", "sensor_pixel_um": 3.9,
+    sample_optics = {
+        "objective": SAMPLE["obj"], "objective_magnification": 10, "na": 0.25, "immersion": "air", "sensor_pixel_um": 3.9,
         "dof_overlap": 30, "filter_mode": "filter",
         "filter": {"name": "GFP", "type": "bandpass", "center_nm": 525, "bandwidth_nm": 50},
-        "illumination": {"type": SAMPLE["illum"], "level_percent": 80}, "notes": SAMPLE["notes"]}})
+        "illumination": {"type": SAMPLE["illum"], "level_percent": 80}, "notes": SAMPLE["notes"]}
+    post("/api/optics/profiles/save", {"name": PROFILE, "optics": sample_optics})
+    # lo stesso microscopio con il cambio d'ingrandimento Optovar 1,6× e la fotocamera su un raccordo T2 (1×)
+    post("/api/optics/profiles/save", {"name": PROFILE_OPTOVAR, "optics": {
+        **sample_optics, "intermediate": {"name": "Optovar", "factor": 1.6},
+        "relay": {"name": SAMPLE["relay"], "factor": 1}}})
     for _ in range(3):
         post("/api/camera/test")
         time.sleep(1.2)
@@ -171,18 +177,26 @@ with sync_playwright() as p:
     # ---- ottica: profili e profondità di campo ----
     page.click(".tabs button[data-tab=optics]")
     page.wait_for_timeout(800)
-    page.select_option("#o-profile", PROFILE); page.dispatch_event("#o-profile", "change")
+    page.select_option("#o-profile", PROFILE_OPTOVAR); page.dispatch_event("#o-profile", "change")
     page.evaluate("window.scrollTo(0, 0)")
     page.wait_for_timeout(300)
     page.evaluate("document.querySelector('#card-optics .subsection').style.display = 'none'")
     shot(page, "ottica", "#card-optics", m(
-        (1, "#o-profile", "l"), (2, "#o-profile-save", "l"), (3, "#o-profile-del", "r"), (4, "#o-objective", "l"),
-        (5, "#d-mag", "l"), (6, "#d-na", "l"), (7, "#o-immersion", "l"), (8, "#d-px", "l"), (9, "#o-pxcal", "l"),
-        (10, "#o-pxresult", "l"), (11, "#o-filter-mode", "l"), (12, "#o-fname", "l"), (13, "#o-fcenter", "l"),
-        (14, "#o-illum", "l"), (15, "#o-notes", "l"), (16, "#o-save", "l"), (17, "#o-chip", "r")))
+        (1, "#o-profile", "l"), (2, "#o-profile-save", "l"), (3, "#o-profile-del", "r"),
+        # in ordine fisico, come nella pagina: sensore, adattatore, cambio intermedio, obiettivo
+        (4, "#d-px", "l"), (5, "#o-relay-name", "l"), (6, "#o-inter-name", "l"), (7, "#o-objective", "l"),
+        (8, "#d-mag", "l"), (9, "#d-na", "l"), (10, "#o-immersion", "l"), (11, "#o-pxcal", "l"), (12, "#o-pxresult", "l"),
+        (13, "#o-filter-mode", "l"), (14, "#o-fname", "l"), (15, "#o-fcenter", "l"), (16, "#o-illum", "l"),
+        (17, "#o-notes", "l"), (18, "#o-save", "l"), (19, "#o-chip", "r")))
     page.evaluate("document.querySelector('#card-optics .subsection').style.display = ''")
+    # profondità di campo: profilo senza Optovar (come gli esempi del capitolo 11), riquadro stretto
+    # perché i tre numeri non si sovrappongano
+    page.select_option("#o-profile", PROFILE); page.dispatch_event("#o-profile", "change")
+    page.wait_for_timeout(300)
+    page.evaluate("Object.assign(document.querySelector('#card-optics .subsection').style, {width: '520px'})")
     shot(page, "profondita", "#card-optics .subsection", m(
-        (1, "#d-ov", "l"), (2, "#d-result", "l"), (3, "#d-apply", "l")), pad=10)
+        (1, "#d-ov", "l"), (2, "#d-result", "l"), (3, "#d-apply", "l")), pad=0)
+    page.evaluate("document.querySelector('#card-optics .subsection').style.width = ''")
     notes["profondita"]["text"] = page.inner_text("#d-result")
 
     # ---- configurazione ----
@@ -204,7 +218,8 @@ with sync_playwright() as p:
     shot(page, "motore", "#card-motor", m(
         (1, "#mo-step_mode", "l"), (2, "#mo-speed", "l"), (3, "#mo-coil_power", "l"), (4, "#mo-reverse", "l"),
         (5, "#mo-backlash_in_enabled", "l"), (6, "#mo-backlash_in_steps", "l"), (7, "#mo-reload", "r")))
-    shot(page, "aggiornamenti", "#card-updates", m((1, "#up-app", "l"), (2, "#up-fw", "l"), (3, "#fw-update", "l"), (4, "#up-check", "r")))
+    # 1 a sinistra e 2 a destra: le due righe sono troppo vicine per due numeri uno sopra l'altro
+    shot(page, "aggiornamenti", "#card-updates", m((1, "#up-app", "l"), (2, "#up-fw", "r"), (3, "#fw-update", "l"), (4, "#up-check", "r")))
     shot(page, "temperatura", "#card-temp", m((1, "#t-value", "l"), (2, "#t-spark", "l")))
     notes["meccanica"]["text"] = page.inner_text("#m-result")
 
@@ -238,7 +253,8 @@ with sync_playwright() as p:
     shot(page, "sequenza-in-corso", "#card-seq", m(
         (1, "#s-chip", "r"), (2, ".progress-box", "l"), (3, ".seq-actions", "l")))
     shot(page, "barra-posizione", "#card-focuser .position", pad=0)
-    shot(page, "binario", "#rail", m((1, "#rail-forb-l", "l"), (2, "#rail-seq", "t"), (3, "#rail-pos", "t")), pad=6)
+    # 2 sotto la fascia della sequenza, 3 sopra la linea della posizione (che sta dentro la fascia)
+    shot(page, "binario", "#rail", m((1, "#rail-forb-l", "l"), (2, "#rail-seq", "b"), (3, "#rail-pos", "t")), pad=6)
     post("/api/sequence/stop")
     time.sleep(1.5)
     browser.close()

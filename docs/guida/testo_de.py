@@ -8,7 +8,7 @@ META = {
     "lang": "de",
     "title": "Focus Stack — Bedienungsanleitung",
     "footer": "Bedienungsanleitung",
-    "pdf": "Focus Stack Anleitung.pdf",
+    "pdf": "DE Focus Stack - Anleitung.pdf",
 }
 
 
@@ -271,6 +271,8 @@ können Sie auf 100 % und mehr vergrößern und zum gewünschten Detail verschie
 
 # 7
 TORNA = ui("Torna all'inizio a fine sequenza")
+ING_OBIETTIVO = ui("Ingrandimento dell'obiettivo")
+CAMBIO_INTERMEDIO = ui("Cambio d'ingrandimento intermedio")
 add(f"""
 <h1><span class="n">7</span>Die Stacking-Serie</h1>
 <h2 style="margin-top:0">7.1 Die Serie einstellen</h2>
@@ -312,18 +314,22 @@ add(f"""
 <p>Die Fusionssoftware arbeitet besser, wenn sie weiß, womit die Fotos aufgenommen wurden: Mit der Vergrößerung und der
 Pixelgröße des Sensors kann sie die Tiefenkarte und die 3D-Ansicht in echten Mikrometern liefern. Diese Daten speichern
 Sie im Bereich <b>{ui('Ottica')}</b> als benannte <b>Profile</b>, eines für jede Kombination aus Objektiv, Filter und
-Beleuchtung (zum Beispiel „10× GFP“, „4× Hellfeld“), und wählen sie in der Serie aus (Nummer 5 in der Abbildung oben).</p>
+Beleuchtung (zum Beispiel „10× GFP“, „4× Hellfeld“), und wählen sie in der Serie aus (Nummer 5 in der Abbildung oben). Die
+Abbildung zeigt dasselbe Objektiv mit dem Vergrößerungswechsler Optovar 1,6× und die Kamera an einem T2-Adapter ohne
+Linsen.</p>
 {fig("ottica", [
     f"<b>{ui('Profilo da modificare')}</b>: Wählen Sie es, um seine Werte zu laden; <i>{ui('— nuovo profilo —')}</i> beginnt mit einem leeren Formular.",
     f"<b>{ui('Salva come nuovo profilo…')}</b>: fragt nach einem Namen und speichert eine Kopie; das Ausgangsprofil bleibt unverändert.",
     f"<b>{ui('Elimina profilo')}</b>, nach einer Rückfrage.",
+    f"<b>{ui('Pixel del sensore (pixel pitch in µm)')}</b>. Nikon D5600: <b>3,9 µm</b> (23,5 mm ÷ 6.000 Pixel). Er steht im Datenblatt der Kamera, auf <b>digicamdb.com</b> (Fotokameras) oder in der Sensordatenbank von <b>AstroBin</b> (dedizierte Kameras, zum Beispiel nach IMX571 suchen).",
+    f"<b>{ui('Adattatore / oculare di proiezione')}</b> zwischen Mikroskop und Kamera: Name und Faktor, zum Beispiel ein C-Mount-Adapter 0,5× oder 0,63×, ein Fotookular 2,5×, ein T2-Adapter ohne Linsen 1×. Leer = 1×.",
+    f"<b>{CAMBIO_INTERMEDIO}</b>, falls das Stativ einen hat: Name und Faktor, zum Beispiel <i>Optovar</i> 1,25×, 1,6× oder 2×. Leer = 1×.",
     f"<b>{ui('Obiettivo (nome)')}</b>: ein frei wählbarer Name, so wie er auf dem Objektiv eingraviert ist.",
-    f"<b>{ui('Ingrandimento sul sensore')}</b>: Objektivvergrößerung × Faktor des Kameraadapters.",
+    f"<b>{ING_OBIETTIVO}</b>: die erste auf dem Objektiv eingravierte Zahl (<b>10</b>×/0,25).",
     f"<b>{ui('Apertura numerica (NA)')}</b>: die zweite auf dem Objektiv eingravierte Zahl (10×/<b>0,25</b>).",
     f"<b>{ui('Immersione')}</b>: {ui('Aria (a secco)')}, {ui('Acqua')}, {ui('Olio')}, {ui('Glicerina')} oder {ui('Silicone')}.",
-    f"<b>{ui('Pixel del sensore (µm)')}</b>. Nikon D5600: <b>3,9 µm</b> (23,5 mm ÷ 6.000 Pixel).",
     f"<b>{ui('µm per pixel sul campione, misurati (facoltativo)')}</b> mit einem Objektmikrometer: Falls vorhanden, hat dieser Wert Vorrang vor der Berechnung.",
-    "Der <b>Maßstab am Präparat</b>: der gemessene Wert oder Sensorpixel ÷ Vergrößerung.",
+    f"<b>{ui('Ingrandimento sul sensore')}</b> = Objektiv × Zwischenvergrößerung × Adapter (hier 10 × 1,6 × 1 = 16×) und <b>Maßstab am Präparat</b>: der gemessene Wert oder Sensorpixel ÷ Vergrößerung.",
     f"<b>{ui('Filtro')}</b>: <i>{ui('Non indicato')}</i> (unbekannt), <i>{ui('Nessun filtro')}</i> oder <i>{ui('Filtro montato')}</i>.",
     f"<b>{ui('Nome')}</b> und <b>{ui('Tipo')}</b> des Filters: {ui('Passa banda')}, {ui('Long pass')}, {ui('Short pass')}, {ui('Neutro (ND)')}, {ui('Polarizzatore')}, {ui('Altro')}.",
     f"<b>{ui('Centro (nm)')}</b> und <b>{ui('Larghezza di banda (nm)')}</b> bei einem Bandpass; bei Lang- und Kurzpass die Kantenwellenlänge.",
@@ -354,7 +360,7 @@ und sind daher auch gültig, wenn die Serie abgebrochen wird. Die Fotos selbst w
   <code>docs/sequence-json.md</code> auf GitHub beschrieben.</li>
 <li><code>sequence.txt</code>: eine <b>lesbare Übersicht</b> in der Sprache der App. Zum Beispiel:</li>
 </ul>
-<div class="calc">{SEQ_TXT}</div>
+<div class="calc long">{SEQ_TXT}</div>
 """)
 
 # 8
@@ -581,7 +587,7 @@ add(f"""
 Stacking alles scharf ist, darf sich der Fokus zwischen zwei Aufnahmen nicht weiter als diese Schicht verschieben, mit
 etwas Überlappung.</p>
 <p>Der Rechner befindet sich unten im Bereich <b>{ui('Ottica')}</b> und verwendet die numerische Apertur, die
-Vergrößerung auf dem Sensor und die Pixelgröße des Sensors aus dem geöffneten Profil (Kapitel 7.2).</p>
+Vergrößerung auf dem Sensor (Objektiv × Zwischenvergrößerung × Adapter) und die Pixelgröße des Sensors aus dem geöffneten Profil (Kapitel 7.2).</p>
 {fig("profondita", [
     f"<b>{ui('Sovrapposizione (%)')}</b> zwischen einer scharfen Schicht und der nächsten; 20–30 % ist ein guter Wert.",
     "<b>Ergebnis</b>: Schärfentiefe, empfohlene Schrittweite in µm und in Motorschritten.",
@@ -603,9 +609,12 @@ in Schritten, Beispiel A: 7,25 ÷ {num(UA, 4)} = 87,0 → <b>87 Schritte</b>   B
 <h3>Typische Werte (D5600, Adapter 1×, Überlappung 30 %)</h3>
 {table(["Objektiv", "Schärfentiefe (µm)", "Schrittweite (µm)", "Schritte, Beispiel A", "Schritte, Beispiel B"], dof_rows, right=(1, 2, 3, 4))}
 <p style="font-size:9pt;color:#5a6b80">Beispiel A = {num(UA, 4)} µm/Schritt; Beispiel B = {num(UB, 4)} µm/Schritt (Abschnitt 10.3). Hinweis: {dof_note}</p>
-<div class="box tip"><span class="t">Der Kameraadapter</span>Hat der Adapter einen anderen Faktor als 1 (zum Beispiel
-0,5× oder 2,5×), multiplizieren Sie die Objektivvergrößerung mit diesem Faktor: 10× mit Adapter 0,5× = 5 auf dem Sensor.
-Nur der zweite Term der Formel ändert sich, und der fällt bei schwachen Objektiven am stärksten ins Gewicht.</div>
+<div class="box tip"><span class="t">Optovar, Adapter und Projektionsokulare</span>Geben Sie im Optikprofil (Kapitel 7.2)
+den Faktor des Zwischenvergrößerungswechslers und den des Adapters oder Projektionsokulars an: Die App multipliziert sie
+mit der Objektivvergrößerung. Zum Beispiel 10× mit Optovar 1,6× und Adapter 0,63× = 10 × 1,6 × 0,63 ≈ 10,1× auf dem
+Sensor. Nur der zweite Term der Formel ändert sich, und der fällt bei schwachen Objektiven am stärksten ins Gewicht. Für
+einen exakten Maßstab in µm messen Sie die µm pro Pixel mit einem Objektmikrometer: Die auf dem Zubehör angegebenen
+Faktoren sind Nennwerte.</div>
 
 <h2>11.2 Anfang, Ende und Anzahl der Aufnahmen</h2>
 <ol class="steps">

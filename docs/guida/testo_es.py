@@ -8,7 +8,7 @@ META = {
     "lang": "es",
     "title": "Focus Stack — Guía de uso",
     "footer": "Guía de uso",
-    "pdf": "Guía Focus Stack.pdf",
+    "pdf": "ES Focus Stack - Guía.pdf",
 }
 
 
@@ -310,18 +310,21 @@ add(f"""
 <p>El software de fusión trabaja mejor si sabe con qué se tomaron las fotos: con el aumento y el píxel del sensor
 puede dar el mapa de profundidad y la vista 3D en micrómetros reales. Estos datos se guardan en la pestaña
 <b>{ui('Ottica')}</b> como <b>perfiles</b> con nombre, uno por cada combinación de objetivo, filtro e iluminación
-(por ejemplo «10× GFP», «4× campo claro»), y se eligen en la secuencia (número 5 de la figura anterior).</p>
+(por ejemplo «10× GFP», «4× campo claro»), y se eligen en la secuencia (número 5 de la figura anterior). En la
+figura, el mismo objetivo con el cambiador de aumento Optovar 1,6× y la cámara en un adaptador T2 sin lentes.</p>
 {fig("ottica", [
     f"<b>{ui('Profilo da modificare')}</b>: elígelo para cargar sus valores; <i>{ui('— nuovo profilo —')}</i> empieza con un formulario vacío.",
     f"<b>{ui('Salva come nuovo profilo…')}</b>: pide un nombre y guarda una copia, sin tocar el perfil de partida.",
     f"<b>{ui('Elimina profilo')}</b>, tras una confirmación.",
+    f"<b>{ui('Pixel del sensore (pixel pitch in µm)')}</b>. Nikon D5600: <b>3,9 µm</b> (23,5 mm ÷ 6.000 píxeles). Se encuentra en la ficha técnica de la cámara, en <b>digicamdb.com</b> (cámaras fotográficas) o en la base de datos de sensores de <b>AstroBin</b> (cámaras dedicadas, buscando por ejemplo IMX571).",
+    f"<b>{ui('Adattatore / oculare di proiezione')}</b> entre el microscopio y la cámara: nombre y factor, por ejemplo un adaptador C-mount de 0,5× o 0,63×, un fotocular de 2,5×, un adaptador T2 sin lentes de 1×. Vacío = 1×.",
+    f'''<b>{ui("Cambio d'ingrandimento intermedio")}</b>, si el estativo lo tiene: nombre y factor, por ejemplo <i>Optovar</i> 1,25×, 1,6× o 2×. Vacío = 1×.''',
     "<b>Objetivo</b>: un nombre libre, tal como está grabado en el objetivo.",
-    f"<b>{ui('Ingrandimento sul sensore')}</b>: aumento del objetivo × factor del adaptador de la cámara.",
+    f'''<b>{ui("Ingrandimento dell'obiettivo")}</b>: el primer número grabado en el objetivo (<b>10</b>×/0,25).''',
     f"<b>{ui('Apertura numerica (NA)')}</b>: el segundo número grabado en el objetivo (10×/<b>0,25</b>).",
     f"<b>{ui('Immersione')}</b>: aire, agua, aceite, glicerina o silicona.",
-    f"<b>{ui('Pixel del sensore (µm)')}</b>. Nikon D5600: <b>3,9 µm</b> (23,5 mm ÷ 6.000 píxeles).",
     "<b>µm por píxel en la muestra, medidos</b> con un micrómetro objetivo: si se indican, valen más que el cálculo.",
-    "La <b>escala en la muestra</b>: el valor medido o bien píxel del sensor ÷ aumento.",
+    f"<b>{ui('Ingrandimento sul sensore')}</b> = objetivo × cambiador intermedio × adaptador (aquí 10 × 1,6 × 1 = 16×) y <b>escala en la muestra</b>: el valor medido o bien píxel del sensor ÷ aumento.",
     f"<b>{ui('Filtro')}</b>: <i>{ui('Non indicato')}</i> (no se sabe), <i>{ui('Nessun filtro')}</i> o <i>{ui('Filtro montato')}</i>.",
     "<b>Nombre</b> y <b>tipo</b> del filtro: paso banda, paso largo (long pass), paso corto (short pass), densidad neutra, polarizador, otro.",
     "<b>Centro</b> y <b>ancho de banda</b> en nm para un paso banda; para paso largo y paso corto, la longitud de onda de corte.",
@@ -351,7 +354,7 @@ son válidos aunque la secuencia se interrumpa. Las fotos nunca se modifican.</p
   <code>docs/sequence-json.md</code> en GitHub.</li>
 <li><code>sequence.txt</code>: un <b>resumen para leer</b>, en el idioma de la app. Por ejemplo:</li>
 </ul>
-<div class="calc">{SEQ_TXT}</div>
+<div class="calc long">{SEQ_TXT}</div>
 """)
 
 # 8
@@ -577,7 +580,7 @@ add(f"""
 todo enfocado después del apilado, entre una foto y la siguiente el enfoque no debe moverse más que esa capa, con
 un poco de solapamiento.</p>
 <p>El cálculo está al final de la pestaña <b>{ui('Ottica')}</b> y usa la apertura numérica, el aumento sobre el sensor
-y el píxel del sensor del perfil abierto (capítulo 7.2).</p>
+(objetivo × cambiador intermedio × adaptador) y el píxel del sensor del perfil abierto (capítulo 7.2).</p>
 {fig("profondita", [
     "<b>Solapamiento</b> entre una capa nítida y la siguiente; un 20–30% es un buen valor.",
     "<b>Resultado</b>: profundidad de campo, paso recomendado en µm y en pasos del motor.",
@@ -600,9 +603,12 @@ en pasos, ejemplo A: 7,25 ÷ {num(UA, 4)} = 87,0 → <b>87 pasos</b>
 <h3>Valores típicos (D5600, adaptador 1×, solapamiento 30%)</h3>
 {table(["Objetivo", "Profundidad de campo (µm)", "Paso (µm)", "Pasos, ejemplo A", "Pasos, ejemplo B"], dof_rows, right=(1, 2, 3, 4))}
 <p style="font-size:9pt;color:#5a6b80">Ejemplo A = {num(UA, 4)} µm/paso; ejemplo B = {num(UB, 4)} µm/paso (apartado 10.3). Nota: {dof_note}</p>
-<div class="box tip"><span class="t">El adaptador de la cámara</span>Si el adaptador tiene un factor distinto de 1
-(por ejemplo 0,5× o 2,5×), multiplica el aumento del objetivo por ese factor: 10× con un adaptador de 0,5× = 5 sobre
-el sensor. Solo cambia el segundo término de la fórmula, que pesa más con los objetivos de poco aumento.</div>
+<div class="box tip"><span class="t">Optovar, adaptadores y oculares de proyección</span>En el perfil óptico
+(capítulo 7.2) indica el factor del cambiador de aumento intermedio y el del adaptador o del ocular de proyección: la app
+los multiplica por el aumento del objetivo. Por ejemplo, 10× con Optovar 1,6× y adaptador 0,63× = 10 × 1,6 × 0,63
+≈ 10,1× sobre el sensor. Solo cambia el segundo término de la fórmula, que pesa más con los objetivos de poco aumento.
+Para una escala exacta en µm, mide los µm por píxel con un micrómetro objetivo: los factores grabados en los accesorios
+son nominales.</div>
 
 <h2>11.2 Inicio, fin y número de fotos</h2>
 <ol class="steps">

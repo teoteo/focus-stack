@@ -135,9 +135,21 @@ def render(m: dict) -> str:
         add(tr("Nessun profilo ottico"))
     if optics.get("objective"):
         add(f"{tr('Obiettivo')}: {optics['objective']}")
-    parts = []
+    chain = []   # obiettivo × Optovar × adattatore = totale sul sensore
+    if optics.get("objective_magnification"):
+        chain.append(f"{tr('obiettivo')} {num(optics['objective_magnification'])}×")
+    for key in ("intermediate", "relay"):
+        part = optics.get(key) or {}
+        if part:
+            name, fac = part.get("name") or "", part.get("magnification")
+            fac_txt = f"{num(fac)}×" if fac else ""
+            chain.append(name if fac_txt and fac_txt in name else " ".join(x for x in (name, fac_txt) if x))
     if optics.get("magnification"):
-        parts.append(f"{tr('Ingrandimento sul sensore')} {num(optics['magnification'])}×")
+        line = f"{tr('Ingrandimento sul sensore')}: {num(optics['magnification'])}×"
+        if len(chain) > 1:
+            line += f" ({' · '.join(chain)})"
+        add(line)
+    parts = []
     if optics.get("na"):
         parts.append(f"NA {num(optics['na'])}")
     if optics.get("immersion"):

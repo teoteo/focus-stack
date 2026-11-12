@@ -8,7 +8,7 @@ META = {
     "lang": "en",
     "title": "Focus Stack — User Guide",
     "footer": "User Guide",
-    "pdf": "Focus Stack Guide.pdf",
+    "pdf": "EN Focus Stack - Guide.pdf",
 }
 
 # Names of the app's commands and labels, keyed by the Italian text (= the app's translation keys).
@@ -72,6 +72,9 @@ UI = {
     "Elimina profilo": "Delete profile",
     "Salva profilo": "Save profile",
     "Obiettivo": "Objective",
+    "Ingrandimento dell'obiettivo": "Objective magnification",
+    "Cambio d'ingrandimento intermedio": "Intermediate magnification changer",
+    "Adattatore / oculare di proiezione": "Camera adapter / projection eyepiece",
     "Immersione": "Immersion",
     "Filtro": "Filter",
     "Non indicato": "Not specified",
@@ -124,7 +127,7 @@ UI = {
     "Profondità di campo": "Depth of field",
     "Apertura numerica (NA)": "Numerical aperture (NA)",
     "Ingrandimento sul sensore": "Magnification on the sensor",
-    "Pixel del sensore (µm)": "Sensor pixel (µm)",
+    "Pixel del sensore (pixel pitch in µm)": "Sensor pixel (pixel pitch in µm)",
     "Sovrapposizione (%)": "Overlap (%)",
     "Usa come passo della sequenza": "Use as sequence step",
     "Focus Stack è chiuso": "Focus Stack is closed",
@@ -429,18 +432,21 @@ section.</p>
 <p>The fusion software works better when it knows what the photos were taken with: given the magnification and the
 sensor pixel it can produce the depth map and the 3D view in real micrometres. These data are saved in the
 <b>{ui('Ottica')}</b> tab as named <b>profiles</b>, one for each combination of objective, filter and illumination
-(for example “10× GFP”, “4× brightfield”), and chosen in the sequence (number 5 in the figure above).</p>
+(for example “10× GFP”, “4× brightfield”), and chosen in the sequence (number 5 in the figure above). The figure
+shows the same objective with an Optovar 1.6× magnification changer and the camera on a T2 adapter with no lens.</p>
 {fig("ottica", [
     f"<b>{ui('Profilo da modificare')}</b>: choose one to load its values; <i>{ui('— nuovo profilo —')}</i> starts from an empty form.",
     f"<b>{ui('Salva come nuovo profilo…')}</b>: asks for a name and saves a copy, leaving the original profile as it was.",
     f"<b>{ui('Elimina profilo')}</b>, after a confirmation.",
+    "<b>Sensor pixel</b> (pixel pitch) in µm. Nikon D5600: <b>3.9 µm</b> (23.5 mm ÷ 6,000 pixels). It is in the camera's specifications, on <b>digicamdb.com</b> (photo cameras) or in the sensor database of <b>AstroBin</b> (dedicated cameras, searching for example IMX571).",
+    f"<b>{ui('Adattatore / oculare di proiezione')}</b> between the microscope and the camera: name and factor, for example a 0.5× or 0.63× C-mount adapter, a 2.5× photo eyepiece, a T2 adapter with no lens 1×. Empty = 1×.",
+    "<b>" + ui("Cambio d'ingrandimento intermedio") + "</b>, if the microscope stand has one: name and factor, for example <i>Optovar</i> 1.25×, 1.6× or 2×. Empty = 1×.",
     f"<b>{ui('Obiettivo')}</b>: any name, for example as engraved on the objective.",
-    f"<b>{ui('Ingrandimento sul sensore')}</b>: objective magnification × the camera adapter's factor.",
+    "<b>" + ui("Ingrandimento dell'obiettivo") + "</b>: the first number engraved on the objective (<b>10</b>×/0.25).",
     f"<b>{ui('Apertura numerica (NA)')}</b>: the second number engraved on the objective (10×/<b>0.25</b>).",
     f"<b>{ui('Immersione')}</b>: air, water, oil, glycerol or silicone.",
-    "<b>Sensor pixel</b> in µm. Nikon D5600: <b>3.9 µm</b> (23.5 mm ÷ 6,000 pixels).",
     "<b>µm per pixel on the specimen, measured</b> with a stage micrometer: if present, it takes precedence over the calculation.",
-    "The <b>scale on the specimen</b>: the measured value, or sensor pixel ÷ magnification.",
+    f"<b>{ui('Ingrandimento sul sensore')}</b> = objective × intermediate changer × adapter (here 10 × 1.6 × 1 = 16×) and <b>scale on the specimen</b>: the measured value, or sensor pixel ÷ magnification.",
     f"<b>{ui('Filtro')}</b>: <i>{ui('Non indicato')}</i> (unknown), <i>{ui('Nessun filtro')}</i> or <i>{ui('Filtro montato')}</i>.",
     "Filter <b>name</b> and <b>type</b>: band pass, long pass, short pass, neutral density, polarizer, other.",
     "<b>Centre</b> and <b>bandwidth</b> in nm for a band pass; for long pass and short pass, the cut-off wavelength.",
@@ -470,7 +476,7 @@ valid even if the sequence is aborted. The photos themselves are never modified.
   <code>docs/sequence-json.md</code> on GitHub.</li>
 <li><code>sequence.txt</code>: a <b>human-readable summary</b>, in the app's language. For example:</li>
 </ul>
-<div class="calc">{SEQ_TXT}</div>
+<div class="calc long">{SEQ_TXT}</div>
 """)
 
 # 8
@@ -691,7 +697,7 @@ add(f"""
 everything in focus after stacking, the focus must not move more than that layer between one shot and the next,
 with a little overlap.</p>
 <p>The calculator is at the bottom of the <b>{ui('Ottica')}</b> tab and uses the numerical aperture, the magnification on
-the sensor and the sensor pixel of the open profile (chapter 7.2).</p>
+the sensor (objective × intermediate changer × adapter) and the sensor pixel of the open profile (chapter 7.2).</p>
 {fig("profondita", [
     "<b>Overlap</b> between one sharp layer and the next; 20–30% is a good value.",
     "<b>Result</b>: depth of field, recommended step in µm and in motor steps.",
@@ -713,9 +719,12 @@ in steps, example A: 7.25 ÷ {num(UA, 4)} = 87.0 → <b>87 steps</b>   example B
 <h3>Typical values (D5600, 1× adapter, 30% overlap)</h3>
 {table(["Objective", "Depth of field (µm)", "Step (µm)", "Steps, example A", "Steps, example B"], dof_rows, right=(1, 2, 3, 4))}
 <p style="font-size:9pt;color:#5a6b80">Example A = {num(UA, 4)} µm/step; example B = {num(UB, 4)} µm/step (section 10.3). Note: {dof_note}</p>
-<div class="box tip"><span class="t">The camera adapter</span>If the adapter has a factor other than 1 (for example
-0.5× or 2.5×), multiply the objective magnification by that factor: 10× with a 0.5× adapter = 5 on the sensor. Only
-the second term of the formula changes, and it matters most with low-power objectives.</div>
+<div class="box tip"><span class="t">Optovar, adapters and projection eyepieces</span>In the optics profile (chapter 7.2)
+enter the factor of the intermediate magnification changer and that of the camera adapter or projection eyepiece: the
+app multiplies them by the objective magnification. For example 10× with an Optovar 1.6× and a 0.63× adapter =
+10 × 1.6 × 0.63 ≈ 10.1× on the sensor. Only the second term of the formula changes, and it matters most with low-power
+objectives. For an exact scale in µm, measure the µm per pixel with a stage micrometer: the factors marked on the
+accessories are nominal.</div>
 
 <h2>11.2 Start, end and number of shots</h2>
 <ol class="steps">

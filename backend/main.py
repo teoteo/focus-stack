@@ -144,9 +144,18 @@ class App:
         optics: dict = {}
         if o.get("objective"):
             optics["objective"] = o["objective"]
-        for key in ("magnification", "na"):
-            if o.get(key):
-                optics[key] = o[key]
+        if o.get("objective_magnification"):
+            optics["objective_magnification"] = o["objective_magnification"]
+        for key in ("intermediate", "relay"):   # solo se indicati: assenti = non si sa (o nessuno)
+            part = o.get(key) or {}
+            data = {k: v for k, v in (("name", part.get("name")), ("magnification", part.get("factor"))) if v}
+            if data:
+                optics[key] = data
+        total = total_magnification(o)
+        if total:
+            optics["magnification"] = total
+        if o.get("na"):
+            optics["na"] = o["na"]
         if o.get("immersion"):
             optics["immersion"] = o["immersion"]
         if o.get("sensor_pixel_um"):
@@ -154,8 +163,8 @@ class App:
         if o.get("pixel_size_um"):
             optics["pixel_size_um"] = o["pixel_size_um"]
             optics["pixel_size_source"] = "calibrated"
-        elif o.get("sensor_pixel_um") and o.get("magnification"):
-            optics["pixel_size_um"] = round(o["sensor_pixel_um"] / o["magnification"], 5)
+        elif o.get("sensor_pixel_um") and total:
+            optics["pixel_size_um"] = round(o["sensor_pixel_um"] / total, 5)
             optics["pixel_size_source"] = "sensor_pixel / magnification"
         if optics:
             ctx["optics"] = optics
@@ -1077,9 +1086,17 @@ class IlluminationBody(BaseModel):
     level_percent: float | None = None
 
 
+class RelayBody(BaseModel):
+    """Elemento ottico fra obiettivo e sensore: nome libero e fattore d'ingrandimento (vuoto = 1)."""
+    name: str = ""
+    factor: float | None = None
+
+
 class OpticsBody(BaseModel):
     objective: str = ""
-    magnification: float | None = None
+    objective_magnification: float | None = None
+    intermediate: RelayBody = RelayBody()   # cambio d'ingrandimento intermedio, es. Optovar 1,6×
+    relay: RelayBody = RelayBody()          # adattatore per fotocamera / oculare di proiezione
     na: float | None = None
     immersion: str = ""
     sensor_pixel_um: float | None = None
@@ -1145,7 +1162,8 @@ def clean_optics(body: OpticsBody) -> dict:
         raise ValueError(tr("Scelta del filtro non valida"))
     if body.filter.type not in FILTER_TYPES:
         raise ValueError(tr("Tipo di filtro non valido"))
-    for value in (body.magnification, body.sensor_pixel_um, body.pixel_size_um, body.filter.center_nm,
+    for value in (body.objective_magnification, body.intermediate.factor, body.relay.factor,
+                  body.sensor_pixel_um, body.pixel_size_um, body.filter.center_nm,
                   body.filter.bandwidth_nm, body.filter.edge_nm):
         if value is not None and value <= 0:
             raise ValueError(tr("I valori dell'ottica devono essere positivi"))
@@ -1158,7 +1176,20 @@ def clean_optics(body: OpticsBody) -> dict:
         data[key] = data[key].strip()
     data["filter"]["name"] = data["filter"]["name"].strip()
     data["illumination"]["type"] = data["illumination"]["type"].strip()
+    for key in ("intermediate", "relay"):
+        data[key]["name"] = data[key]["name"].strip()
     return data
+
+
+def total_magnification(o: dict) -> float | None:
+    """Ingrandimento sul sensore = obiettivo × cambio intermedio × adattatore (fattori vuoti = 1)."""
+    obj = o.get("objective_magnification")
+    if not obj:
+        return None
+    total = float(obj)
+    for key in ("intermediate", "relay"):
+        total *= float((o.get(key) or {}).get("factor") or 1)
+    return round(total, 4)
 
 
 @api.post("/api/optics/profiles/save")

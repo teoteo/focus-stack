@@ -62,7 +62,7 @@ with a single shot). Files are named `<name>_0001.ext` with one shot per positio
 | `rail.settle_ms`, `rail.post_shot_ms` | wait after the move, pause after each shot |
 | `sequence` | `start_steps`, `end_steps`, `step_steps`, `step_um`, `span_um`, `positions`, `shots_per_position`, `capture_mode` (`download`, `card`, `trigger`), `mirror_delay_ms`, `bulb_s` |
 | `camera` | `model`, `iso`, `shutterspeed`, `aperture`, `imageformat` as read at the start (per-frame values are in the EXIF) |
-| `optics` | `objective`, `magnification` (total on the sensor), `na`, `immersion` (`air`, `water`, `oil`, `glycerol`, `silicone`), `sensor_pixel_um`, `pixel_size_um` + `pixel_size_source` (`calibrated` or `sensor_pixel / magnification`) |
+| `optics` | `objective`, `objective_magnification`, `intermediate` and `relay` (each `{name, magnification}`, only if specified: intermediate magnification changer such as an Optovar, and camera adapter / projection eyepiece), `magnification` (total on the sensor = objective × intermediate × relay, missing factors = 1), `na`, `immersion` (`air`, `water`, `oil`, `glycerol`, `silicone`), `sensor_pixel_um`, `pixel_size_um` + `pixel_size_source` (`calibrated` or `sensor_pixel / magnification`) |
 | `filter` | absent, `null`, or `{name, type, center_nm, bandwidth_nm, edge_nm}`; `type` = `bandpass`, `longpass`, `shortpass`, `neutral_density`, `polarizer`, `other` |
 | `illumination` | `{type, level_percent}` (free text type) |
 | `notes` | free text |
@@ -80,7 +80,7 @@ camera card and must be paired with the frames in shooting order.
 {
   "format": "focus-stack-manifest",
   "version": 1,
-  "software": "Focus Stack 1.0.8",
+  "software": "Focus Stack 1.0.9",
   "state": "completed",
   "started": "2026-11-12T14:02:10.831+01:00",
   "updated": "2026-11-12T14:02:27.932+01:00",
@@ -95,8 +95,11 @@ camera card and must be paired with the frames in shooting order.
                 "shots_per_position": 2, "capture_mode": "download", "mirror_delay_ms": 0,
                 "return_to_start": true, "step_um": 8.33, "span_um": 16.66 },
   "camera": { "model": "Nikon DSC D5600", "iso": "100", "shutterspeed": "1/60", "imageformat": "NEF (Raw)" },
-  "optics": { "objective": "Plan 10×/0,25", "magnification": 10.0, "na": 0.25, "immersion": "air",
-              "sensor_pixel_um": 3.9, "pixel_size_um": 0.39, "pixel_size_source": "sensor_pixel / magnification" },
+  "optics": { "objective": "Plan 10×/0,25", "objective_magnification": 10.0,
+              "intermediate": { "name": "Optovar", "magnification": 1.6 },
+              "relay": { "name": "T2 adapter", "magnification": 1.0 },
+              "magnification": 16.0, "na": 0.25, "immersion": "air",
+              "sensor_pixel_um": 3.9, "pixel_size_um": 0.24375, "pixel_size_source": "sensor_pixel / magnification" },
   "filter": { "name": "GFP", "type": "bandpass", "center_nm": 525.0, "bandwidth_nm": 50.0 },
   "illumination": { "type": "LED ring light", "level_percent": 60.0 },
   "optics_profile": "10× GFP",

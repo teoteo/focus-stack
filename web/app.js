@@ -580,7 +580,7 @@ function updateMechResult() {
 // ---------------- profondità di campo ----------------
 // Formula di Berek/Shillaber: DOF = λ·n/NA² + n·e/(M·NA)
 function dof() {
-  const na = num("d-na"), mag = num("d-mag"), px = num("d-px"), ov = num("d-ov") / 100;
+  const na = num("d-na"), mag = totalMag(opticsForm()) || 0, px = num("d-px"), ov = num("d-ov") / 100;
   if (!(na > 0 && mag > 0)) { $("d-result").textContent = t("Inserisci NA e ingrandimento"); return 0; }
   const d = (0.55 * 1.0) / (na * na) + (1.0 * px) / (mag * na);
   const step = d * (1 - ov), um = umPerStep();
@@ -613,7 +613,9 @@ function setFilterMode(mode) {
 function loadOptics(o) {
   const f = o.filter || {}, il = o.illumination || {};
   const set = (id, v) => ($(id).value = v == null ? "" : v);
-  set("o-objective", o.objective); set("d-mag", o.magnification); set("d-na", o.na);
+  const inter = o.intermediate || {}, relay = o.relay || {};
+  set("o-objective", o.objective); set("d-mag", o.objective_magnification ?? o.magnification); set("d-na", o.na);
+  set("o-inter-name", inter.name); set("o-inter", inter.factor); set("o-relay-name", relay.name); set("o-relay", relay.factor);
   $("o-immersion").value = o.immersion || "";
   set("d-px", o.sensor_pixel_um); set("o-pxcal", o.pixel_size_um); set("d-ov", o.dof_overlap ?? 30);
   set("o-fname", f.name); $("o-ftype").value = f.type || "bandpass";
@@ -634,7 +636,10 @@ function editProfile(name) {
 
 function opticsForm() {
   return {
-    objective: $("o-objective").value.trim(), magnification: optNum("d-mag"), na: optNum("d-na"),
+    objective: $("o-objective").value.trim(), objective_magnification: optNum("d-mag"),
+    intermediate: { name: $("o-inter-name").value.trim(), factor: optNum("o-inter") },
+    relay: { name: $("o-relay-name").value.trim(), factor: optNum("o-relay") },
+    na: optNum("d-na"),
     immersion: $("o-immersion").value, sensor_pixel_um: optNum("d-px"), pixel_size_um: optNum("o-pxcal"),
     dof_overlap: optNum("d-ov") ?? 30, filter_mode: filterMode,
     filter: { name: $("o-fname").value.trim(), type: $("o-ftype").value, center_nm: optNum("o-fcenter"),
@@ -644,11 +649,22 @@ function opticsForm() {
   };
 }
 
-// testo breve di un profilo: obiettivo · NA · filtro
+// numero con i soli decimali che servono (40 · 1,6 · 0,63)
+const fmtMag = (x) => fmtNum(x, Math.abs(x - Math.round(x)) < 1e-9 ? 0 : Math.abs(x * 10 - Math.round(x * 10)) < 1e-9 ? 1 : 2);
+
+// ingrandimento sul sensore = obiettivo × cambio intermedio × adattatore (fattori vuoti = 1)
+function totalMag(o) {
+  const obj = o.objective_magnification ?? o.magnification;
+  if (!obj) return null;
+  return obj * ((o.intermediate && o.intermediate.factor) || 1) * ((o.relay && o.relay.factor) || 1);
+}
+
+// testo breve di un profilo: obiettivo · totale sul sensore · NA · filtro
 function opticsText(o) {
-  const parts = [];
+  const parts = [], total = totalMag(o), obj = o.objective_magnification ?? o.magnification;
   if (o.objective) parts.push(o.objective);
-  else if (o.magnification) parts.push(`${fmtNum(o.magnification, 1)}×`);
+  else if (obj) parts.push(`${fmtNum(obj, 1)}×`);
+  if (total && total !== obj) parts.push(t("{m}× sul sensore", { m: fmtMag(total) }));
   if (o.na) parts.push(`NA ${fmtNum(o.na, 2)}`);
   const f = o.filter || {};
   if (o.filter_mode === "none") parts.push(t("nessun filtro"));
@@ -666,13 +682,19 @@ function opticsSummary() {
 const escapeHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 function updateOptics() {
-  const o = opticsForm();
-  let txt;
-  if (o.pixel_size_um) txt = t("Sul campione: <b>{v} µm/pixel</b> (misurato)", { v: fmtNum(o.pixel_size_um, 4) });
-  else if (o.sensor_pixel_um && o.magnification)
-    txt = t("Sul campione: <b>{v} µm/pixel</b> (pixel del sensore ÷ ingrandimento)", { v: fmtNum(o.sensor_pixel_um / o.magnification, 4) });
-  else txt = t("Indica ingrandimento e pixel del sensore per avere la scala in µm");
+  const o = opticsForm(), total = totalMag(o);
+  let txt = "";
+  if (total) {
+    const factors = [o.objective_magnification, o.intermediate.factor, o.relay.factor].filter((f) => f);
+    txt = t("Ingrandimento sul sensore: <b>{m}×</b>", { m: fmtMag(total) })
+      + (factors.length > 1 ? ` (${factors.map(fmtMag).join(" × ")})` : "") + "<br>";
+  }
+  if (o.pixel_size_um) txt += t("Sul campione: <b>{v} µm/pixel</b> (misurato)", { v: fmtNum(o.pixel_size_um, 4) });
+  else if (o.sensor_pixel_um && total)
+    txt += t("Sul campione: <b>{v} µm/pixel</b> (pixel del sensore ÷ ingrandimento)", { v: fmtNum(o.sensor_pixel_um / total, 4) });
+  else txt += t("Indica ingrandimento e pixel del sensore per avere la scala in µm");
   $("o-pxresult").innerHTML = txt;
+  dof();
   const dirty = JSON.stringify(o) !== opticsSaved;
   setChip("o-chip", editingProfile || t("Nuovo profilo"), editingProfile ? (dirty ? "busy" : "ok") : "");
   $("o-dirty").textContent = dirty ? t("Modifiche non salvate") : "";

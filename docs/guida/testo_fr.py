@@ -8,7 +8,7 @@ META = {
     "lang": "fr",
     "title": "Focus Stack — Guide d'utilisation",
     "footer": "Guide d'utilisation",
-    "pdf": "Guide Focus Stack.pdf",
+    "pdf": "FR Focus Stack - Guide.pdf",
 }
 
 
@@ -273,6 +273,8 @@ reste levé tant que la visée en direct est active.</p>
 
 # 7
 TORNA = ui("Torna all'inizio a fine sequenza")
+OBJ_MAG = ui("Ingrandimento dell'obiettivo")
+CAMBIO = ui("Cambio d'ingrandimento intermedio")
 add(f"""
 <h1><span class="n">7</span>La séquence de stacking</h1>
 <h2 style="margin-top:0">7.1 Régler la séquence</h2>
@@ -315,18 +317,21 @@ add(f"""
 pixel du capteur, il peut fournir la carte de profondeur et la vue 3D en vrais micromètres. Ces données s'enregistrent
 dans l'onglet <b>{ui('Ottica')}</b> sous forme de <b>profils</b> nommés, un pour chaque combinaison d'objectif, de filtre et
 d'éclairage (par exemple « 10× GFP », « 4× fond clair »), et se choisissent dans la séquence (repère 5 de la figure
-ci-dessus).</p>
+ci-dessus). Sur la figure : le même objectif avec le changeur de grossissement Optovar 1,6× et l'appareil photo monté
+sur une bague T2 sans lentille.</p>
 {fig("ottica", [
     f"<b>{ui('Profilo da modificare')}</b> : choisissez-le pour charger ses valeurs ; <i>{ui('— nuovo profilo —')}</i> part d'un formulaire vide.",
     f"<b>{ui('Salva come nuovo profilo…')}</b> : demande un nom et enregistre une copie, sans modifier le profil de départ.",
     f"<b>{ui('Elimina profilo')}</b>, après confirmation.",
+    f"<b>{ui('Pixel del sensore (pixel pitch in µm)')}</b>. Nikon D5600 : <b>3,9 µm</b> (23,5 mm ÷ 6000 pixels). On le trouve dans la fiche technique de l’appareil, sur <b>digicamdb.com</b> (appareils photo) ou dans la base de capteurs d’<b>AstroBin</b> (caméras dédiées, en cherchant par exemple IMX571).",
+    f"<b>{ui('Adattatore / oculare di proiezione')}</b> entre le microscope et l'appareil photo : nom et facteur, par exemple un adaptateur monture C 0,5× ou 0,63×, un photo-oculaire 2,5×, une bague T2 sans lentille 1×. Vide = 1×.",
+    f"<b>{CAMBIO}</b>, si le statif en possède un : nom et facteur, par exemple <i>Optovar</i> 1,25×, 1,6× ou 2×. Vide = 1×.",
     "<b>Objectif</b> : un nom libre, tel qu'il est gravé sur l'objectif.",
-    f"<b>{ui('Ingrandimento sul sensore')}</b> : grossissement de l'objectif × facteur de l'adaptateur de l'appareil photo.",
+    f"<b>{OBJ_MAG}</b> : le premier nombre gravé sur l'objectif (<b>10</b>×/0,25).",
     f"<b>{ui('Apertura numerica (NA)')}</b> : le second nombre gravé sur l'objectif (10×/<b>0,25</b>).",
     f"<b>{ui('Immersione')}</b> : air, eau, huile, glycérine ou silicone.",
-    f"<b>{ui('Pixel del sensore (µm)')}</b>. Nikon D5600 : <b>3,9 µm</b> (23,5 mm ÷ 6000 pixels).",
     "<b>µm par pixel sur l'échantillon, mesurés</b> avec un micromètre objet : s'il est indiqué, il prime sur le calcul.",
-    "L'<b>échelle sur l'échantillon</b> : la valeur mesurée, ou bien pixel du capteur ÷ grossissement.",
+    f"<b>{ui('Ingrandimento sul sensore')}</b> = objectif × changeur intermédiaire × adaptateur (ici 10 × 1,6 × 1 = 16×) et <b>échelle sur l'échantillon</b> : la valeur mesurée, ou bien pixel du capteur ÷ grossissement.",
     f"<b>{ui('Filtro')}</b> : <i>{ui('Non indicato')}</i> (on ne sait pas), <i>{ui('Nessun filtro')}</i> ou <i>{ui('Filtro montato')}</i>.",
     "<b>Nom</b> et <b>type</b> du filtre : passe-bande, passe-haut (long pass), passe-bas (short pass), densité neutre, polariseur, autre.",
     "<b>Centre</b> et <b>largeur de bande</b> en nm pour un passe-bande ; pour un passe-haut ou un passe-bas, la longueur d'onde de coupure.",
@@ -357,7 +362,7 @@ restent donc valables même si la séquence est interrompue. Les photos ne sont 
   <code>docs/sequence-json.md</code> sur GitHub.</li>
 <li><code>sequence.txt</code> : un <b>récapitulatif à lire</b>, dans la langue de l'app. Par exemple :</li>
 </ul>
-<div class="calc">{SEQ_TXT}</div>
+<div class="calc long">{SEQ_TXT}</div>
 """)
 
 # 8
@@ -588,7 +593,7 @@ add(f"""
 Pour que tout soit net après le stacking, la mise au point ne doit pas se déplacer de plus que cette tranche entre une
 photo et la suivante, avec un peu de chevauchement.</p>
 <p>Le calcul se trouve en bas de l'onglet <b>{ui('Ottica')}</b> et utilise l'ouverture numérique, le grossissement sur le
-capteur et le pixel du capteur du profil ouvert (chapitre 7.2).</p>
+capteur (objectif × changeur intermédiaire × adaptateur) et le pixel du capteur du profil ouvert (chapitre 7.2).</p>
 {fig("profondita", [
     f"<b>{ui('Sovrapposizione (%)')}</b> entre une tranche nette et la suivante ; 20 à 30 % est une bonne valeur.",
     "<b>Résultat</b> : profondeur de champ, pas conseillé en µm et en pas moteur.",
@@ -610,9 +615,12 @@ en pas, exemple A : 7,25 ÷ {num(UA, 4)} = 87,0 → <b>87 pas</b>   exemple B 
 <h3>Valeurs typiques (D5600, adaptateur 1×, chevauchement 30 %)</h3>
 {table(["Objectif", "Profondeur de champ (µm)", "Pas (µm)", "Pas moteur, exemple A", "Pas moteur, exemple B"], dof_rows, right=(1, 2, 3, 4))}
 <p style="font-size:9pt;color:#5a6b80">Exemple A = {num(UA, 4)} µm/pas ; exemple B = {num(UB, 4)} µm/pas (section 10.3). Remarque : {dof_note}</p>
-<div class="box tip"><span class="t">L'adaptateur de l'appareil photo</span>Si l'adaptateur a un facteur différent de 1
-(par exemple 0,5× ou 2,5×), multipliez le grossissement de l'objectif par ce facteur : 10× avec un adaptateur 0,5×
-= 5 sur le capteur. Seul le second terme de la formule change, et il compte davantage avec les objectifs faibles.</div>
+<div class="box tip"><span class="t">Optovar, adaptateurs et oculaires de projection</span>Dans le profil optique
+(chapitre 7.2), indiquez le facteur du changeur de grossissement intermédiaire et celui de l'adaptateur ou de l'oculaire
+de projection : l'app les multiplie par le grossissement de l'objectif. Par exemple, 10× avec Optovar 1,6× et adaptateur
+0,63× = 10 × 1,6 × 0,63 ≈ 10,1× sur le capteur. Seul le second terme de la formule change, et il compte davantage avec
+les objectifs faibles. Pour une échelle exacte en µm, mesurez les µm par pixel avec un micromètre objet : les facteurs
+inscrits sur les accessoires sont nominaux.</div>
 
 <h2>11.2 Début, fin et nombre de photos</h2>
 <ol class="steps">

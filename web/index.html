@@ -275,10 +275,24 @@
     </div>
     <div class="optics-grid">
       <div>
-        <h3>Obiettivo e sensore</h3>
+        <!-- in ordine fisico, dalla fotocamera al campione -->
+        <h3>Sensore</h3>
+        <div class="fields two">
+          <label>Pixel del sensore (pixel pitch in µm)<input type="number" id="d-px" step="0.01" min="0" placeholder="es. 3.9"></label>
+        </div>
+        <p class="hint" data-i18n-html>Il pixel pitch è nella scheda tecnica della fotocamera. Si trova anche su <a href="https://www.digicamdb.com" target="_blank" rel="noopener">digicamdb.com</a> (fotocamere fotografiche) e nel <a href="https://app.astrobin.com/equipment/explorer/sensor" target="_blank" rel="noopener">database di AstroBin</a> (camere dedicate e sensori, es. IMX571).</p>
+        <h3>Fra sensore e obiettivo</h3>
+        <p class="hint">Lascia vuoto quello che non c'è: vale 1×. L'ingrandimento sul sensore è il prodotto dei tre fattori.</p>
+        <div class="fields two">
+          <label>Adattatore / oculare di proiezione<input type="text" id="o-relay-name" autocomplete="off" placeholder="es. fotoculare NFK"></label>
+          <label>Fattore (×)<input type="number" id="o-relay" step="0.01" min="0" placeholder="es. 2.5" title="Fattore dell'adattatore per fotocamera o dell'oculare di proiezione, per esempio 0,63× o 2,5×"></label>
+          <label>Cambio d'ingrandimento intermedio<input type="text" id="o-inter-name" autocomplete="off" placeholder="es. Optovar"></label>
+          <label>Fattore (×)<input type="number" id="o-inter" step="0.01" min="0" placeholder="es. 1.6" title="Ingrandimento del cambio intermedio, per esempio Optovar 1,25× / 1,6× / 2×"></label>
+        </div>
+        <h3>Obiettivo</h3>
         <div class="fields two">
           <label class="span-all">Obiettivo (nome)<input type="text" id="o-objective" autocomplete="off" placeholder="es. Plan 10×/0,25"></label>
-          <label>Ingrandimento sul sensore<input type="number" id="d-mag" step="0.1" min="0" placeholder="es. 10" title="Obiettivo × adattatore della fotocamera"></label>
+          <label>Ingrandimento dell'obiettivo<input type="number" id="d-mag" step="0.1" min="0" placeholder="es. 10"></label>
           <label>Apertura numerica (NA)<input type="number" id="d-na" step="0.01" min="0" placeholder="es. 0.25"></label>
           <label>Immersione
             <select id="o-immersion">
@@ -290,7 +304,9 @@
               <option value="silicone">Silicone</option>
             </select>
           </label>
-          <label>Pixel del sensore (µm)<input type="number" id="d-px" step="0.01" min="0" placeholder="es. 3.9"></label>
+        </div>
+        <h3>Scala sul campione</h3>
+        <div class="fields two">
           <label class="span-all">µm per pixel sul campione, misurati (facoltativo)<input type="number" id="o-pxcal" step="0.0001" min="0" title="Misurato con un micrometro oggetto: ha la precedenza sul valore calcolato"></label>
         </div>
         <p class="result" id="o-pxresult"></p>

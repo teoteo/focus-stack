@@ -1,6 +1,6 @@
 """Genera la guida all'uso in PDF, in italiano e in inglese, dalle schermate in img/<lingua>/.
     python3.11 docs/guida/genera_guida.py [it|en|all]      (predefinito: all)
-Produce docs/Guida Focus Stack.pdf (it) e docs/Focus Stack Guide.pdf (en).
+Produce docs/"<LINGUA> Focus Stack - <Guida|Guide|Anleitung|Guía>.pdf" (es. "IT Focus Stack - Guida.pdf").
 Il testo sta in testo_it.py e testo_en.py; le schermate e le posizioni dei numeri si rifanno con
 cattura_schermate.py --lang <lingua>. Se mancano le schermate di una lingua usa quelle italiane.
 """
@@ -35,13 +35,15 @@ def make_fig(notes, img_dir):
                 cx, cy = x, y
             else:
                 cx, cy = x, y + h / 2
-            marks.append(f'<span class="mk {mk["anchor"]}" style="left:{cx * 100:.2f}%;top:{cy * 100:.2f}%">{mk["n"]}</span>')
+            dd = " dd" if mk["n"] >= 10 else ""   # due cifre: carattere più piccolo, dentro il cerchio
+            marks.append(f'<span class="mk {mk["anchor"]}{dd}" style="left:{cx * 100:.2f}%;top:{cy * 100:.2f}%">{mk["n"]}</span>')
         style = f' style="width:{width}"' if width else ""
         img = (f'<figure class="shot"{style}><div class="frame"><img src="{img_dir}/{name}.png" alt="">'
                f'{"".join(marks)}</div>{f"<figcaption>{caption}</figcaption>" if caption else ""}</figure>')
         if not legend:
             return f'<div class="fig-wrap {layout}">{img}</div>'
-        items = "".join(f'<li><span class="num">{i}</span><div>{text}</div></li>' for i, text in enumerate(legend, 1))
+        items = "".join(f'<li><span class="num{" dd" if i >= 10 else ""}">{i}</span><div>{text}</div></li>'
+                        for i, text in enumerate(legend, 1))
         return f'<div class="fig-wrap {layout}">{img}<ol class="legend">{items}</ol></div>'
     return fig
 
@@ -89,26 +91,34 @@ td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
 .calc { font-family: "SF Mono", Menlo, monospace; font-size: 9.2pt; background: #f7f9fc; border: 1px solid #e1e7ef;
   border-radius: 2mm; padding: 2.5mm 3.5mm; margin: 2mm 0 3.5mm; white-space: pre-wrap; break-inside: avoid; line-height: 1.55; }
 .calc b { color: #1a5fc9; }
+/* esempi lunghi (sequence.txt): possono continuare nella pagina dopo invece di lasciare un vuoto */
+.calc.long { break-inside: auto; }
 
 .fig-wrap { margin: 3mm 0 5mm; break-inside: avoid; }
 .fig-wrap.side { display: grid; grid-template-columns: 54% 1fr; gap: 7mm; align-items: start; }
 .fig-wrap.side.narrow { grid-template-columns: 44% 1fr; }
 .fig-wrap.full .legend { columns: 2; column-gap: 7mm; margin-top: 4mm; }
 .fig-wrap.full .legend li { break-inside: avoid; }
+/* figure a tutta larghezza con legende lunghe: la schermata resta intera, la legenda può continuare
+   nella pagina dopo (altrimenti la figura salta pagina e lascia mezza pagina vuota) */
+.fig-wrap.full { break-inside: auto; }
+.fig-wrap.full figure.shot { break-inside: avoid; break-after: avoid; }
 /* rientro: i numeri appena fuori dalle schermate non devono finire nel margine (Chrome non lo stampa) */
-figure.shot { margin: 0; padding: 0 6mm; }
+figure.shot { margin: 0; padding: 0 7mm; }   /* spazio per i numeri a sinistra/destra (5,4 mm + bordo) */
 figure.shot .frame { position: relative; }
 figure.shot img { display: block; width: 100%; border-radius: 2mm; box-shadow: 0 0 0 1px #c9d2de; }
 figcaption { font-size: 8.8pt; color: #5a6b80; margin-top: 1.5mm; text-align: center; }
 .mk { position: absolute; transform: translate(-50%, -50%); width: 5.4mm; height: 5.4mm; border-radius: 50%;
   background: #ffc531; color: #111; font-size: 8.2pt; font-weight: 800; display: grid; place-items: center;
-  box-shadow: 0 0 0 1.4px #111, 0 0.6mm 1.4mm rgba(0,0,0,.45); line-height: 1; }
+  box-shadow: 0 0 0 1.4px #111, 0 0 0 2.4px #fff; line-height: 1; }
+/* "dd" e non "two": .two è già la classe delle colonne affiancate */
+.mk.dd, .legend .num.dd { font-size: 7pt; }
 /* il numero sta appena fuori dal bordo dell'elemento (a sinistra o a destra), per non coprirne il testo */
 .mk.l { transform: translate(calc(-100% - 0.5mm), -50%); }
 .mk.r { transform: translate(0.5mm, -50%); }
 .mk.b { transform: translate(-50%, 0.6mm); }
 .fig-wrap.below-marks figure.shot { padding-bottom: 6.5mm; }
-.legend { list-style: none; padding: 0; margin: 0; font-size: 9.6pt; }
+.legend { list-style: none; padding: 0 0 0 1mm; margin: 0; font-size: 9.6pt; }
 .legend li { display: grid; grid-template-columns: 6.5mm 1fr; gap: 2mm; margin-bottom: 2.1mm; }
 .legend .num { width: 5mm; height: 5mm; border-radius: 50%; background: #ffc531; color: #111; font-weight: 800;
   font-size: 7.8pt; display: grid; place-items: center; box-shadow: 0 0 0 1.2px #111; margin-top: 0.3mm; }
@@ -255,6 +265,37 @@ def render(lang, browser):
                              '<span class="pageNumber"></span></div>')
     page.close()
     print("PDF:", out_pdf)
+    return check_marks(out_pdf)
+
+
+def check_marks(pdf_path):
+    """Controlla nel PDF finale i numeri gialli sulle schermate: segnala quelli sovrapposti fra loro e
+    quelli tagliati o troppo vicini al bordo della pagina. Richiede PyMuPDF (fitz); senza, non controlla."""
+    try:
+        import fitz
+    except ImportError:
+        print("  (controllo dei numeri saltato: manca PyMuPDF)")
+        return 0
+    problems = 0
+    yellow = (1.0, 0xC5 / 255, 0x31 / 255)   # #ffc531, il colore dei numeri
+    for pno, pg in enumerate(fitz.open(pdf_path), 1):
+        marks = []
+        for d in pg.get_drawings():
+            fill = d.get("fill")
+            r = d["rect"]
+            if fill and all(abs(a - b) < 0.03 for a, b in zip(fill, yellow)) and 10 < r.width < 22 and abs(r.width - r.height) < 2:
+                marks.append(r)
+        for i, a in enumerate(marks):
+            if a.x0 < 6 or a.y0 < 6 or a.x1 > pg.rect.width - 6 or a.y1 > pg.rect.height - 6:
+                problems += 1
+                print(f"  ATTENZIONE pagina {pno}: numero tagliato o sul bordo della pagina ({a.x0:.0f}, {a.y0:.0f})")
+            for b in marks[i + 1:]:
+                inter = a & b
+                if not inter.is_empty and inter.width * inter.height > 0.08 * a.width * a.height:
+                    problems += 1
+                    print(f"  ATTENZIONE pagina {pno}: numeri sovrapposti in ({a.x0:.0f}, {a.y0:.0f}) e ({b.x0:.0f}, {b.y0:.0f})")
+    print("  numeri sulle schermate: " + ("nessun problema" if not problems else f"{problems} problemi"))
+    return problems
 
 
 if __name__ == "__main__":
@@ -264,6 +305,6 @@ if __name__ == "__main__":
         sys.exit(f"Lingua non valida: {which} (it, en o all)")
     with sync_playwright() as p:
         b = p.chromium.launch(channel="chrome")
-        for lang in langs:
-            render(lang, b)
+        problems = sum(render(lang, b) for lang in langs)
         b.close()
+    sys.exit(1 if problems else 0)

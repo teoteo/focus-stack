@@ -43,7 +43,9 @@ DEFAULTS: dict = {
         "optics_profile": "",      # profilo di ottica/filtro usato dalla sequenza ("" = nessun filtro)
     },
     # Profili di ottica, filtro e illuminazione (tab Ottica), scritti nel manifesto sequence.json.
-    # nome -> {objective, magnification (totale sul sensore), na, immersion (air|water|oil|glycerol|silicone),
+    # nome -> {objective, objective_magnification, intermediate {name, factor} (cambio d'ingrandimento,
+    #          es. Optovar), relay {name, factor} (adattatore / oculare di proiezione), na,
+    #          immersion (air|water|oil|glycerol|silicone),
     #          sensor_pixel_um, pixel_size_um (misurato, ha la precedenza), dof_overlap,
     #          filter_mode (unknown|none|filter), filter {name, type, center_nm, bandwidth_nm, edge_nm},
     #          illumination {type, level_percent}, notes}. None/"" = non indicato.
@@ -67,7 +69,19 @@ def load() -> dict:
                 data[k] = v
     except (FileNotFoundError, json.JSONDecodeError):
         pass
+    migrate_optics_profiles(data.get("optics_profiles") or {})
     return data
+
+
+def migrate_optics_profiles(profiles: dict) -> None:
+    """Profili della 1.0.8: "magnification" era l'ingrandimento totale scritto a mano. Diventa quello
+    dell'obiettivo con Optovar e adattatore a 1, così il totale resta uguale."""
+    for p in profiles.values():
+        if isinstance(p, dict) and "magnification" in p and "objective_magnification" not in p:
+            p["objective_magnification"] = p.pop("magnification")
+        if isinstance(p, dict):
+            p.setdefault("intermediate", {"name": "", "factor": None})
+            p.setdefault("relay", {"name": "", "factor": None})
 
 
 def save(data: dict) -> None:

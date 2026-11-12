@@ -173,6 +173,7 @@
   "nessuno": "none",
   "niente": "nothing",
   "non indicato": "not specified",
+  "obiettivo": "objective",
   "pixel del sensore {px} µm ÷ ingrandimento": "sensor pixel {px} µm ÷ magnification",
   "python-gphoto2 non installato (pip install gphoto2)": "python-gphoto2 not installed (pip install gphoto2)",
   "simulata": "simulated",
