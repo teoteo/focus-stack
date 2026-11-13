@@ -84,6 +84,14 @@ class SequenceRunner:
     def busy(self) -> bool:
         return self._task is not None and not self._task.done()
 
+    def reset(self) -> bool:
+        """Riporta lo stato a "pronta" (nuovo progetto): dimentica la sequenza finita e la sua cartella.
+        Non fa nulla durante una sequenza. I file sul disco non si toccano."""
+        if self.busy:
+            return False
+        self.status = SequenceStatus()
+        return True
+
     def start(self, params: SequenceParams, context: dict | None = None) -> None:
         """context: dati per il manifesto (software, µm/passo, verso di z, ottica, filtro…)."""
         if self.busy:
@@ -143,7 +151,12 @@ class SequenceRunner:
         repeats = max(1, int(p.shots_per_position or 1))
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in p.session_name) or "stack"
+        # ogni sequenza ha sempre una cartella nuova, anche se ne parte un'altra nello stesso secondo
         folder = Path(p.output_root).expanduser() / f"{safe_name}_{stamp}"
+        n = 2
+        while folder.exists():
+            folder = Path(p.output_root).expanduser() / f"{safe_name}_{stamp}-{n}"
+            n += 1
         download = p.capture_mode == "download"
         manifest = build_manifest(p, ctx, positions, repeats)
         frames: list[dict] = manifest["frames"]

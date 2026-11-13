@@ -190,5 +190,13 @@
   "⚠ Il firmware ha mantenuto max = {max} (richiesto {requested})": "⚠ El firmware ha mantenido máx. = {max} (solicitado {requested})",
   "⚠ La posizione attuale {pos} è fuori dai fine corsa impostati": "⚠ La posición actual {pos} está fuera de los límites establecidos",
   "La posizione {pos} è oltre il fine corsa superiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "La posición {pos} supera el límite superior ({lim}): usa el otro botón para volver, o cambia los límites en Configuración",
-  "La posizione {pos} è sotto il fine corsa inferiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "La posición {pos} está por debajo del límite inferior ({lim}): usa el otro botón para volver, o cambia los límites en Configuración"
+  "La posizione {pos} è sotto il fine corsa inferiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "La posición {pos} está por debajo del límite inferior ({lim}): usa el otro botón para volver, o cambia los límites en Configuración",
+  "Visualizzatore svuotato ({n} scatti): i file restano nella cartella": "Visor vaciado ({n} fotos): los archivos siguen en la carpeta",
+  "L'installazione della versione {version} non si è conclusa: riprova, oppure scarica l'app da GitHub e sostituiscila in Applicazioni": "La instalación de la versión {version} no terminó: vuelve a intentarlo, o descarga la app de GitHub y sustitúyela en Aplicaciones",
+  "Aggiornamento a Focus Stack {version} completato": "Actualización a Focus Stack {version} completada",
+  "Scaricamento interrotto ({exc}): nuovo tentativo ({n} di {tot})…": "Descarga interrumpida ({exc}): nuevo intento ({n} de {tot})…",
+  "Scaricamento interrotto: la connessione a internet si è persa ({exc}). Riprova quando la rete è stabile: Focus Stack non è stata modificata": "Descarga interrumpida: se perdió la conexión a internet ({exc}). Vuelve a intentarlo cuando la red esté estable: Focus Stack no se ha modificado",
+  "Il file scaricato è incompleto o rovinato: riprova": "El archivo descargado está incompleto o dañado: vuelve a intentarlo",
+  "file incompleto": "archivo incompleto",
+  "nessuna risposta": "sin respuesta"
 }

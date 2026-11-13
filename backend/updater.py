@@ -9,10 +9,13 @@ sicurezza compare solo alla prima installazione.
 """
 from __future__ import annotations
 
+import hashlib
+import http.client
 import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import tempfile
 import time
@@ -20,11 +23,18 @@ import urllib.request
 from pathlib import Path
 
 from .i18n import tr
+from .settings import CONFIG_DIR
 
 APP_ROOT = Path(__file__).resolve().parent.parent
 GITHUB_REPO = "teoteo/focus-stack"
 ASSET_RE = re.compile(r"^FocusStack-.*\.zip$")
 CHECK_INTERVAL = 6 * 3600
+RETRY_INTERVAL = 5 * 60      # dopo un controllo non riuscito (per esempio rete non ancora pronta all'avvio)
+INSTALL_TIMEOUT = 5 * 60     # se dopo tanto l'app non si è ancora chiusa, l'installazione non è andata
+# versione che si sta installando: alla riapertura dice se lo scambio dell'app è riuscito
+PENDING_FILE = CONFIG_DIR / "aggiornamento-in-corso.json"
+DOWNLOAD_ATTEMPTS = 4        # se la connessione cade, si riprende da dove si era arrivati
+DOWNLOAD_TIMEOUT = 30        # secondi senza ricevere dati = connessione persa
 
 # Firmware incluso nell'app (preparato da build_release.sh); nel progetto di sviluppo
 # compare dopo una build, altrimenti l'aggiornamento del firmware non è disponibile.
@@ -72,17 +82,51 @@ class AppUpdater:
         self.latest: str | None = None      # versione dell'ultima release
         self.notes: str = ""
         self.asset_url: str | None = None
+        self.asset_size: int | None = None     # dimensione e sha256 dello zip dichiarati da GitHub:
+        self.asset_sha256: str | None = None   # servono a riconoscere un download incompleto o rovinato
         self.checked_at = 0.0
         self.error = ""
         self.installing = False
+        self.installing_since = 0.0           # quando è partito lo script che sostituisce l'app (0 = non ancora)
+        self.install_error = ""
+        self.progress: float | None = None    # avanzamento dello scaricamento (0–1), None se non noto
+        self._check_pending()
+
+    def _check_pending(self) -> None:
+        """Dopo un riavvio per aggiornamento: se la versione non è cambiata lo script non è riuscito
+        a sostituire l'app (per esempio permessi della cartella): lo si dice e si ripropone."""
+        try:
+            target = json.loads(PENDING_FILE.read_text()).get("version", "")
+        except (OSError, ValueError):
+            return
+        try:
+            PENDING_FILE.unlink()
+        except OSError:
+            pass
+        current = app_version()
+        if target and current != "sviluppo" and parse_version(current) < parse_version(target):
+            self.install_error = tr("L'installazione della versione {version} non si è conclusa: riprova, oppure "
+                                    "scarica l'app da GitHub e sostituiscila in Applicazioni", version=target)
+            self.log("⚠ " + self.install_error)
+        elif target:
+            self.log(tr("Aggiornamento a Focus Stack {version} completato", version=current))
 
     def describe(self) -> dict:
         current = app_version()
+        # installazione avviata ma l'app è ancora qui: lo script non è riuscito a sostituirla.
+        # Si torna a proporre l'aggiornamento invece di restare "in corso" per sempre.
+        # (il tempo conta solo dallo scambio: lo scaricamento su una linea lenta può durare di più)
+        if self.installing and self.installing_since and time.time() - self.installing_since > INSTALL_TIMEOUT:
+            self.installing = False
+            self.install_error = tr("L'installazione della versione {version} non si è conclusa: riprova, oppure "
+                                    "scarica l'app da GitHub e sostituiscila in Applicazioni", version=self.latest)
+            self.log("⚠ " + self.install_error)
         available = bool(self.latest and self.asset_url and current != "sviluppo"
                          and parse_version(self.latest) > parse_version(current))
         return {"version": current, "latest": self.latest, "available": available,
                 "can_install": available and app_bundle() is not None, "notes": self.notes[:2000],
-                "installing": self.installing, "error": self.error}
+                "installing": self.installing, "error": self.error, "install_error": self.install_error,
+                "progress": self.progress if self.installing else None}
 
     def check_blocking(self) -> None:
         req = urllib.request.Request(f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest",
@@ -99,11 +143,14 @@ class AppUpdater:
         self.checked_at = time.time()
         self.latest = str(rel.get("tag_name", "")).lstrip("v") or None
         self.notes = rel.get("body") or ""
-        self.asset_url = next((a["browser_download_url"] for a in rel.get("assets", [])
-                               if ASSET_RE.match(a.get("name", ""))), None)
+        asset = next((a for a in rel.get("assets", []) if ASSET_RE.match(a.get("name", ""))), None)
+        self.asset_url = asset["browser_download_url"] if asset else None
+        self.asset_size = asset.get("size") if asset else None
+        digest = (asset or {}).get("digest") or ""
+        self.asset_sha256 = digest.split(":", 1)[1].lower() if digest.startswith("sha256:") else None
 
     def due(self) -> bool:
-        return time.time() - self.checked_at > CHECK_INTERVAL
+        return time.time() - self.checked_at > (RETRY_INTERVAL if self.error else CHECK_INTERVAL)
 
     def install_blocking(self) -> None:
         """Scarica e prepara la nuova versione, poi avvia lo script che sostituisce l'app."""
@@ -117,30 +164,111 @@ class AppUpdater:
             raise RuntimeError(tr("Non ho i permessi per scrivere in {path}: sposta Focus Stack "
                                   "in Applicazioni con un account amministratore", path=parent))
         self.installing = True
+        self.installing_since = 0.0
+        self.install_error = ""
+        self.progress = 0.0
+        work = Path(tempfile.mkdtemp(prefix="FocusStack-update-"))
+        staged = parent / f".{bundle.stem}-aggiornamento.app"
+        launched = False
         try:
-            work = Path(tempfile.mkdtemp(prefix="FocusStack-update-"))
             zip_path = work / "FocusStack.zip"
-            self.log(tr("Scaricamento della versione {version}…", version=self.latest))
-            req = urllib.request.Request(self.asset_url, headers={"User-Agent": "FocusStack"})
-            with urllib.request.urlopen(req, timeout=60) as r, open(zip_path, "wb") as out:
-                shutil.copyfileobj(r, out)
-            subprocess.run(["ditto", "-x", "-k", str(zip_path), str(work / "x")], check=True)
+            self._download(zip_path)
+            try:
+                subprocess.run(["ditto", "-x", "-k", str(zip_path), str(work / "x")], check=True,
+                               capture_output=True)
+            except subprocess.CalledProcessError:
+                raise RuntimeError(tr("Il file scaricato è incompleto o rovinato: riprova")) from None
             new_app = next((work / "x").glob("*.app"), None)
             if not new_app or not (new_app / "Contents" / "Info.plist").exists():
                 raise RuntimeError(tr("Il pacchetto scaricato non contiene l'app"))
             # copia accanto a quella attuale: lo scambio finale è un semplice rename
-            staged = parent / f".{bundle.stem}-aggiornamento.app"
             shutil.rmtree(staged, ignore_errors=True)
-            subprocess.run(["ditto", str(new_app), str(staged)], check=True)
+            subprocess.run(["ditto", str(new_app), str(staged)], check=True, capture_output=True)
+            try:
+                CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+                PENDING_FILE.write_text(json.dumps({"version": self.latest, "from": app_version()}))
+            except OSError:
+                pass
             script = work / "installa.sh"
             script.write_text(_INSTALL_SCRIPT)
             subprocess.Popen(["/bin/zsh", str(script), str(bundle), str(staged), str(work)],
                              stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                              stderr=subprocess.DEVNULL, start_new_session=True)
+            launched = True
+            self.installing_since = time.time()
+            self.progress = None
             self.log(tr("Installazione della versione {version}: Focus Stack si riavvia…", version=self.latest))
-        except Exception:
+        except Exception as exc:
             self.installing = False
+            self.progress = None
+            self.install_error = str(exc)
             raise
+        finally:
+            # se non si arriva allo scambio, l'app installata resta com'è e non restano file a metà
+            if not launched:
+                shutil.rmtree(work, ignore_errors=True)
+                shutil.rmtree(staged, ignore_errors=True)
+
+    def _download(self, dest: Path) -> None:
+        """Scarica lo zip della release. Se la connessione cade riprova e riprende da dove era
+        arrivato (richiesta Range); alla fine controlla dimensione e sha256 dichiarati da GitHub."""
+        self.log(tr("Scaricamento della versione {version}…", version=self.latest))
+        last_exc: Exception | None = None
+        for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+            have = dest.stat().st_size if dest.exists() else 0
+            headers = {"User-Agent": "FocusStack"}
+            if have:
+                headers["Range"] = f"bytes={have}-"
+            try:
+                req = urllib.request.Request(self.asset_url, headers=headers)
+                with urllib.request.urlopen(req, timeout=DOWNLOAD_TIMEOUT) as r:
+                    resumed = have and r.status == 206
+                    expected = r.headers.get("Content-Length")
+                    expected = int(expected) if expected and expected.isdigit() else None
+                    got = 0
+                    with open(dest, "ab" if resumed else "wb") as out:
+                        while chunk := r.read(1 << 16):
+                            out.write(chunk)
+                            got += len(chunk)
+                            if self.asset_size:
+                                self.progress = min(1.0, ((have if resumed else 0) + got) / self.asset_size)
+                    if expected is not None and got < expected:
+                        raise http.client.IncompleteRead(b"", expected - got)
+                size = dest.stat().st_size
+                if self.asset_size and size != self.asset_size:
+                    raise http.client.IncompleteRead(b"", max(0, self.asset_size - size))
+                break
+            except (OSError, http.client.HTTPException) as exc:
+                last_exc = exc
+                if isinstance(exc, urllib.error.HTTPError) and exc.code == 416:
+                    dest.unlink(missing_ok=True)   # file parziale non valido: si ricomincia
+                if attempt < DOWNLOAD_ATTEMPTS:
+                    self.log(tr("Scaricamento interrotto ({exc}): nuovo tentativo ({n} di {tot})…",
+                                exc=_short(exc), n=attempt + 1, tot=DOWNLOAD_ATTEMPTS))
+                    time.sleep(3 * attempt)
+        else:
+            raise RuntimeError(tr("Scaricamento interrotto: la connessione a internet si è persa ({exc}). "
+                                  "Riprova quando la rete è stabile: Focus Stack non è stata modificata",
+                                  exc=_short(last_exc)))
+        if self.asset_sha256:
+            h = hashlib.sha256()
+            with open(dest, "rb") as f:
+                while chunk := f.read(1 << 20):
+                    h.update(chunk)
+            if h.hexdigest() != self.asset_sha256:
+                dest.unlink(missing_ok=True)
+                raise RuntimeError(tr("Il file scaricato è incompleto o rovinato: riprova"))
+
+
+def _short(exc: Exception | None) -> str:
+    """Errore di rete in breve, per il registro e per la pagina."""
+    if isinstance(exc, urllib.error.URLError) and not isinstance(exc, urllib.error.HTTPError):
+        exc = exc.reason if isinstance(exc.reason, Exception) else exc
+    if isinstance(exc, http.client.IncompleteRead):
+        return tr("file incompleto")
+    if isinstance(exc, (TimeoutError, socket.timeout)):
+        return tr("nessuna risposta")
+    return getattr(exc, "strerror", None) or str(exc)
 
 
 # Eseguito fuori dall'app: la chiude (l'app spegne il server), scambia le cartelle e la riapre.

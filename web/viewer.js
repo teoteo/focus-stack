@@ -11,7 +11,7 @@ let current = null;      // id dello scatto mostrato
 let currentKey = null;   // chiave unica dello scatto mostrato (gli id ripartono da 0 a ogni riavvio)
 let follow = true;       // segue automaticamente l'ultimo scatto
 let lockView = true;     // mantiene zoom/pan cambiando scatto
-let lastCount = -1;
+let lastRev = null;
 let bootSignature = null; // versione del codice del server alla prima connessione
 
 // Vista: scale = pixel CSS per pixel immagine (naturale), tx/ty = traslazione in pixel CSS
@@ -156,6 +156,7 @@ async function fetchShots() {
   const r = await fetch("/api/shots");
   const data = await r.json();
   shots = data.items;
+  $("clear").disabled = !shots.length;
   renderStrip();
   // server riavviato: lo scatto mostrato non esiste più
   if (current != null && !shots.some((s) => s.id === current && s.key === currentKey)) {
@@ -195,7 +196,9 @@ function connectWS() {
     if (wantLive && camState.connected) setLiveView(true);
     wantLive = false;
     renderLiveView();
-    if (st.shot_count !== lastCount) { lastCount = st.shot_count; loadShots().catch(() => {}); }
+    // shots_rev cambia a ogni scatto e a ogni "Svuota" (shot_count: server di versioni precedenti)
+    const rev = st.shots_rev ?? st.shot_count;
+    if (rev !== lastRev) { lastRev = rev; loadShots().catch(() => {}); }
   };
   ws.onclose = () => setTimeout(connectWS, 1500);
 }
@@ -314,6 +317,14 @@ $("follow").onclick = () => {
 $("liveview").onclick = () => setLiveView(!liveOn);
 $("lock").onclick = () => setLock(!lockView);
 $("reveal").onclick = () => !liveOn && current != null && fetch(`/api/shots/${current}/reveal`, { method: "POST", headers: { "X-FocusStack": "1" } });
+$("clear").onclick = async () => {
+  if (!shots.length) return;
+  if (!confirm(t("Ricominciare da capo? Gli scatti ({n}) escono dal visualizzatore e la sequenza torna «Pronta».", { n: shots.length }) + "\n\n" +
+    t("I file già salvati restano nella cartella sul disco. La prossima sequenza avrà una cartella nuova, con i suoi sequence.json e sequence.txt."))) return;
+  setFollow(true);
+  await fetch("/api/shots/clear", { method: "POST", headers: { "X-FocusStack": "1" } });
+  loadShots().catch(() => {});
+};
 $("fs").onclick = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.());
 
 // pan con il mouse (pointer events: funziona anche con trackpad e touch)

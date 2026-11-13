@@ -157,19 +157,52 @@ function renderUpdates() {
   $("fw-progress").style.width = `${Math.round((fw.progress || 0) * 100)}%`;
   $("fw-phase").textContent = fw.error ? t("Errore: {e}", { e: fw.error }) : fw.busy ? `${fw.phase}… ${Math.round((fw.progress || 0) * 100)}%` : "";
 
+  // Aggiornamento dell'app: la barra in alto e il pulsante qui sotto seguono la stessa regola.
+  // Se c'è una versione nuova restano SEMPRE visibili: cambia solo cosa dicono (disponibile,
+  // installazione in corso, installazione non riuscita), così l'avviso non sparisce mai in silenzio.
+  const app = appUpdateView(a);
+  const inst = $("up-install");
+  inst.classList.toggle("hidden", !app);
+  if (app) {
+    inst.textContent = app.label;
+    inst.disabled = app.disabled;
+    inst.onclick = app.action;
+  }
+
   // barra in alto: prima l'app, poi il firmware
   const bar = $("update-bar"), btn = $("update-btn");
-  if (a.available && !a.installing) {
-    $("update-text").textContent = t("È disponibile Focus Stack {latest} (installata {v}).", { latest: a.latest, v: a.version });
-    btn.textContent = a.can_install ? t("Aggiorna e riavvia") : t("Scarica da GitHub");
-    btn.onclick = a.can_install ? installAppUpdate : () => window.open("https://github.com/teoteo/focus-stack/releases/latest");
+  if (app) {
+    $("update-text").textContent = app.text;
+    btn.textContent = app.label;
+    btn.disabled = app.disabled;
+    btn.onclick = app.action;
     bar.classList.remove("hidden");
   } else if (fw.available && !fw.busy) {
     $("update-text").textContent = t("È disponibile un aggiornamento del firmware del focheggiatore (build {b}).", { b: fw.bundled });
     btn.textContent = t("Vai agli aggiornamenti");
+    btn.disabled = false;
     btn.onclick = () => switchTab("config");
     bar.classList.remove("hidden");
   } else bar.classList.add("hidden");
+}
+
+// Cosa mostrare per l'aggiornamento dell'app (null = niente da proporre)
+function appUpdateView(a) {
+  if (!a.available) return null;
+  const github = () => window.open("https://github.com/teoteo/focus-stack/releases/latest");
+  if (a.installing && a.progress != null) {
+    return { text: t("Scaricamento di Focus Stack {latest}: {p}%", { latest: a.latest, p: Math.floor(a.progress * 100) }),
+      label: t("Installazione in corso…"), disabled: true, action: null };
+  }
+  if (a.installing || updatingApp) {
+    return { text: t("Installazione di Focus Stack {latest} in corso: l'app si chiude e si riapre da sola…", { latest: a.latest }),
+      label: t("Installazione in corso…"), disabled: true, action: null };
+  }
+  const label = a.can_install ? (a.install_error ? t("Riprova") : t("Aggiorna e riavvia")) : t("Scarica da GitHub");
+  return {
+    text: a.install_error || t("È disponibile Focus Stack {latest} (installata {v}).", { latest: a.latest, v: a.version }),
+    label, disabled: false, action: a.can_install ? installAppUpdate : github,
+  };
 }
 
 let updatingApp = false;
@@ -226,7 +259,8 @@ function renderFocuser(f, run) {
   $("jog-um").innerHTML = umPerStep() ? t("{n} passi = {um}", { n: fmtInt(jogSize), um: fmtUm(jogSize) }) : "&nbsp;";
 
   const dis = !f.connected || run;
-  ["jog-away", "jog-toward", "f-goto-btn", "f-goto"].forEach((id) => ($(id).disabled = dis));
+  ["jog-away", "jog-toward", "f-goto"].forEach((id) => ($(id).disabled = dis));
+  updateGotoBtn();
   $("f-halt").disabled = !f.connected;
 }
 
@@ -870,6 +904,18 @@ function bindJogButton(btn, signFn) {
   btn.addEventListener("click", (e) => { if (e.detail === 0) jog(signFn()); });  // Invio/spazio da tastiera
 }
 
+// posizione scritta nel campo "Vai alla posizione": null se vuoto o non è un intero ≥ 0
+function gotoValue() {
+  const raw = $("f-goto").value.trim();
+  if (raw === "" || !/^\d+$/.test(raw)) return null;
+  return Number(raw);
+}
+
+function updateGotoBtn() {
+  const f = S && S.focuser;
+  $("f-goto-btn").disabled = !(f && f.connected) || running() || gotoValue() == null;
+}
+
 function jog(sign) {
   if (!S || !S.focuser.connected || running()) return;
   api("/api/focuser/jog", { delta: sign * jogSize })
@@ -915,7 +961,13 @@ function bind() {
     S.settings = await api("/api/settings", { jog_hold: e.target.checked });
     render();
   });
-  $("f-goto-btn").onclick = (e) => act(e.target, () => api("/api/focuser/move", { position: num("f-goto") }));
+  // "Vai" senza un numero valido resta disattivato: un campo vuoto vale 0 e mandava il motore a zero
+  $("f-goto-btn").onclick = (e) => {
+    const pos = gotoValue();
+    if (pos == null) return;
+    act(e.target, () => api("/api/focuser/move", { position: pos })).finally(updateGotoBtn);
+  };
+  $("f-goto").oninput = updateGotoBtn;
   $("f-goto").onkeydown = (e) => { if (e.key === "Enter") $("f-goto-btn").click(); };
   $("f-halt").onclick = () => act(null, () => api("/api/focuser/halt"), t("Stop"));
 

@@ -190,5 +190,13 @@
   "⚠ Il firmware ha mantenuto max = {max} (richiesto {requested})": "⚠ The firmware kept max = {max} ({requested} requested)",
   "⚠ La posizione attuale {pos} è fuori dai fine corsa impostati": "⚠ The current position {pos} is outside the set limits",
   "La posizione {pos} è oltre il fine corsa superiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "Position {pos} is beyond the upper limit ({lim}): use the other button to move back, or change the limits in Configuration",
-  "La posizione {pos} è sotto il fine corsa inferiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "Position {pos} is below the lower limit ({lim}): use the other button to move back, or change the limits in Configuration"
+  "La posizione {pos} è sotto il fine corsa inferiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "Position {pos} is below the lower limit ({lim}): use the other button to move back, or change the limits in Configuration",
+  "Visualizzatore svuotato ({n} scatti): i file restano nella cartella": "Viewer cleared ({n} shots): the files stay in the folder",
+  "L'installazione della versione {version} non si è conclusa: riprova, oppure scarica l'app da GitHub e sostituiscila in Applicazioni": "Installing version {version} did not finish: try again, or download the app from GitHub and replace it in Applications",
+  "Aggiornamento a Focus Stack {version} completato": "Update to Focus Stack {version} completed",
+  "Scaricamento interrotto ({exc}): nuovo tentativo ({n} di {tot})…": "Download interrupted ({exc}): new attempt ({n} of {tot})…",
+  "Scaricamento interrotto: la connessione a internet si è persa ({exc}). Riprova quando la rete è stabile: Focus Stack non è stata modificata": "Download interrupted: the internet connection was lost ({exc}). Try again when the network is stable: Focus Stack has not been changed",
+  "Il file scaricato è incompleto o rovinato: riprova": "The downloaded file is incomplete or damaged: try again",
+  "file incompleto": "incomplete file",
+  "nessuna risposta": "no response"
 }

@@ -90,6 +90,7 @@ code, kbd { font: 13px ui-monospace, "SF Mono", Menlo, monospace; background: va
   border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); color: var(--text); font-size: 15px;
   display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .update-bar .grow { flex: 1; }
+.up-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0 0 14px; font-size: 15px; }
 .kv dt { color: var(--text-2); }
 .kv dd { margin: 0; font-weight: 600; }

@@ -51,6 +51,8 @@ class App:
         self.log_lines: deque[str] = deque(maxlen=500)
         self.temp_history: deque[tuple[float, float]] = deque(maxlen=720)  # 2 h a 10 s
         self.shots: list[dict] = []          # galleria della sessione (prova + sequenze)
+        self.next_shot_id = 0                # gli id non si riusano dopo "Svuota" (l'elenco riparte vuoto)
+        self.shots_rev = 0                   # cambia a ogni scatto aggiunto e a ogni "Svuota"
         self.alarm: str = ""                  # avviso fine corsa / movimento non comandato
         self.alarm_kind: str = ""             # "limits" = posizione fuori dai fine corsa (il testo è tradotto)
         self.code_stale = False               # il codice su disco è più recente del server in esecuzione
@@ -100,10 +102,26 @@ class App:
         except OSError:
             mtime = 0
         key = hashlib.sha1(f"{BOOT_ID}:{display}:{mtime}".encode()).hexdigest()[:16]
-        self.shots.append({"id": len(self.shots), "key": key, "kind": kind, "file": display, "files": files,
+        self.shots.append({"id": self.next_shot_id, "key": key, "kind": kind, "file": display, "files": files,
                            "name": Path(display).name, "position": position, "temperature": temperature,
                            "index": index, "repeat": repeat, "time": time.strftime("%H:%M:%S")})
+        self.next_shot_id += 1
+        self.shots_rev += 1
         asyncio.get_running_loop().create_task(warm_cache(display))
+
+    def get_shot(self, shot_id: int) -> dict | None:
+        """Scatto per id: gli id sono consecutivi dal primo dell'elenco (dopo "Svuota" non ripartono da 0)."""
+        if not self.shots:
+            return None
+        i = shot_id - self.shots[0]["id"]
+        return self.shots[i] if 0 <= i < len(self.shots) else None
+
+    def clear_shots(self) -> int:
+        """Toglie tutti gli scatti dal visualizzatore; i file restano dove sono."""
+        n = len(self.shots)
+        self.shots = []
+        self.shots_rev += 1
+        return n
 
     def add_sequence_shot(self, record: dict) -> None:
         self.add_shot(record["files"], "sequence", record["position"], record["temperature"], record["index"],
@@ -203,6 +221,7 @@ class App:
             "temp_history": [t for _, t in list(self.temp_history)[-180:]],
             "last_shot": last,
             "shot_count": len(self.shots),
+            "shots_rev": self.shots_rev,
             "log": list(self.log_lines)[-200:],
             "boot_signature": BOOT_SIGNATURE,
             "language": i18n.current(),
@@ -354,7 +373,7 @@ async def update_check_loop():
             if u["available"]:
                 app_state.log(tr("È disponibile Focus Stack {latest} (installata {version})",
                                  latest=u["latest"], version=u["version"]))
-        await asyncio.sleep(600)
+        await asyncio.sleep(60)
 
 
 @asynccontextmanager
@@ -977,24 +996,39 @@ async def shots():
     return {"items": app_state.shots[-500:], "count": len(app_state.shots)}
 
 
+@api.post("/api/shots/clear")
+@guard
+async def shots_clear():
+    """Ricomincia da capo: svuota il visualizzatore e, se non c'è una sequenza in corso, riporta la
+    sequenza a "pronta". La prossima sequenza crea comunque una cartella nuova con i suoi
+    sequence.json e sequence.txt; i file già salvati restano dove sono."""
+    n = app_state.clear_shots()
+    app_state.runner.reset()
+    if n:
+        app_state.log(tr("Visualizzatore svuotato ({n} scatti): i file restano nella cartella", n=n))
+    return {"ok": True}
+
+
 @api.get("/api/shots/{shot_id}/image")
 async def shot_image(shot_id: int, size: str = "full", v: str = ""):
-    if shot_id < 0 or shot_id >= len(app_state.shots):
+    shot = app_state.get_shot(shot_id)
+    if not shot:
         raise HTTPException(404)
-    if v and v != app_state.shots[shot_id]["key"]:
+    if v and v != shot["key"]:
         raise HTTPException(404, tr("Scatto di una sessione precedente"))
     if size not in ("full", "preview"):
         raise HTTPException(400)
-    out = await render_image(app_state.shots[shot_id]["file"], size)
+    out = await render_image(shot["file"], size)
     # no-cache = il browser può tenere l'immagine ma deve ricontrollare (ETag) prima di riusarla
     return FileResponse(out, headers={"Cache-Control": "private, no-cache"})
 
 
 @api.post("/api/shots/{shot_id}/reveal")
 async def shot_reveal(shot_id: int):
-    if shot_id < 0 or shot_id >= len(app_state.shots):
+    shot = app_state.get_shot(shot_id)
+    if not shot:
         raise HTTPException(404)
-    subprocess.Popen(["open", "-R", app_state.shots[shot_id]["file"]])
+    subprocess.Popen(["open", "-R", shot["file"]])
     return {"ok": True}
 
 

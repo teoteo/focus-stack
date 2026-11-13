@@ -190,5 +190,13 @@
   "⚠ Il firmware ha mantenuto max = {max} (richiesto {requested})": "⚠ Le firmware a conservé max = {max} ({requested} demandé)",
   "⚠ La posizione attuale {pos} è fuori dai fine corsa impostati": "⚠ La position actuelle {pos} est hors des limites définies",
   "La posizione {pos} è oltre il fine corsa superiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "La position {pos} dépasse la limite supérieure ({lim}) : utilisez l'autre bouton pour revenir, ou modifiez les limites dans Configuration",
-  "La posizione {pos} è sotto il fine corsa inferiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "La position {pos} est sous la limite inférieure ({lim}) : utilisez l'autre bouton pour revenir, ou modifiez les limites dans Configuration"
+  "La posizione {pos} è sotto il fine corsa inferiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "La position {pos} est sous la limite inférieure ({lim}) : utilisez l'autre bouton pour revenir, ou modifiez les limites dans Configuration",
+  "Visualizzatore svuotato ({n} scatti): i file restano nella cartella": "Visionneuse vidée ({n} photos) : les fichiers restent dans le dossier",
+  "L'installazione della versione {version} non si è conclusa: riprova, oppure scarica l'app da GitHub e sostituiscila in Applicazioni": "L'installation de la version {version} n'a pas abouti : réessayez, ou téléchargez l'app depuis GitHub et remplacez-la dans Applications",
+  "Aggiornamento a Focus Stack {version} completato": "Mise à jour vers Focus Stack {version} terminée",
+  "Scaricamento interrotto ({exc}): nuovo tentativo ({n} di {tot})…": "Téléchargement interrompu ({exc}) : nouvelle tentative ({n} sur {tot})…",
+  "Scaricamento interrotto: la connessione a internet si è persa ({exc}). Riprova quando la rete è stabile: Focus Stack non è stata modificata": "Téléchargement interrompu : la connexion internet a été perdue ({exc}). Réessayez quand le réseau est stable : Focus Stack n'a pas été modifiée",
+  "Il file scaricato è incompleto o rovinato: riprova": "Le fichier téléchargé est incomplet ou endommagé : réessayez",
+  "file incompleto": "fichier incomplet",
+  "nessuna risposta": "aucune réponse"
 }

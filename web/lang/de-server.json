@@ -190,5 +190,13 @@
   "⚠ Il firmware ha mantenuto max = {max} (richiesto {requested})": "⚠ Die Firmware hat max = {max} beibehalten ({requested} angefordert)",
   "⚠ La posizione attuale {pos} è fuori dai fine corsa impostati": "⚠ Die aktuelle Position {pos} liegt außerhalb der eingestellten Grenzen",
   "La posizione {pos} è oltre il fine corsa superiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "Position {pos} liegt über der oberen Grenze ({lim}): Mit der anderen Taste zurückfahren oder die Grenzen unter Konfiguration ändern",
-  "La posizione {pos} è sotto il fine corsa inferiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "Position {pos} liegt unter der unteren Grenze ({lim}): Mit der anderen Taste zurückfahren oder die Grenzen unter Konfiguration ändern"
+  "La posizione {pos} è sotto il fine corsa inferiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "Position {pos} liegt unter der unteren Grenze ({lim}): Mit der anderen Taste zurückfahren oder die Grenzen unter Konfiguration ändern",
+  "Visualizzatore svuotato ({n} scatti): i file restano nella cartella": "Betrachter geleert ({n} Aufnahmen): Die Dateien bleiben im Ordner",
+  "L'installazione della versione {version} non si è conclusa: riprova, oppure scarica l'app da GitHub e sostituiscila in Applicazioni": "Die Installation von Version {version} wurde nicht abgeschlossen: erneut versuchen oder die App von GitHub laden und in Programme ersetzen",
+  "Aggiornamento a Focus Stack {version} completato": "Aktualisierung auf Focus Stack {version} abgeschlossen",
+  "Scaricamento interrotto ({exc}): nuovo tentativo ({n} di {tot})…": "Download unterbrochen ({exc}): neuer Versuch ({n} von {tot})…",
+  "Scaricamento interrotto: la connessione a internet si è persa ({exc}). Riprova quando la rete è stabile: Focus Stack non è stata modificata": "Download unterbrochen: Die Internetverbindung ist abgebrochen ({exc}). Erneut versuchen, wenn das Netz stabil ist: Focus Stack wurde nicht verändert",
+  "Il file scaricato è incompleto o rovinato: riprova": "Die heruntergeladene Datei ist unvollständig oder beschädigt: erneut versuchen",
+  "file incompleto": "Datei unvollständig",
+  "nessuna risposta": "keine Antwort"
 }

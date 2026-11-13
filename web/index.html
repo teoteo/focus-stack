@@ -499,7 +499,10 @@
       <dt>App</dt><dd id="up-app">—</dd>
       <dt>Firmware del focheggiatore</dt><dd id="up-fw">—</dd>
     </dl>
-    <button class="btn primary" id="fw-update" disabled>Aggiorna firmware</button>
+    <div class="up-actions">
+      <button class="btn primary hidden" id="up-install">Aggiorna e riavvia</button>
+      <button class="btn primary" id="fw-update" disabled>Aggiorna firmware</button>
+    </div>
     <div class="progress-box hidden" id="fw-progress-box">
       <div class="progress"><div id="fw-progress"></div></div>
       <div class="progress-text" id="fw-phase"></div>
