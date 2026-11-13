@@ -188,5 +188,7 @@
   "È disponibile Focus Stack {latest} (installata {version})": "Focus Stack {latest} ist verfügbar (installiert: {version})",
   "⚠ Aggiornamento firmware non riuscito: {exc}": "⚠ Firmware-Aktualisierung fehlgeschlagen: {exc}",
   "⚠ Il firmware ha mantenuto max = {max} (richiesto {requested})": "⚠ Die Firmware hat max = {max} beibehalten ({requested} angefordert)",
-  "⚠ La posizione attuale {pos} è fuori dai fine corsa impostati": "⚠ Die aktuelle Position {pos} liegt außerhalb der eingestellten Grenzen"
+  "⚠ La posizione attuale {pos} è fuori dai fine corsa impostati": "⚠ Die aktuelle Position {pos} liegt außerhalb der eingestellten Grenzen",
+  "La posizione {pos} è oltre il fine corsa superiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "Position {pos} liegt über der oberen Grenze ({lim}): Mit der anderen Taste zurückfahren oder die Grenzen unter Konfiguration ändern",
+  "La posizione {pos} è sotto il fine corsa inferiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "Position {pos} liegt unter der unteren Grenze ({lim}): Mit der anderen Taste zurückfahren oder die Grenzen unter Konfiguration ändern"
 }

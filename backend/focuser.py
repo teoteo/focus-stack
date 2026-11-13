@@ -220,10 +220,45 @@ class MyFocuserPro2:
                                 hi=hi if hi is not None else "∞"))
         return int(pos)
 
-    def clamp(self, pos: int) -> int:
+    def check_move(self, pos: int) -> int:
+        """Come check(), ma se la posizione attuale è già fuori dai fine corsa permette di muoversi
+        verso l'intervallo (senza superarlo dall'altra parte): così si può rientrare a piccoli passi."""
         lo, hi = self.bounds()
-        pos = max(lo, int(pos))
-        return min(pos, hi) if hi is not None else pos
+        if hi is not None and self.position > hi and pos < self.position and pos >= lo:
+            return int(pos)
+        if self.position < lo and pos > self.position and (hi is None or pos <= hi):
+            return int(pos)
+        return self.check(pos)
+
+    def check_direction(self, direction: int) -> None:
+        """Rifiuta un movimento che allontana ancora di più da un fine corsa già superato."""
+        lo, hi = self.bounds()
+        if direction > 0 and hi is not None and self.position > hi:
+            raise LimitError(tr("La posizione {pos} è oltre il fine corsa superiore ({lim}): usa l'altro pulsante "
+                                "per rientrare, o cambia i fine corsa in Configurazione", pos=self.position, lim=hi))
+        if direction < 0 and self.position < lo:
+            raise LimitError(tr("La posizione {pos} è sotto il fine corsa inferiore ({lim}): usa l'altro pulsante "
+                                "per rientrare, o cambia i fine corsa in Configurazione", pos=self.position, lim=lo))
+
+    def jog_target(self, delta: int) -> tuple[int, bool]:
+        """Destinazione di uno spostamento relativo, sempre nel verso chiesto: si ferma al fine corsa
+        verso cui si va e non salta mai a quello opposto (anche se la posizione ne è già fuori).
+        Restituisce (destinazione, fermato_al_fine_corsa)."""
+        lo, hi = self.bounds()
+        pos = self.position
+        target = pos + int(delta)
+        self.check_direction(1 if delta > 0 else -1)
+        if delta > 0:
+            if hi is not None and pos >= hi:
+                raise LimitError(tr("Fine corsa raggiunto"))
+            if hi is not None and target > hi:
+                return hi, True
+        elif delta < 0:
+            if pos <= lo:
+                raise LimitError(tr("Fine corsa raggiunto"))
+            if target < lo:
+                return lo, True
+        return target, False
 
     # ---------- API asincrona ----------
     async def connect(self) -> None:
@@ -236,7 +271,7 @@ class MyFocuserPro2:
         await asyncio.to_thread(self._poll_blocking, with_temp)
 
     async def move_to(self, pos: int, wait: bool = False, timeout: float = 600) -> None:
-        pos = self.check(pos)
+        pos = self.check_move(pos)
         self._mark_commanded()
         await asyncio.to_thread(self._send, f":05{pos}#")
         self.moving = True
@@ -345,7 +380,7 @@ class SimulatedFocuser(MyFocuserPro2):
             self.temperature = round(21.5 + 0.6 * math.sin(time.time() / 300), 2)
 
     async def move_to(self, pos: int, wait: bool = False, timeout: float = 600) -> None:
-        pos = self.check(pos)
+        pos = self.check_move(pos)
         self._mark_commanded()
         self._advance()
         self._target = pos

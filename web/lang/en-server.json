@@ -188,5 +188,7 @@
   "È disponibile Focus Stack {latest} (installata {version})": "Focus Stack {latest} is available (installed {version})",
   "⚠ Aggiornamento firmware non riuscito: {exc}": "⚠ Firmware update failed: {exc}",
   "⚠ Il firmware ha mantenuto max = {max} (richiesto {requested})": "⚠ The firmware kept max = {max} ({requested} requested)",
-  "⚠ La posizione attuale {pos} è fuori dai fine corsa impostati": "⚠ The current position {pos} is outside the set limits"
+  "⚠ La posizione attuale {pos} è fuori dai fine corsa impostati": "⚠ The current position {pos} is outside the set limits",
+  "La posizione {pos} è oltre il fine corsa superiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "Position {pos} is beyond the upper limit ({lim}): use the other button to move back, or change the limits in Configuration",
+  "La posizione {pos} è sotto il fine corsa inferiore ({lim}): usa l'altro pulsante per rientrare, o cambia i fine corsa in Configurazione": "Position {pos} is below the lower limit ({lim}): use the other button to move back, or change the limits in Configuration"
 }

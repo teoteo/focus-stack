@@ -617,12 +617,9 @@ async def focuser_jog(body: Delta):
     not_running()
     f = need_focuser()
     await f.poll()
-    target = f.position + body.delta
-    clamped = f.clamp(target)
-    if clamped == f.position and clamped != target:
-        raise LimitError(tr("Fine corsa raggiunto"))
-    await f.move_to(clamped)
-    return {"ok": True, "target": clamped, "clamped": clamped != target}
+    target, clamped = f.jog_target(body.delta)
+    await f.move_to(target)
+    return {"ok": True, "target": target, "clamped": clamped}
 
 
 class Hold(BaseModel):
@@ -653,9 +650,11 @@ async def focuser_hold(body: Hold):
     await f.poll()
     if f.moving:  # il firmware ignora un nuovo target mentre si muove (es. sta ancora rallentando)
         await f.wait_idle(timeout=5)
+    f.check_direction(body.direction)
     lo, hi = f.bounds()
     target = lo if body.direction < 0 else (hi if hi is not None else f.position + 1_000_000)
-    if target == f.position:
+    # mai nel verso opposto a quello chiesto (succedeva con la posizione già oltre un fine corsa)
+    if (target - f.position) * body.direction <= 0:
         raise LimitError(tr("Fine corsa raggiunto"))
     app_state.hold_dir = body.direction
     app_state.hold_deadline = time.monotonic() + HOLD_TIMEOUT
