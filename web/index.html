@@ -22,6 +22,7 @@
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="session" aria-selected="true">Sessione</button>
     <button role="tab" data-tab="optics">Ottica</button>
+    <button role="tab" data-tab="calib">Calibrazione</button>
     <button role="tab" data-tab="config">Configurazione</button>
     <button role="tab" data-tab="log">Registro</button>
   </nav>
@@ -118,6 +119,15 @@
       <span class="chip" id="s-chip">Pronta</span>
     </header>
 
+    <div class="stack-name">
+      <label for="s-name">Nome della pila</label>
+      <div class="field-with-btn">
+        <input type="text" id="s-name" autocomplete="off" spellcheck="false" maxlength="80" placeholder="es. ape_occhio">
+        <button class="btn primary small hidden" id="s-new" title="Prepara la pila successiva: la sequenza torna «Pronta» e puoi cambiare il nome. Le immagini già salvate non si toccano">＋ Nuova pila</button>
+      </div>
+      <p class="hint" id="s-name-hint"></p>
+    </div>
+
     <div class="fields two">
       <label>Inizio
         <span class="field-with-btn"><input type="number" id="s-start" min="0"><button class="btn ghost small" data-mark="start" title="Usa la posizione attuale">⌖ qui</button></span>
@@ -127,6 +137,7 @@
       </label>
       <label>Passo (passi motore)<input type="number" id="s-step" min="1"></label>
       <label>Numero di scatti<input type="number" id="s-count" min="2" title="Modifica per ricalcolare il passo"></label>
+      <label>Attesa dopo il movimento (ms)<input type="number" id="s-settle" min="0" step="100" title="Dopo ogni movimento, prima dello scatto: lascia smorzare le vibrazioni (1–3 s al microscopio)"></label>
       <label class="span-all">Ottica e filtro (profilo)
         <span class="field-with-btn"><select id="s-optics"><option value="">Nessun profilo (nessun filtro)</option></select><button class="btn ghost small" id="s-optics-edit" title="Crea o modifica i profili nel tab Ottica">Modifica</button></span>
       </label>
@@ -145,11 +156,10 @@
     </div>
 
     <details class="more" id="s-more">
-      <summary>Tempi, gioco, scatti per posizione e nome della sessione</summary>
+      <summary>Tempi, gioco e scatti per posizione</summary>
       <div class="fields two">
         <label>Scatti per posizione<input type="number" id="s-repeats" min="1" max="32" step="1" title="Più scatti nella stessa posizione: il software di fusione ne fa la media per ridurre il rumore"></label>
-        <label>Attesa dopo il movimento (ms)<input type="number" id="s-settle" min="0" step="100"></label>
-        <label>Pausa dopo lo scatto (ms)<input type="number" id="s-post" min="0" step="100"></label>
+        <label>Pausa dopo lo scatto, per scheda e flash (ms)<input type="number" id="s-post" min="0" step="100" title="Dopo ogni scatto, prima del movimento successivo: tempo per scrivere sulla scheda e ricaricare il flash"></label>
         <label>Compensazione gioco (passi)<input type="number" id="s-backlash" min="0"></label>
         <label>Modalità di scatto
           <select id="s-mode">
@@ -158,7 +168,6 @@
             <option value="trigger">Solo trigger (veloce)</option>
           </select>
         </label>
-        <label class="span-all">Nome sessione (sottocartella: nome_data-ora)<input type="text" id="s-name" autocomplete="off"></label>
       </div>
       <label class="check"><input type="checkbox" id="s-return"> Torna all'inizio a fine sequenza</label>
       <div class="row preset">
@@ -273,6 +282,10 @@
       <button class="btn ghost small" id="o-profile-save">Salva come nuovo profilo…</button>
       <button class="btn ghost small" id="o-profile-del">Elimina profilo</button>
     </div>
+    <div class="seg wide" id="o-kind" role="radiogroup" aria-label="Tipo di ottica">
+      <button data-kind="microscope" title="Obiettivo da microscopio: ingrandimento e apertura numerica (NA) scritti sull'obiettivo">Microscopio</button>
+      <button data-kind="macro" title="Obiettivo fotografico, con tubi di prolunga e lenti addizionali">Macro fotografica</button>
+    </div>
     <div class="optics-grid">
       <div>
         <!-- in ordine fisico, dalla fotocamera al campione -->
@@ -281,6 +294,7 @@
           <label>Pixel del sensore (pixel pitch in µm)<input type="number" id="d-px" step="0.01" min="0" placeholder="es. 3.9"></label>
         </div>
         <p class="hint" data-i18n-html>Il pixel pitch è nella scheda tecnica della fotocamera. Si trova anche su <a href="https://www.digicamdb.com" target="_blank" rel="noopener">digicamdb.com</a> (fotocamere fotografiche) e nel <a href="https://app.astrobin.com/equipment/explorer/sensor" target="_blank" rel="noopener">database di AstroBin</a> (camere dedicate e sensori, es. IMX571).</p>
+        <div class="only-micro">
         <h3>Fra sensore e obiettivo</h3>
         <p class="hint">Lascia vuoto quello che non c'è: vale 1×. L'ingrandimento sul sensore è il prodotto dei tre fattori.</p>
         <div class="fields two">
@@ -305,6 +319,43 @@
             </select>
           </label>
         </div>
+        </div>
+
+        <div class="only-macro">
+        <h3>Obiettivo fotografico</h3>
+        <div class="lens-search">
+          <label class="span-all">Cerca nel database
+            <input type="search" id="m-search" autocomplete="off" spellcheck="false" placeholder="es. micro nikkor 60" aria-controls="m-results" aria-autocomplete="list">
+          </label>
+          <ul class="lens-results hidden" id="m-results" role="listbox"></ul>
+        </div>
+        <p class="hint" id="m-db-hint" data-i18n-html>Obiettivi dal database <a href="https://lensfun.github.io" target="_blank" rel="noopener">Lensfun</a> (licenza CC BY-SA 3.0) e dal tuo elenco personale. Se manca, scrivilo qui sotto e aggiungilo all'elenco.</p>
+        <div class="fields two">
+          <label>Marca<input type="text" id="m-maker" autocomplete="off" placeholder="es. Nikon"></label>
+          <label>Modello<input type="text" id="m-model" autocomplete="off" placeholder="es. AF-S Micro 60mm f/2.8G"></label>
+          <label>Focale (mm)<input type="number" id="m-focal" step="0.1" min="0" placeholder="es. 60" title="Con uno zoom indica la focale usata"></label>
+          <label>Diaframma più aperto (f/)<input type="number" id="m-fmax" step="0.1" min="0" placeholder="es. 2.8"></label>
+        </div>
+        <div class="row lens-actions">
+          <button class="btn ghost small" id="m-lens-add" title="Salva questo obiettivo nel tuo elenco personale, per ritrovarlo nella ricerca">＋ Aggiungi al mio elenco</button>
+          <button class="btn ghost small hidden" id="m-lens-del">Togli dal mio elenco</button>
+          <span class="hint" id="m-lens-note"></span>
+        </div>
+        <h3>Messa a fuoco e diaframma</h3>
+        <div class="fields two">
+          <label>Rapporto di riproduzione dell'obiettivo (×)<input type="number" id="m-mag" step="0.05" min="0" placeholder="es. 1" title="Quello letto sulla scala dell'obiettivo alla distanza di messa a fuoco usata: 1 = 1:1, 0.5 = 1:2, 0 = a fuoco all'infinito"></label>
+          <label>Diaframma impostato (f/)<input type="number" id="m-fnum" step="0.1" min="0" placeholder="es. 8"></label>
+        </div>
+        <p class="hint">Rapporto: 1 = 1:1, 0,5 = 1:2, 0 = a fuoco all'infinito (con tubi o lenti addizionali).</p>
+        <h3>Tubi di prolunga e lenti addizionali</h3>
+        <div class="fields two">
+          <label>Tubi di prolunga / soffietto (mm)<input type="number" id="m-ext" step="1" min="0" placeholder="es. 36" title="Lunghezza totale dei tubi (o tiraggio aggiunto dal soffietto) fra obiettivo e fotocamera"></label>
+        </div>
+        <div id="m-closeups"></div>
+        <button class="btn ghost small" id="m-closeup-add">＋ Lente addizionale</button>
+        <datalist id="m-closeup-list"></datalist>
+        </div>
+
         <h3>Scala sul campione</h3>
         <div class="fields two">
           <label class="span-all">µm per pixel sul campione, misurati (facoltativo)<input type="number" id="o-pxcal" step="0.0001" min="0" title="Misurato con un micrometro oggetto: ha la precedenza sul valore calcolato"></label>
@@ -338,6 +389,7 @@
         <div class="fields two">
           <label>Illuminazione<input type="text" id="o-illum" list="o-illum-list" autocomplete="off" placeholder="es. LED ad anello"></label>
           <label>Intensità (%)<input type="number" id="o-level" step="1" min="0" max="100" placeholder="es. 60"></label>
+          <label>Temperatura di colore (K)<input type="number" id="o-cct" step="100" min="1000" max="20000" placeholder="es. 4000" title="Temperatura di colore della luce in kelvin: 2700–3200 K calda (alogena), 4000 K neutra, 5500–6500 K luce diurna"></label>
           <label class="span-all">Note<input type="text" id="o-notes" autocomplete="off"></label>
         </div>
         <datalist id="o-illum-list"></datalist>
@@ -356,6 +408,69 @@
       <p class="result" id="d-result"></p>
       <button class="btn ghost" id="d-apply">Usa come passo della sequenza</button>
     </div>
+  </section>
+</main>
+
+<!-- ============================= CALIBRAZIONE ============================= -->
+<main class="view grid-config hidden" id="view-calib">
+
+  <section class="card" id="card-expo">
+    <header class="card-head"><h2>Esposizione dei light</h2><span class="chip" id="x-chip">—</span></header>
+    <p class="hint">Porta il focheggiatore a metà della pila e accendi l'illuminazione come per la sequenza. L'esposizione si calcola una volta, prima della pila: cambiarla fra un piano e l'altro renderebbe diversa la luminosità dei fotogrammi.</p>
+    <div class="fields two">
+      <label>Misura su
+        <select id="x-stat">
+          <option value="highlights">Luci (99,5° percentile)</option>
+          <option value="mean">Media</option>
+        </select>
+      </label>
+      <label>Livello obiettivo (% della saturazione)<input type="number" id="x-target" min="1" max="99" step="1" placeholder="es. 85" title="Livello del canale più chiaro, in percentuale fra il nero e la saturazione del sensore"></label>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="x-start">Calcola e imposta il tempo</button>
+      <button class="btn danger small hidden" id="x-stop">Interrompi</button>
+    </div>
+    <p class="result" id="x-result">Scatta qualche foto di prova, misura i RAW e sceglie il tempo di posa. ISO e diaframma restano quelli impostati.</p>
+  </section>
+
+  <section class="card" id="card-calib">
+    <header class="card-head"><h2>Frame di calibrazione</h2><span class="chip" id="k-chip">Pronta</span></header>
+    <div class="seg wide" id="k-kind" role="radiogroup" aria-label="Tipo di frame">
+      <button data-kind="dark" title="Tappo sull'obiettivo, stessi ISO e tempo dei light: rumore termico e pixel caldi">Dark</button>
+      <button data-kind="flat" title="Campo illuminato in modo uniforme, stessa ottica e diaframma dei light: vignettatura e polvere">Flat</button>
+      <button data-kind="flat_dark" title="Tappo sull'obiettivo, stessi ISO e tempo dei flat">Dark dei flat</button>
+    </div>
+    <p class="hint" id="k-hint"></p>
+    <div class="fields two">
+      <label>Fotogrammi<input type="number" id="k-count" min="1" max="100" step="1" placeholder="es. 16"></label>
+      <label class="k-flat">Livello dei flat (% della saturazione)<input type="number" id="k-target" min="5" max="95" step="1" placeholder="es. 50" title="Media del canale più chiaro: il tempo di posa si trova da solo"></label>
+    </div>
+    <p class="result" id="k-info"></p>
+    <div class="progress-box">
+      <div class="progress-head">
+        <span class="progress-count" id="k-count-label">0 / 0</span>
+        <span class="progress-eta" id="k-level"></span>
+      </div>
+      <div class="progress"><div id="k-bar"></div></div>
+      <div class="progress-text" id="k-progress"></div>
+    </div>
+    <div class="seq-actions two-actions">
+      <button class="btn primary big" id="k-start">▶  Scatta i frame</button>
+      <button class="btn danger big" id="k-stop">■  Interrompi</button>
+    </div>
+  </section>
+
+  <section class="card span2" id="card-library">
+    <header class="card-head"><h2>Libreria di calibrazione</h2><span class="grow"></span><button class="btn ghost small" id="k-open">Apri nel Finder</button></header>
+    <p class="hint" id="k-root"></p>
+    <p class="result" id="k-match"></p>
+    <div class="table-wrap">
+      <table class="lib-table" id="k-table">
+        <thead><tr><th>Tipo</th><th>Data</th><th>Fotocamera</th><th>ISO</th><th>Tempo</th><th>Profilo ottico</th><th>Fotogrammi</th><th>Livello medio</th><th>Temperatura</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="hint" data-i18n-html>Ogni set ha la sua cartella con i fotogrammi e <code>calibration.json</code>. All'avvio di una pila, il suo <code>sequence.json</code> indica i set più recenti adatti (stessa fotocamera, ISO e tempo per i dark; stesso profilo ottico per i flat): i fotogrammi non vengono copiati. <b>Elimina</b> sposta la cartella del set nel Cestino.</p>
   </section>
 </main>
 
@@ -476,6 +591,27 @@
       Cambiare il microstep cambia la scala delle posizioni: dopo la modifica ricontrolla i fine corsa.</p>
   </section>
 
+  <section class="card" id="card-remote">
+    <header class="card-head"><h2>Avanzamento da smartphone</h2></header>
+    <div class="toggles">
+      <label class="toggle"><input type="checkbox" id="r-enabled"><span>Mostra l'avanzamento sulla rete locale
+        <em>pagina di sola lettura: scatti fatti, tempo rimanente e, a richiesta, l'ultimo scatto</em></span></label>
+    </div>
+    <div id="r-info" class="hidden">
+      <div class="remote-link">
+        <img id="r-qr" alt="Codice QR del link" width="132" height="132">
+        <div>
+          <p>Inquadra il codice con la fotocamera dello smartphone, oppure apri:</p>
+          <a id="r-url" target="_blank" rel="noopener"></a>
+          <button class="btn ghost small" id="r-new">Nuovo link</button>
+        </div>
+      </div>
+    </div>
+    <p class="hint" id="r-error"></p>
+    <p class="hint">Lo smartphone deve essere sulla stessa rete Wi-Fi del Mac. Dalla pagina non si comanda nulla; senza il codice del link non si vede niente.
+      <b>Nuovo link</b> cambia il codice: quello vecchio smette di funzionare. Se macOS chiede di accettare le connessioni in entrata, rispondi Consenti.</p>
+  </section>
+
   <section class="card" id="card-lang">
     <header class="card-head"><h2>Lingua</h2></header>
     <label>Lingua dell'interfaccia
@@ -499,6 +635,7 @@
       <dt>App</dt><dd id="up-app">—</dd>
       <dt>Firmware del focheggiatore</dt><dd id="up-fw">—</dd>
     </dl>
+    <p class="up-links"><a id="up-notes" class="hidden" target="_blank" rel="noopener"></a><a href="https://github.com/teoteo/focus-stack/releases" target="_blank" rel="noopener" title="Le note di tutte le versioni su GitHub">Tutte le versioni</a></p>
     <div class="up-actions">
       <button class="btn primary hidden" id="up-install">Aggiorna e riavvia</button>
       <button class="btn primary" id="fw-update" disabled>Aggiorna firmware</button>

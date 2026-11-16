@@ -39,7 +39,8 @@ Safari (PWA, interfaccia)  ⇄  http://localhost:8765  ⇄  server Python
                                                         └─ libgphoto2 → fotocamera (USB PTP)
 ```
 
-Il server ascolta solo su `127.0.0.1`, quindi non è raggiungibile da altri computer.
+Il server ascolta solo su `127.0.0.1`, quindi non è raggiungibile da altri computer. La pagina
+facoltativa *Avanzamento da smartphone* (vedi sotto) è un server separato e di sola lettura.
 
 ## Installazione
 
@@ -199,7 +200,11 @@ spostare su un secondo monitor. Se il live view è acceso, il visualizzatore si 
 | **● Live** | L | live view della fotocamera con zoom, 100% e spostamento; ◀ ▶ o una miniatura tornano agli scatti |
 | **Segui ultimo** | U | mostra automaticamente ogni nuovo scatto |
 | **Blocca vista** | K | mantiene zoom e posizione cambiando scatto, utile per confrontare la messa a fuoco nello stesso punto |
+| **Ispettore** | I | pannello laterale in sola lettura: istogrammi R, G, B e luminosità, pixel bruciati (canali a 255) e neri (canali a 0) secondo una regola a scelta, segni rossi/blu sull'immagine, valori sotto il puntatore e min/max/media/mediana dell'immagine intera. Funziona anche sul live view (aggiornato due volte al secondo) |
 | Schermo intero | F | — |
+
+L'Ispettore misura l'immagine a 8 bit mostrata a schermo: per uno scatto RAW è la conversione per lo schermo,
+e il RAW ha più margine nelle luci e nelle ombre (il pannello lo ricorda).
 
 Gli scatti RAW vengono convertiti in JPEG con `sips` di macOS, prima un'anteprima e poi la piena risoluzione.
 La conversione è in cache in `~/Library/Caches/MyFocuserStack`.
@@ -236,10 +241,11 @@ La conversione è in cache in `~/Library/Caches/MyFocuserStack`.
 
 | Campo | Significato |
 |---|---|
+| Nome della pila | in testa alla card, perché si cambia spesso. Ogni pila va nella sua cartella `<nome>_<data-ora>/`, quindi due pile possono avere lo stesso nome. A pila finita **＋ Nuova pila** riporta la sequenza a *Pronta* e seleziona il nome per cambiarlo (visualizzatore e file salvati non si toccano) |
 | Inizio / Fine | posizioni in passi (⌖ copia la posizione attuale) |
 | Passo / N. scatti | sono collegati: modificandone uno si ricalcola l'altro |
 | Attesa dopo movimento | smorzamento delle vibrazioni prima dello scatto (1–3 s su un microscopio) |
-| Pausa dopo scatto | tempo per scrivere sulla scheda e ricaricare il flash |
+| Pausa dopo lo scatto, per scheda e flash | dopo ogni scatto, prima del movimento successivo: tempo per scrivere sulla scheda e ricaricare il flash |
 | Compensazione gioco | prima del primo scatto il motore arretra di N passi e poi avanza, così ogni scatto viene raggiunto dalla stessa direzione |
 | Modalità | **Scarica sul Mac** (consigliata), **Solo scheda**, **Solo trigger** (più veloce; con questa imposta la destinazione su scheda) |
 
@@ -264,6 +270,72 @@ A fine sequenza **Apri nel Finder** apre la cartella della pila.
 
 Pausa, ripresa e interruzione sono sempre disponibili; **STOP** ferma subito anche il motore.
 Le sequenze si possono salvare come **preset**, ad esempio uno per obiettivo.
+
+## Ottica: microscopio o macro fotografica
+
+Ogni profilo ottico (tab *Ottica*) è **Microscopio** (ingrandimento dell'obiettivo × cambio intermedio ×
+adattatore, NA dall'obiettivo) oppure **Macro fotografica**:
+
+- **Obiettivo**: si cerca nel database [Lensfun](https://lensfun.github.io) (≈1160 obiettivi intercambiabili,
+  CC BY-SA 3.0, vedi sotto), in alcune ottiche macro dedicate che Lensfun non ha (`web/data/lenses-extra.json`) e
+  nel tuo **elenco personale** (*＋ Aggiungi al mio elenco*, salvato nelle impostazioni). Marca, modello, focale e
+  diaframma più aperto si possono sempre scrivere a mano.
+- **Rapporto di riproduzione dell'obiettivo** alla messa a fuoco usata (1 = 1:1, 0 = all'infinito) e
+  **diaframma impostato**.
+- **Tubi di prolunga / soffietto** (mm) e fino a tre **lenti addizionali** (diottrie; quelle comuni, come la
+  Raynox DCR-250, sono suggerite).
+
+L'ingrandimento è una stima con lenti sottili: m1 = m0 + tubi / f, poi m = m1 + ΣD/1000 · f · (1 + m1).
+Il diaframma effettivo N·(1 + m1) e l'NA equivalente lato soggetto m / (2 N (1 + m1)) servono al calcolo del
+passo dalla profondità di campo. Per la scala esatta misura i µm per pixel con un righello o un micrometro.
+Il manifesto riceve `optics.kind = "macro"` e le chiavi della macro (vedi [docs/sequence-json.md](docs/sequence-json.md)).
+
+**Aggiornare il database degli obiettivi.** L'app contiene una copia; gli obiettivi nuovi arrivano con la
+release successiva dell'app:
+
+```bash
+git clone --depth 1 https://github.com/lensfun/lensfun.git /tmp/lensfun
+python3 tools/lensfun_import.py /tmp/lensfun/data/db     # riscrive web/data/lenses-lensfun.json
+git diff --stat web/data/                                # poi commit e pubblicazione come al solito
+```
+
+Il file registra il commit e la data di Lensfun da cui è stato generato. Gli obiettivi dell'elenco personale
+stanno nelle impostazioni e un aggiornamento non li tocca.
+
+## Frame di calibrazione ed esposizione automatica
+
+Il tab **Calibrazione** ha tre card:
+
+- **Esposizione dei light**: con il focheggiatore a metà della pila, scatta qualche foto di prova, misura i RAW
+  e imposta il tempo di posa perché il canale più chiaro arrivi al livello obiettivo (predefinito: 99,5° percentile
+  all'85 % della saturazione; oppure la media). L'esposizione si calcola una volta, prima della pila, mai per fotogramma.
+- **Frame di calibrazione**: dark (tappo, stessi ISO e tempo dei light), flat (campo illuminato in modo uniforme,
+  tempo trovato da solo per un livello medio obiettivo, predefinito 50 %) e dark dei flat (tappo, ISO e tempo dei
+  flat). Prima dei dark l'app chiede di mettere il tappo.
+- **Libreria di calibrazione**: i set in `<cartella di salvataggio>/_calibrazione/` e quali userebbe la prossima pila.
+
+I set sono condivisi da tutte le pile: il `sequence.json` di ogni pila indica i set più recenti adatti (stessa
+fotocamera, ISO e tempo per i dark; stesso profilo ottico per i flat). Formato: [docs/calibration-json.md](docs/calibration-json.md).
+
+Le misure le fa `fs-rawstat`, un piccolo programma compilato con **LibRaw 0.22.3** (sottomodulo `third_party/LibRaw`,
+la stessa versione di Focus Fusion) che legge i valori dei RAW senza demosaicizzare; JPEG e PNG si leggono con ImageIO
+di macOS e sono segnati come stime. In sviluppo si compila una volta:
+
+```bash
+git submodule update --init third_party/LibRaw
+python3 tools/rawstat/build.py          # → build/rawstat/fs-rawstat (universale arm64 + x86_64)
+```
+
+`build_release.sh` lo compila dentro l'app (`Contents/Resources/app/bin`).
+
+## Avanzamento da smartphone
+
+*Configurazione › Avanzamento da smartphone* attiva una pagina di sola lettura sulla rete locale (porta 8766):
+scatti fatti, tempo rimanente, ora di fine prevista e, a richiesta, un'anteprima piccola dell'ultimo scatto
+(creata solo quando viene chiesta, circa 640 px). È un secondo server, separato da quello che comanda
+l'hardware, e non ha comandi; ogni richiesta deve avere il codice del link (*Nuovo link* lo cambia). Sullo smartphone
+si apre inquadrando il codice QR (generato da CoreImage di macOS). La prima volta il firewall di macOS chiede
+se consentire le connessioni in entrata.
 
 ## Pubblicare una nuova versione
 
@@ -311,6 +383,15 @@ build_release.sh     costruzione e pubblicazione dell'app universale
 firmware/            sorgente del firmware del focheggiatore
 web/index.html …     interfaccia principale (PWA, nessuna dipendenza esterna)
 web/viewer.*         visualizzatore con zoom e pan
+web/inspector.js     Ispettore del visualizzatore (istogrammi, pixel bruciati e neri)
+backend/optics.py    ingrandimento (microscopio, macro) e ottica del manifesto
+web/data/            database obiettivi (Lensfun, CC BY-SA 3.0) e ottiche macro aggiuntive
+tools/lensfun_import.py rigenera web/data/lenses-lensfun.json da una copia di Lensfun
+backend/calibration.py libreria di calibrazione, scatti di dark/flat, esposizione automatica
+backend/rawstat.py   lancia fs-rawstat (livelli dei RAW)
+backend/remote.py    pagina di avanzamento in sola lettura per la rete locale (smartphone)
+tools/rawstat/       sorgente e compilazione di fs-rawstat (LibRaw)
+third_party/LibRaw   LibRaw 0.22.3 (sottomodulo git)
 web/i18n.js, web/lang/ traduzioni dell'interfaccia e dei messaggi
 backend/i18n.py      lingua corrente e traduzioni lato server
 docs/guida/          generatore della guida in PDF (testo_<lingua>.py)
@@ -321,3 +402,11 @@ tools/i18n_check.py  controllo delle traduzioni
 
 MIT (vedi `LICENSE`). Il firmware in `firmware/` deriva da myFocuserPro2 di Robert Brown e
 collaboratori, anch'esso con licenza MIT: le note di copyright originali sono nei file.
+
+`web/data/lenses-lensfun.json` deriva dal database degli obiettivi di [Lensfun](https://github.com/lensfun/lensfun)
+e, come quello, ha licenza **Creative Commons Attribuzione - Condividi allo stesso modo 3.0** (CC BY-SA 3.0),
+© i collaboratori di Lensfun. È un file di dati a parte: la licenza del codice dell'app non cambia.
+
+`fs-rawstat` è collegato staticamente a [LibRaw](https://www.libraw.org/) 0.22.3 (sottomodulo in
+`third_party/LibRaw`, non modificato), usata con licenza **CDDL 1.0** (LibRaw ha doppia licenza LGPL 2.1 / CDDL 1.0);
+il sorgente di LibRaw è nel sottomodulo, © LibRaw LLC.

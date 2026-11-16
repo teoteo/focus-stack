@@ -1,0 +1,12 @@
+{
+  "source": "Focus Stack: dedicated macro optics missing from Lensfun, from the manufacturers' specifications",
+  "license": "MIT, like Focus Stack",
+  "note": "mag = maximum reproduction ratio of the lens alone",
+  "lenses": [
+    {"maker": "Canon", "model": "MP-E 65mm f/2.8 1-5x Macro Photo", "mounts": ["Canon EF"], "focal": [65, 65], "f": 2.8, "mag": 5, "macro": true},
+    {"maker": "Laowa", "model": "Laowa 25mm f/2.8 2.5-5X Ultra Macro", "mounts": [], "focal": [25, 25], "f": 2.8, "mag": 5, "macro": true},
+    {"maker": "Laowa", "model": "Laowa 100mm f/2.8 2X Ultra Macro APO", "mounts": [], "focal": [100, 100], "f": 2.8, "mag": 2, "macro": true},
+    {"maker": "Laowa", "model": "Laowa 90mm f/2.8 2X Ultra Macro APO", "mounts": [], "focal": [90, 90], "f": 2.8, "mag": 2, "macro": true},
+    {"maker": "OM System", "model": "M.Zuiko Digital ED 90mm F3.5 Macro IS PRO", "mounts": ["Micro 4/3 System"], "focal": [90, 90], "f": 3.5, "mag": 2, "macro": true}
+  ]
+}

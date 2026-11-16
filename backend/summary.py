@@ -53,6 +53,37 @@ def duration(a: str | None, b: str | None) -> str:
     return f"{h} h {m:02d} min" if h else (f"{m} min {sec:02d} s" if m else f"{sec} s")
 
 
+def macro_lines(optics: dict, add) -> None:
+    """Righe della macro fotografica: obiettivo, diaframma, tubi, lenti addizionali, ingrandimento stimato."""
+    add(tr("Macro fotografica"))
+    lens = optics.get("lens") or {}
+    if lens:
+        bits = [lens.get("name") or ""]
+        if lens.get("focal_length_mm"):
+            bits.append(f"{num(lens['focal_length_mm'])} mm")
+        add(f"{tr('Obiettivo')}: {' · '.join(b for b in bits if b)}")
+    parts = []
+    if optics.get("lens_magnification") is not None:
+        parts.append(tr("Rapporto dell'obiettivo {m}×", m=num(optics["lens_magnification"])))
+    if optics.get("extension_mm"):
+        parts.append(tr("tubi {mm} mm", mm=num(optics["extension_mm"])))
+    for c in optics.get("closeup_lenses") or []:
+        parts.append(" ".join(x for x in (c.get("name") or tr("lente addizionale"), f"+{num(c.get('diopters'))} D") if x))
+    if parts:
+        add(" · ".join(parts))
+    if optics.get("magnification"):
+        add(f"{tr('Ingrandimento sul sensore')}: {num(optics['magnification'])}× ({tr('stima')})")
+    ap = []
+    if optics.get("f_number"):
+        ap.append(tr("Diaframma f/{n}", n=num(optics["f_number"])))
+    if optics.get("effective_f_number"):
+        ap.append(tr("effettivo f/{n}", n=num(optics["effective_f_number"])))
+    if optics.get("na"):
+        ap.append(tr("NA equivalente {na}", na=num(optics["na"])))
+    if ap:
+        add(" · ".join(ap))
+
+
 def render(m: dict) -> str:
     rail, seq, cam = m.get("rail", {}), m.get("sequence", {}), m.get("camera", {})
     frames = m.get("frames", [])
@@ -133,6 +164,8 @@ def render(m: dict) -> str:
         add(tr("Profilo: {name}", name=m["optics_profile"]))
     else:
         add(tr("Nessun profilo ottico"))
+    if optics.get("kind") == "macro":
+        macro_lines(optics, add)
     if optics.get("objective"):
         add(f"{tr('Obiettivo')}: {optics['objective']}")
     chain = []   # obiettivo × Optovar × adattatore = totale sul sensore
@@ -144,13 +177,13 @@ def render(m: dict) -> str:
             name, fac = part.get("name") or "", part.get("magnification")
             fac_txt = f"{num(fac)}×" if fac else ""
             chain.append(name if fac_txt and fac_txt in name else " ".join(x for x in (name, fac_txt) if x))
-    if optics.get("magnification"):
+    if optics.get("magnification") and optics.get("kind") != "macro":
         line = f"{tr('Ingrandimento sul sensore')}: {num(optics['magnification'])}×"
         if len(chain) > 1:
             line += f" ({' · '.join(chain)})"
         add(line)
     parts = []
-    if optics.get("na"):
+    if optics.get("na") and optics.get("kind") != "macro":
         parts.append(f"NA {num(optics['na'])}")
     if optics.get("immersion"):
         parts.append(f"{tr('Immersione')}: {immersion_labels().get(optics['immersion'], optics['immersion'])}")
@@ -176,11 +209,25 @@ def render(m: dict) -> str:
     il = m.get("illumination", {})
     if il:
         add(f"{tr('Illuminazione')}: " + " · ".join(x for x in (il.get("type"), il.get("level_percent") is not None
-                                                             and f"{num(il['level_percent'])} %") if x))
+                                                             and f"{num(il['level_percent'])} %",
+                                                             il.get("color_temp_k") and f"{num(round(il['color_temp_k']))} K") if x))
     if m.get("notes"):
         add(f"{tr('Note')}: {m['notes']}")
 
     # ---- file
+    # ---- calibrazione
+    section(tr("CALIBRAZIONE"))
+    cal = m.get("calibration") or {}
+    labels = {"darks": tr("Dark"), "flats": tr("Flat"), "flat_darks": tr("Dark dei flat")}
+    for key, label in labels.items():
+        e = cal.get(key)
+        if not e:
+            add(f"{label}: {tr('nessun set adatto nella libreria')}")
+            continue
+        bits = [tr("{n} fotogrammi", n=e.get("frames")), when(e.get("created"))]
+        bits += [x for x in (e.get("iso") and f"ISO {e['iso']}", e.get("shutterspeed")) if x]
+        add(f"{label}: {e.get('path')}  ({' · '.join(str(b) for b in bits if b)})")
+
     section(tr("FILE"))
     names = [n for f in frames for e in f.get("exposures", []) for n in e.get("files", [])]
     if names:

@@ -49,8 +49,17 @@ DEFAULTS: dict = {
     #          sensor_pixel_um, pixel_size_um (misurato, ha la precedenza), dof_overlap,
     #          filter_mode (unknown|none|filter), filter {name, type, center_nm, bandwidth_nm, edge_nm},
     #          illumination {type, level_percent}, notes}. None/"" = non indicato.
+    #          kind (microscope|macro), macro {lens {maker, model, focal_mm, max_aperture, source},
+    #          lens_magnification, f_number, extension_mm, closeup [{name, diopters}]} (vedi optics.py).
     "optics_profiles": {},
+    # Obiettivi fotografici aggiunti dall'utente, cercati insieme al database Lensfun:
+    # [{maker, model, focal_mm, max_aperture, max_magnification, mounts}]
+    "custom_lenses": [],
     "presets": {},
+    # frame di calibrazione (tab Calibrazione): ultimi valori usati
+    "calibration": {"count": 16, "flat_target_pct": 50, "light_target_pct": 85, "light_stat": "highlights"},
+    # pagina di sola lettura per seguire la sequenza dalla rete locale (smartphone): vedi remote.py
+    "remote": {"enabled": False, "port": 8766, "token": ""},
     # lingua dell'interfaccia: "auto" = quella di macOS, oppure "it" / "en"
     "language": "auto",
 }
@@ -82,6 +91,7 @@ def migrate_optics_profiles(profiles: dict) -> None:
         if isinstance(p, dict):
             p.setdefault("intermediate", {"name": "", "factor": None})
             p.setdefault("relay", {"name": "", "factor": None})
+            p.setdefault("kind", "microscope")   # profili fino alla 1.0.11: solo microscopio
 
 
 def save(data: dict) -> None:

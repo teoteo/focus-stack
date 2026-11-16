@@ -9,10 +9,10 @@
 <link rel="stylesheet" href="/style.css">
 <style>
   html, body { height: 100%; overflow: hidden; }
-  body { display: grid; grid-template-rows: auto 1fr auto; }
+  body { display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); }
   .vbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--card);
     border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-  .vbar .group { display: flex; align-items: center; gap: 6px; }
+  .vbar .group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .vbar .sep { width: 1px; height: 26px; background: var(--line); margin: 0 4px; }
   .vtitle { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
   .vtitle b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -44,6 +44,42 @@
   .strip button.active { border-color: var(--accent); }
   .strip button span { position: absolute; left: 3px; bottom: 2px; font-size: 11px; font-weight: 700; color: #fff;
     text-shadow: 0 1px 2px #000; font-variant-numeric: tabular-nums; }
+
+  /* immagine + Ispettore a destra */
+  .vmain { display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 0; }
+  .stage canvas.clipmask { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; will-change: transform; }
+  .stage canvas.clipmask.pixelated { image-rendering: pixelated; }
+  .insp { width: 320px; overflow-y: auto; background: var(--card); border-left: 1px solid var(--line); padding: 12px 14px 18px;
+    font-size: 13.5px; }
+  .insp h3 { display: flex; align-items: center; gap: 8px; font-size: 15px; margin: 0 0 4px; }
+  .insp h3 small { font-size: 12px; font-weight: 500; color: var(--muted); }
+  .insp details { border-top: 1px solid var(--line); padding: 8px 0 4px; }
+  .insp summary { cursor: pointer; font-weight: 650; color: var(--text); padding: 4px 0; }
+  .insp .muted { color: var(--muted); font-size: 12.5px; line-height: 1.4; margin: 4px 0; }
+  .insp .warn-note { color: var(--warn); font-size: 12.5px; line-height: 1.4; margin: 4px 0; }
+  .insp .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+  .insp .chip-btn { font: inherit; font-size: 12.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; cursor: pointer;
+    background: var(--bg-2); color: var(--muted); border: 1px solid var(--line); }
+  .insp .chip-btn[aria-pressed="true"] { color: var(--text); border-color: var(--accent); background: var(--accent-soft); }
+  .insp .chip-btn:disabled { opacity: .45; cursor: not-allowed; }
+  .insp table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .insp th { font-weight: 500; color: var(--muted); font-size: 12px; text-align: right; padding: 2px 4px; }
+  .insp th:first-child, .insp td:first-child { text-align: left; }
+  .insp td { padding: 3px 4px; text-align: right; }
+  .insp tr[data-rule] { cursor: pointer; }
+  .insp tr[data-rule]:hover td { background: var(--bg-2); }
+  .insp tr[data-rule][aria-selected="true"] td { background: var(--accent-soft); }
+  .insp tr[data-rule][aria-selected="true"] td:first-child { font-weight: 650; }
+  .insp td.bad-n { color: var(--bad); font-weight: 650; }
+  .insp td.warn-n { color: #7fb0ff; font-weight: 650; }
+  :root[data-theme="light"] .insp td.warn-n { color: #1f5fd1; }
+  .insp label.check { font-size: 13.5px; margin: 4px 0; }
+  .insp canvas.hist { width: 100%; height: 140px; display: block; background: var(--bg-2); border: 1px solid var(--line);
+    border-radius: 8px; margin: 6px 0 4px; cursor: crosshair; }
+  .insp .hover { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 10px; font-variant-numeric: tabular-nums; font-size: 12.5px; }
+  .insp .r { color: #ff6060; } .insp .g { color: #48d078; } .insp .b { color: #609cff; } .insp .l { color: var(--text-2); }
+  :root[data-theme="light"] .insp .r { color: #c62828; } :root[data-theme="light"] .insp .g { color: #138a52; } :root[data-theme="light"] .insp .b { color: #1f5fd1; }
+  @media (max-width: 760px) { .vmain { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } .insp { width: auto; max-height: 45vh; border-left: 0; border-top: 1px solid var(--line); } }
 </style>
 </head>
 <body>
@@ -77,12 +113,15 @@
     <button class="btn ghost vb" id="lock" aria-pressed="true" title="Mantieni zoom e posizione cambiando scatto (K)">Blocca vista</button>
     <button class="btn ghost vb" id="reveal" title="Mostra il file nel Finder">Finder</button>
     <button class="btn ghost vb" id="clear" title="Ricomincia da capo: svuota il visualizzatore e prepara una sequenza nuova (i file restano nella cartella)" disabled>Svuota</button>
+    <button class="btn ghost vb" id="insp-btn" aria-pressed="false" title="Istogramma, pixel bruciati e neri, valori (I)">Ispettore</button>
     <button class="btn ghost vb" id="fs" title="Schermo intero (F)">⛶</button>
   </div>
 </div>
 
+<div class="vmain">
 <div class="stage" id="stage">
   <img id="img" alt="" draggable="false">
+  <canvas class="clipmask hidden" id="clipmask" aria-hidden="true"></canvas>
   <div class="msg" id="msg">In attesa del primo scatto…</div>
   <div class="loading hidden" id="loading">Caricamento piena risoluzione…</div>
   <span class="live-badge hidden" id="live-badge">LIVE</span>
@@ -90,10 +129,76 @@
   <div class="help">Trascina per spostare · rotella o pinch per lo zoom · doppio clic: adatta ↔ 100%</div>
 </div>
 
+<aside class="insp hidden" id="insp" aria-label="Ispettore">
+  <h3>Ispettore <small>sola lettura</small><span class="grow"></span><small class="hidden" id="insp-busy">calcolo…</small></h3>
+  <p class="muted" id="insp-basis"></p>
+  <p class="warn-note hidden" id="insp-note"></p>
+
+  <details open>
+    <summary>Bruciati e neri</summary>
+    <label class="check"><input type="checkbox" id="insp-marks"> Evidenzia sull'immagine</label>
+    <div class="chips">
+      <button class="chip-btn" id="insp-lo" title="Mostra o nasconde i segni blu dei pixel neri">Neri (blu)</button>
+      <button class="chip-btn" id="insp-hi" title="Mostra o nasconde i segni rossi dei pixel bruciati">Bruciati (rosso)</button>
+    </div>
+    <table id="insp-rules">
+      <thead><tr><th title="Quali pixel contano come neri (canali a 0) o bruciati (canali a 255). Clic su una riga per sceglierla">Regola</th><th>neri</th><th>bruciati</th></tr></thead>
+      <tbody>
+        <tr data-rule="all" title="R, G e B tutti a 0 (nero vero) o tutti a 255 (bianco vero): lì non resta nessuna informazione. Un colore saturo non viene segnato"><td>Tutti i canali</td><td class="n"></td><td class="n"></td></tr>
+        <tr data-rule="any" title="Basta un canale a 0 o a 255: segnala anche i colori saturi, dove l'informazione manca in un solo canale"><td>Almeno un canale</td><td class="n"></td><td class="n"></td></tr>
+        <tr data-rule="r" title="Guarda un solo canale: a 0 o a 255, qualunque valore abbiano gli altri due"><td>Solo rosso</td><td class="n"></td><td class="n"></td></tr>
+        <tr data-rule="g" title="Guarda un solo canale: a 0 o a 255, qualunque valore abbiano gli altri due"><td>Solo verde</td><td class="n"></td><td class="n"></td></tr>
+        <tr data-rule="b" title="Guarda un solo canale: a 0 o a 255, qualunque valore abbiano gli altri due"><td>Solo blu</td><td class="n"></td><td class="n"></td></tr>
+      </tbody>
+    </table>
+    <p class="muted" id="insp-count"></p>
+  </details>
+
+  <details open>
+    <summary>Istogramma</summary>
+    <div class="chips">
+      <button class="chip-btn r" data-ch="0" title="Mostra o nasconde questo canale nell'istogramma">R</button>
+      <button class="chip-btn g" data-ch="1" title="Mostra o nasconde questo canale nell'istogramma">G</button>
+      <button class="chip-btn b" data-ch="2" title="Mostra o nasconde questo canale nell'istogramma">B</button>
+      <button class="chip-btn l" data-ch="3" title="Luminosità: 0,21 R + 0,72 G + 0,07 B sui valori a 8 bit">L</button>
+      <span class="grow"></span>
+      <button class="chip-btn" data-scale="lin" title="Altezza delle barre proporzionale al numero di pixel">Lineare</button>
+      <button class="chip-btn" data-scale="log" title="Scala logaritmica: rende visibili i livelli con pochi pixel accanto a quelli molto frequenti">Log</button>
+    </div>
+    <div class="chips">
+      <button class="chip-btn" data-range="shadows" title="Ingrandisce i livelli da 0 a 15">Ombre</button>
+      <button class="chip-btn" data-range="all" title="Tutti i livelli, da 0 a 255">Tutto</button>
+      <button class="chip-btn" data-range="highlights" title="Ingrandisce i livelli da 240 a 255">Luci</button>
+    </div>
+    <canvas class="hist" id="insp-hist" title="Porta il puntatore su un livello per leggere quanti pixel ci sono"></canvas>
+    <div class="muted" id="insp-level"></div>
+    <div class="hover" id="insp-hover"><span class="r"></span><span class="g"></span><span class="b"></span><span class="l"></span></div>
+  </details>
+
+  <details open>
+    <summary>Valori</summary>
+    <p class="muted">Sotto il puntatore: <span id="insp-px-place"></span></p>
+    <table><thead><tr><th class="r">R</th><th class="g">G</th><th class="b">B</th><th class="l">L</th></tr></thead>
+      <tbody><tr id="insp-px"><td></td><td></td><td></td><td></td></tr></tbody></table>
+    <p class="muted">Immagine intera (0–255)</p>
+    <table id="insp-whole">
+      <thead><tr><th></th><th>min</th><th>max</th><th>media</th><th>mediana</th></tr></thead>
+      <tbody>
+        <tr><th class="r">R</th><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="g">G</th><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="b">B</th><td></td><td></td><td></td><td></td></tr>
+        <tr><th class="l">L</th><td></td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+  </details>
+</aside>
+</div>
+
 <div class="strip" id="strip"></div>
 
 <script src="/lang.js"></script>
 <script src="/i18n.js"></script>
+<script src="/inspector.js"></script>
 <script src="/viewer.js"></script>
 </body>
 </html>

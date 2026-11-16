@@ -20,6 +20,8 @@ from . import settings as store
 from . import flasher
 from . import i18n
 from .i18n import tr
+from .optics import manifest_optics
+from . import calibration, rawstat, remote
 from .camera import GPHOTO_AVAILABLE, CameraError, GPhotoCamera, SimulatedCamera
 from .focuser import FocuserError, LimitError, MyFocuserPro2, SimulatedFocuser, list_serial_ports
 from .sequence import SequenceParams, SequenceRunner
@@ -69,6 +71,13 @@ class App:
         self.runner = SequenceRunner(lambda: self.focuser if self.focuser and self.focuser.connected else None,
                                      lambda: self.camera if self.camera and self.camera.connected else None,
                                      self.log, self.add_sequence_shot)
+        # frame di calibrazione ed esposizione automatica (libreria in <output_root>/_calibrazione)
+        self.calib = calibration.CalibrationRunner(
+            lambda: self.camera if self.camera and self.camera.connected else None,
+            lambda: self.focuser if self.focuser and self.focuser.connected else None,
+            self.log, self.add_calibration_shot, Path(store.CONFIG_DIR) / "test-shots")
+        # pagina di sola lettura sulla rete locale (avanzamento da smartphone)
+        self.remote = remote.RemoteServer(self.remote_status, self.remote_preview, CACHE_DIR)
 
     def log(self, msg: str) -> None:
         self.log_lines.append(f"{time.strftime('%H:%M:%S')}  {msg}")
@@ -127,6 +136,14 @@ class App:
         self.add_shot(record["files"], "sequence", record["position"], record["temperature"], record["index"],
                       record.get("repeat") if record.get("repeats", 1) > 1 else None)
 
+    def add_calibration_shot(self, files: list[str], kind: str) -> None:
+        f = self.focuser if self.focuser and self.focuser.connected else None
+        self.add_shot(files, kind, f.position if f else None, f.temperature if f else None)
+
+    def busy(self) -> bool:
+        """Sequenza o calibrazione in corso: la fotocamera è occupata."""
+        return self.runner.busy or self.calib.busy
+
     def manifest_context(self, profile: str | None = None) -> dict:
         """Dati per il manifesto sequence.json (vedi sequence.build_manifest)."""
         f, cam = self.focuser, self.camera
@@ -159,31 +176,7 @@ class App:
             ctx["filter"] = None
             return ctx
         ctx["optics_profile"] = name
-        optics: dict = {}
-        if o.get("objective"):
-            optics["objective"] = o["objective"]
-        if o.get("objective_magnification"):
-            optics["objective_magnification"] = o["objective_magnification"]
-        for key in ("intermediate", "relay"):   # solo se indicati: assenti = non si sa (o nessuno)
-            part = o.get(key) or {}
-            data = {k: v for k, v in (("name", part.get("name")), ("magnification", part.get("factor"))) if v}
-            if data:
-                optics[key] = data
-        total = total_magnification(o)
-        if total:
-            optics["magnification"] = total
-        if o.get("na"):
-            optics["na"] = o["na"]
-        if o.get("immersion"):
-            optics["immersion"] = o["immersion"]
-        if o.get("sensor_pixel_um"):
-            optics["sensor_pixel_um"] = o["sensor_pixel_um"]
-        if o.get("pixel_size_um"):
-            optics["pixel_size_um"] = o["pixel_size_um"]
-            optics["pixel_size_source"] = "calibrated"
-        elif o.get("sensor_pixel_um") and total:
-            optics["pixel_size_um"] = round(o["sensor_pixel_um"] / total, 5)
-            optics["pixel_size_source"] = "sensor_pixel / magnification"
+        optics = manifest_optics(o)
         if optics:
             ctx["optics"] = optics
         mode = o.get("filter_mode", "unknown")
@@ -198,7 +191,8 @@ class App:
                 data["edge_nm"] = fl.get("edge_nm")
             ctx["filter"] = {k: v for k, v in data.items() if v not in (None, "")}
         il = o.get("illumination") or {}
-        illum = {k: v for k, v in (("type", il.get("type")), ("level_percent", il.get("level_percent")))
+        illum = {k: v for k, v in (("type", il.get("type")), ("level_percent", il.get("level_percent")),
+                                   ("color_temp_k", il.get("color_temp_k")))
                  if v not in (None, "")}
         if illum:
             ctx["illumination"] = illum
@@ -215,6 +209,8 @@ class App:
             else {"connected": False},
             "gphoto": GPHOTO_AVAILABLE,
             "sequence": {**st.__dict__, "files": st.files[-3:], "file_count": len(st.files)},
+            "calibration": {**self.calib.status.__dict__, "busy": self.calib.busy,
+                            "tool": rawstat.tool_path() is not None},
             "settings": self.cfg,
             "um_per_step": self.um_per_step(),
             "alarm": self.alarm,
@@ -228,7 +224,43 @@ class App:
             "code_stale": self.code_stale,
             "app": self.updater.describe(),
             "firmware_update": self.firmware_update_state(),
+            "remote": self.remote.describe(),
         }
+
+    def remote_status(self) -> dict:
+        """Dati per la pagina di sola lettura: avanzamento e ultimo scatto, niente impostazioni."""
+        st = self.runner.status
+        last = self.shots[-1] if self.shots else None
+        label = None
+        if last:   # posizione nella sequenza (da 1), con lo scatto nella posizione se sono più di uno
+            label = str(last["index"]) if last.get("index") is not None else last.get("name")
+            if last.get("index") is not None and last.get("repeat"):
+                label += f" · {last['repeat']}"
+        return {"state": st.state, "index": st.index, "total": st.total, "eta_s": st.eta_s,
+                "message": st.message,
+                "name": self.cfg["sequence"].get("session_name") or (Path(st.folder).name if st.folder else ""),
+                "last": {"key": last["key"], "time": last["time"], "label": label} if last else None}
+
+    async def remote_preview(self) -> Path | None:
+        """Anteprima dell'ultimo scatto per la pagina remota (quella già pronta per l'interfaccia)."""
+        if not self.shots:
+            return None
+        try:
+            return await render_image(self.shots[-1]["file"], "preview")
+        except HTTPException:
+            return None
+
+    async def remote_apply(self) -> None:
+        """Avvia o ferma la pagina remota secondo le impostazioni."""
+        r = self.cfg["remote"]
+        if r.get("enabled"):
+            if not r.get("token"):
+                r["token"] = remote.new_token()
+                store.save(self.cfg)
+            await self.remote.start(int(r.get("port") or remote.DEFAULT_PORT), r["token"])
+            self.log(tr("Avanzamento da smartphone attivo: {url}", url=self.remote.url() or f"porta {self.remote.port}"))
+        else:
+            await self.remote.stop()
 
     def firmware_update_state(self) -> dict:
         f = self.focuser
@@ -381,7 +413,13 @@ async def lifespan(_: FastAPI):
     task = asyncio.create_task(poll_loop())
     update_task = asyncio.create_task(update_check_loop())
     app_state.log(tr("Server avviato (Focus Stack {version})", version=app_state.updater.describe()["version"]))
+    if app_state.cfg["remote"].get("enabled"):
+        try:
+            await app_state.remote_apply()
+        except RuntimeError as exc:
+            app_state.log(tr("Errore: {exc}", exc=exc))
     yield
+    await app_state.remote.stop()
     task.cancel()
     update_task.cancel()
     if app_state.focuser:
@@ -421,6 +459,7 @@ async def shutdown():
     e fotocamera vengono chiuse dal lifespan."""
     import os
     import signal
+    await app_state.calib.stop()
     if app_state.runner.busy:
         await app_state.runner.stop()
     elif app_state.focuser and app_state.focuser.connected:
@@ -466,6 +505,8 @@ def need_camera() -> GPhotoCamera:
 def not_running():
     if app_state.runner.busy:
         raise HTTPException(409, tr("Sequenza in corso"))
+    if app_state.calib.busy:
+        raise HTTPException(409, tr("Calibrazione in corso"))
 
 
 # ---------------- stato ----------------
@@ -685,6 +726,7 @@ async def focuser_hold(body: Hold):
 @guard
 async def focuser_halt():
     app_state.hold_dir = 0
+    await app_state.calib.stop()   # STOP ferma tutto, anche gli scatti di calibrazione
     if app_state.runner.busy:
         await app_state.runner.stop()
     elif app_state.focuser and app_state.focuser.connected:
@@ -913,8 +955,8 @@ async def live_frames(cam: GPhotoCamera):
     seq = 0
     try:
         while cam.connected and app_state.camera is cam:
-            if app_state.runner.busy:
-                # la sequenza scatta come senza live view (specchio, ritardi): live view spento
+            if app_state.busy():
+                # sequenza e calibrazione scattano come senza live view (specchio, ritardi): live view spento
                 if cam.live:
                     await cam.end_preview()
                 await asyncio.sleep(0.3)
@@ -961,8 +1003,15 @@ async def camera_reload():
 @guard
 async def camera_set(body: CameraSetting):
     not_running()
-    settings = await need_camera().set_setting(body.name, body.value)
+    cam = need_camera()
+    settings = await cam.set_setting(body.name, body.value)
     actual = settings.get(body.name, {}).get("current")
+    if body.name == "capturetarget" and actual != body.value and "sony" in (cam.model or "").lower():
+        # Sony: la destinazione si sceglie solo dal menu della fotocamera, prima del controllo remoto
+        app_state.log(tr("{name} = {actual} (richiesto {requested})", name=body.name, actual=actual, requested=body.value))
+        raise ValueError(tr("La Sony non permette di cambiare la destinazione dal computer. Premi «Disconnetti», poi "
+                            "sulla fotocamera MENU › Impostazione › Impostazioni Remote PC › Destinazione salvataggio "
+                            "foto (Still Img. Save Dest.) › Solo PC, e ricollega la fotocamera."))
     app_state.log(f"{body.name} = {actual}" if actual == body.value
                   else tr("{name} = {actual} (richiesto {requested})", name=body.name, actual=actual, requested=body.value))
     return settings
@@ -1032,6 +1081,42 @@ async def shot_reveal(shot_id: int):
     return {"ok": True}
 
 
+# ---------------- avanzamento da smartphone (pagina di sola lettura sulla rete locale) ----------------
+class RemoteBody(BaseModel):
+    enabled: bool
+    new_link: bool = False      # nuovo codice: il link vecchio smette di funzionare
+
+
+@api.post("/api/remote")
+@guard
+async def remote_set(body: RemoteBody):
+    r = app_state.cfg["remote"]
+    r["enabled"] = body.enabled
+    if body.new_link:
+        r["token"] = remote.new_token()
+    store.save(app_state.cfg)
+    if not body.enabled:
+        app_state.log(tr("Avanzamento da smartphone disattivato"))
+    try:
+        await app_state.remote_apply()
+    except RuntimeError:
+        r["enabled"] = False
+        store.save(app_state.cfg)
+        raise
+    return app_state.remote.describe()
+
+
+@api.get("/api/remote/qr.png")
+async def remote_qr():
+    url = app_state.remote.url() if app_state.remote.running else None
+    if not url:
+        raise HTTPException(404)
+    out = CACHE_DIR / f"qr-{hashlib.sha1(url.encode()).hexdigest()[:16]}.png"
+    if not out.exists() and not await asyncio.to_thread(remote.qr_png, url, out):
+        raise HTTPException(500, tr("Impossibile creare il codice QR"))
+    return FileResponse(out, media_type="image/png", headers={"Cache-Control": "no-store"})
+
+
 # ---------------- sequenza ----------------
 class SequenceBody(BaseModel):
     start: int
@@ -1067,7 +1152,15 @@ async def sequence_start(body: SequenceBody):
     data["output_root"] = (validate_output_root(body.output_root or app_state.cfg["output_root"])
                            if body.capture_mode == "download" else body.output_root or app_state.cfg["output_root"])
     profile = data.pop("optics_profile")
-    app_state.runner.start(SequenceParams(**data), app_state.manifest_context(profile))   # verifica anche i fine corsa
+    if app_state.calib.busy:
+        raise ValueError(tr("Calibrazione in corso"))
+    ctx = app_state.manifest_context(profile)
+    # set di calibrazione adatti (stessa fotocamera, ISO, tempo, profilo ottico): solo riferimenti, niente copie
+    if body.capture_mode == "download":
+        found = calibration.match(calibration.list_library(data["output_root"]), ctx.get("camera"), profile, body.bulb_s)
+        if found:
+            ctx["calibration"] = found
+    app_state.runner.start(SequenceParams(**data), ctx)   # verifica anche i fine corsa
     app_state.cfg["sequence"].update({k: v for k, v in data.items() if k != "output_root"},
                                      optics_profile=profile)
     app_state.cfg["output_root"] = data["output_root"]
@@ -1093,6 +1186,117 @@ async def sequence_stop():
     return {"ok": True}
 
 
+@api.post("/api/sequence/reset")
+@guard
+async def sequence_reset():
+    """Nuova pila: la sequenza finita torna «pronta» (0 / N). Il visualizzatore e i file non cambiano;
+    la prossima sequenza crea comunque una cartella nuova, anche con lo stesso nome."""
+    if not app_state.runner.reset():
+        raise ValueError(tr("Sequenza in corso"))
+    return {"ok": True}
+
+
+# ---------------- calibrazione ed esposizione automatica ----------------
+class CalibrationStart(BaseModel):
+    kind: str                      # dark, flat, flat_dark
+    count: int = 16
+    target_pct: float = 50         # flat: livello medio del canale più chiaro (% della saturazione)
+
+
+class ExposureBody(BaseModel):
+    target_pct: float = 85
+    stat: str = "highlights"       # "highlights" (99,5° percentile) o "mean"
+
+
+def calibration_view() -> dict:
+    """Libreria e set che una pila avviata ora userebbe (con le impostazioni attuali della fotocamera)."""
+    root = app_state.cfg["output_root"]
+    sets = calibration.list_library(root)
+    cam = app_state.camera if app_state.camera and app_state.camera.connected else None
+    info = calibration.camera_info(cam) if cam else None
+    seq = app_state.cfg["sequence"]
+    return {"root": str(calibration.library_root(root)), "sets": sets,
+            "match": calibration.match(sets, info, seq.get("optics_profile") or "", seq.get("bulb_s") or 0) if info else None,
+            "flat": calibration.latest_flat(sets, info.get("model")) if info else None}
+
+
+@api.get("/api/calibration")
+async def calibration_get():
+    return calibration_view()
+
+
+@api.post("/api/calibration/start")
+@guard
+async def calibration_start(body: CalibrationStart):
+    not_running()
+    if not 1 <= body.target_pct <= 95:
+        raise ValueError(tr("Livello obiettivo: da 1 a 95 %"))
+    root = validate_output_root(app_state.cfg["output_root"])
+    cam = need_camera()
+    seq = app_state.cfg["sequence"]
+    flat = None
+    if body.kind == "flat_dark":
+        flat = calibration.latest_flat(calibration.list_library(root), cam.model)
+    profile = seq.get("optics_profile") or ""
+    ctx = app_state.manifest_context(profile) if body.kind == "flat" else {}
+    app_state.calib.pause_s = (seq.get("post_shot_ms") or 0) / 1000
+    app_state.calib.start(body.kind, body.count, root, target_pct=body.target_pct, flat_set=flat,
+                          optics_profile=profile, optics=ctx.get("optics"), illumination=ctx.get("illumination"),
+                          bulb_s=seq.get("bulb_s") or 0, mirror_s=(seq.get("mirror_delay_ms") or 0) / 1000,
+                          software=f"Focus Stack {app_version()}")
+    app_state.cfg.setdefault("calibration", {}).update(count=body.count, **({"flat_target_pct": body.target_pct} if body.kind == "flat" else {}))
+    store.save(app_state.cfg)
+    return {"ok": True}
+
+
+@api.post("/api/calibration/stop")
+async def calibration_stop():
+    await app_state.calib.stop()
+    return {"ok": True}
+
+
+@api.post("/api/exposure/auto")
+@guard
+async def exposure_auto(body: ExposureBody):
+    """Esposizione dei light: una volta, prima della pila, alla posizione attuale (mai fotogramma per fotogramma)."""
+    not_running()
+    if body.stat not in ("highlights", "mean"):
+        raise ValueError(tr("Misura non valida"))
+    if not 1 <= body.target_pct <= 99:
+        raise ValueError(tr("Livello obiettivo: da 1 a 99 %"))
+    need_camera()
+    if app_state.cfg["sequence"].get("bulb_s"):
+        raise ValueError(tr("Con la posa B il tempo si imposta a mano: azzera «Posa B» per l'esposizione automatica"))
+    seq = app_state.cfg["sequence"]
+    app_state.calib.pause_s = (seq.get("post_shot_ms") or 0) / 1000
+    app_state.calib.start_exposure(body.target_pct, body.stat, (seq.get("mirror_delay_ms") or 0) / 1000)
+    app_state.cfg.setdefault("calibration", {}).update(light_target_pct=body.target_pct, light_stat=body.stat)
+    store.save(app_state.cfg)
+    return {"ok": True}
+
+
+class CalibrationSetBody(BaseModel):
+    name: str
+
+
+@api.post("/api/calibration/delete")
+@guard
+async def calibration_delete(body: CalibrationSetBody):
+    """Sposta nel Cestino un set della libreria (dark, flat, dark dei flat)."""
+    not_running()
+    calibration.delete_set(app_state.cfg["output_root"], body.name)
+    app_state.log(tr("Set di calibrazione spostato nel Cestino: {name}", name=body.name))
+    return calibration_view()
+
+
+@api.post("/api/calibration/open")
+async def calibration_open():
+    root = calibration.library_root(app_state.cfg["output_root"])
+    root.mkdir(parents=True, exist_ok=True)
+    subprocess.Popen(["open", str(root)])
+    return {"ok": True}
+
+
 # ---------------- impostazioni / preset ----------------
 class SettingsBody(BaseModel):
     output_root: str | None = None
@@ -1102,6 +1306,8 @@ class SettingsBody(BaseModel):
 
 
 MAX_SHOTS_PER_POSITION = 32
+MAX_CLOSEUP = 3
+MAX_CUSTOM_LENSES = 500
 IMMERSIONS = ("", "air", "water", "oil", "glycerol", "silicone")
 FILTER_TYPES = ("bandpass", "longpass", "shortpass", "neutral_density", "polarizer", "other")
 
@@ -1117,6 +1323,7 @@ class FilterBody(BaseModel):
 class IlluminationBody(BaseModel):
     type: str = ""
     level_percent: float | None = None
+    color_temp_k: float | None = None      # temperatura di colore in kelvin (es. 4000)
 
 
 class RelayBody(BaseModel):
@@ -1125,7 +1332,32 @@ class RelayBody(BaseModel):
     factor: float | None = None
 
 
+class MacroLensBody(BaseModel):
+    """Obiettivo fotografico: dal database Lensfun, dall'elenco personale o scritto a mano."""
+    maker: str = ""
+    model: str = ""
+    focal_mm: float | None = None
+    max_aperture: float | None = None    # diaframma più aperto (f/)
+    source: str = ""                     # "lensfun", "custom" o "" (scritto a mano)
+
+
+class CloseupBody(BaseModel):
+    """Lente addizionale (close-up) davanti all'obiettivo."""
+    name: str = ""
+    diopters: float | None = None
+
+
+class MacroBody(BaseModel):
+    lens: MacroLensBody = MacroLensBody()
+    lens_magnification: float | None = None   # rapporto di riproduzione dell'obiettivo da solo (0 = infinito)
+    f_number: float | None = None             # diaframma impostato
+    extension_mm: float | None = None         # tubi di prolunga / soffietto
+    closeup: list[CloseupBody] = []
+
+
 class OpticsBody(BaseModel):
+    kind: str = "microscope"                  # "microscope" o "macro" (fotografica)
+    macro: MacroBody = MacroBody()
     objective: str = ""
     objective_magnification: float | None = None
     intermediate: RelayBody = RelayBody()   # cambio d'ingrandimento intermedio, es. Optovar 1,6×
@@ -1189,6 +1421,17 @@ async def save_settings(body: SettingsBody):
 
 def clean_optics(body: OpticsBody) -> dict:
     """Verifica e normalizza ottica, filtro e illuminazione (senza il nome del profilo)."""
+    if body.kind not in ("microscope", "macro"):
+        raise ValueError(tr("Tipo di ottica non valido"))
+    mc = body.macro
+    if len(mc.closeup) > MAX_CLOSEUP:
+        raise ValueError(tr("Al massimo {n} lenti addizionali", n=MAX_CLOSEUP))
+    for value in (mc.lens.focal_mm, mc.lens.max_aperture, mc.f_number, *(c.diopters for c in mc.closeup)):
+        if value is not None and value <= 0:
+            raise ValueError(tr("I valori dell'ottica devono essere positivi"))
+    for value in (mc.lens_magnification, mc.extension_mm):
+        if value is not None and value < 0:
+            raise ValueError(tr("I valori dell'ottica devono essere positivi"))
     if body.immersion not in IMMERSIONS:
         raise ValueError(tr("Mezzo di immersione non valido"))
     if body.filter_mode not in ("unknown", "none", "filter"):
@@ -1202,6 +1445,8 @@ def clean_optics(body: OpticsBody) -> dict:
             raise ValueError(tr("I valori dell'ottica devono essere positivi"))
     if body.na is not None and not 0 < body.na <= 1.7:
         raise ValueError(tr("Apertura numerica non valida (0–1,7)"))
+    if body.illumination.color_temp_k is not None and not 1000 <= body.illumination.color_temp_k <= 20000:
+        raise ValueError(tr("Temperatura di colore: da 1000 a 20000 K"))
     if body.illumination.level_percent is not None and not 0 <= body.illumination.level_percent <= 100:
         raise ValueError(tr("Livello dell'illuminazione: da 0 a 100 %"))
     data = body.model_dump()
@@ -1211,18 +1456,13 @@ def clean_optics(body: OpticsBody) -> dict:
     data["illumination"]["type"] = data["illumination"]["type"].strip()
     for key in ("intermediate", "relay"):
         data[key]["name"] = data[key]["name"].strip()
+    lens = data["macro"]["lens"]
+    for key in ("maker", "model", "source"):
+        lens[key] = lens[key].strip()
+    # lenti addizionali senza potenza = righe vuote del modulo
+    data["macro"]["closeup"] = [{"name": c["name"].strip(), "diopters": c["diopters"]}
+                                for c in data["macro"]["closeup"] if c["diopters"]]
     return data
-
-
-def total_magnification(o: dict) -> float | None:
-    """Ingrandimento sul sensore = obiettivo × cambio intermedio × adattatore (fattori vuoti = 1)."""
-    obj = o.get("objective_magnification")
-    if not obj:
-        return None
-    total = float(obj)
-    for key in ("intermediate", "relay"):
-        total *= float((o.get(key) or {}).get("factor") or 1)
-    return round(total, 4)
 
 
 @api.post("/api/optics/profiles/save")
@@ -1236,6 +1476,51 @@ async def save_optics_profile(body: OpticsProfileBody):
     store.save(app_state.cfg)
     app_state.log(tr("Profilo ottico salvato: {name}", name=name))
     return app_state.cfg["optics_profiles"]
+
+
+class CustomLensBody(BaseModel):
+    maker: str = ""
+    model: str
+    focal_mm: float | None = None
+    max_aperture: float | None = None
+    max_magnification: float | None = None
+    mounts: list[str] = []
+
+
+@api.post("/api/lenses/save")
+@guard
+async def save_custom_lens(body: CustomLensBody):
+    """Aggiunge (o sostituisce, stesso marchio e modello) un obiettivo all'elenco personale, cercato
+    insieme al database Lensfun nel tab Ottica."""
+    lens = body.model_dump()
+    lens["maker"], lens["model"] = lens["maker"].strip(), lens["model"].strip()
+    if not lens["model"]:
+        raise ValueError(tr("Indica il nome dell'obiettivo"))
+    if not body.focal_mm:
+        raise ValueError(tr("Indica la focale dell'obiettivo"))
+    for value in (body.focal_mm, body.max_aperture, body.max_magnification):
+        if value is not None and value <= 0:
+            raise ValueError(tr("I valori dell'ottica devono essere positivi"))
+    lens["mounts"] = [m.strip() for m in body.mounts if m.strip()]
+    key = (lens["maker"].lower(), lens["model"].lower())
+    lenses = [x for x in app_state.cfg["custom_lenses"] if (x.get("maker", "").lower(), x.get("model", "").lower()) != key]
+    if len(lenses) >= MAX_CUSTOM_LENSES:
+        raise ValueError(tr("Elenco personale pieno ({n} obiettivi)", n=MAX_CUSTOM_LENSES))
+    lenses.append(lens)
+    app_state.cfg["custom_lenses"] = lenses
+    store.save(app_state.cfg)
+    app_state.log(tr("Obiettivo aggiunto all'elenco personale: {name}", name=" ".join(x for x in (lens["maker"], lens["model"]) if x)))
+    return lenses
+
+
+@api.post("/api/lenses/delete")
+@guard
+async def delete_custom_lens(body: CustomLensBody):
+    key = (body.maker.strip().lower(), body.model.strip().lower())
+    app_state.cfg["custom_lenses"] = [x for x in app_state.cfg["custom_lenses"]
+                                      if (x.get("maker", "").lower(), x.get("model", "").lower()) != key]
+    store.save(app_state.cfg)
+    return app_state.cfg["custom_lenses"]
 
 
 @api.post("/api/optics/profiles/delete")

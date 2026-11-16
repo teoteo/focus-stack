@@ -41,7 +41,8 @@ Safari (PWA, interface)  ⇄  http://localhost:8765  ⇄  Python server
                                                        └─ libgphoto2 → camera (USB PTP)
 ```
 
-The server listens on `127.0.0.1` only, so it cannot be reached from other computers.
+The server listens on `127.0.0.1` only, so it cannot be reached from other computers. The optional
+*Smartphone progress* page (see below) is a separate, read-only server.
 
 ## Installation
 
@@ -199,7 +200,11 @@ second monitor. If the live view is on, the viewer opens straight on the live vi
 | **● Live** | L | camera live view with zoom, 100% and pan; ◀ ▶ or a thumbnail go back to the shots |
 | **Follow latest** | U | show every new shot automatically |
 | **Lock view** | K | keep zoom and position when changing shot, to compare focus at the same spot |
+| **Inspector** | I | side panel, read only: R, G, B and brightness histograms, burnt (channels at 255) and black (channels at 0) pixels under a chosen rule, red/blue marks on the image, values under the pointer and min/max/mean/median of the whole image. It also works on the live view (updated twice a second) |
 | Full screen | F | — |
+
+The Inspector measures the 8-bit image on screen: for a RAW shot that is the conversion for the screen,
+and the RAW itself has more headroom in highlights and shadows (the panel says so).
 
 RAW shots are converted to JPEG with macOS `sips`, first a preview and then full resolution.
 The conversion is cached in `~/Library/Caches/MyFocuserStack`.
@@ -234,10 +239,11 @@ The conversion is cached in `~/Library/Caches/MyFocuserStack`.
 
 | Field | Meaning |
 |---|---|
+| Stack name | at the top of the card, because it changes often. Every stack goes into its own `<name>_<date-time>/` folder, so two stacks can share a name. When a stack is finished, **＋ New stack** sets the sequence back to *Ready* and selects the name to change it (the viewer and the saved files are not touched) |
 | Start / End | positions in steps (⌖ copies the current position) |
 | Step / Number of shots | linked: changing one recalculates the other |
 | Settle time after moving | lets vibrations die down before the shot (1–3 s on a microscope) |
-| Pause after the shot | time to write to the card and recharge the flash |
+| Pause after the shot, for card and flash | after each shot, before the next move: time to write to the card and recharge the flash |
 | Backlash compensation | before the first shot the motor backs off N steps and then advances, so every shot is reached from the same direction |
 | Capture mode | **Download to the Mac** (recommended), **Memory card only**, **Trigger only** (fastest; set the destination to the card) |
 
@@ -260,6 +266,70 @@ At the end of the sequence **Open in Finder** opens the stack folder.
 
 Pause, resume and abort are always available; **STOP** also halts the motor at once.
 Sequences can be saved as **presets**, for example one per objective.
+
+## Optics: microscope or photographic macro
+
+Each optics profile (*Optics* tab) is either **Microscope** (objective magnification × intermediate
+magnification changer × camera adapter, NA from the objective) or **Photographic macro**:
+
+- **Lens**: searched in the [Lensfun](https://lensfun.github.io) database (≈1,160 interchangeable lenses,
+  CC BY-SA 3.0, see below) plus a few dedicated macro lenses Lensfun lacks (`web/data/lenses-extra.json`) and
+  your **personal list** (*＋ Add to my list*, saved in the settings). Make, model, focal length and widest aperture
+  can always be typed by hand.
+- **Lens reproduction ratio** at the focus used (1 = 1:1, 0 = focused at infinity) and **aperture set**.
+- **Extension tubes / bellows** (mm) and up to three **close-up lenses** (diopters; common ones such as
+  Raynox DCR-250 are suggested).
+
+Magnification is a thin-lens estimate: m1 = m0 + extension / f, then m = m1 + ΣD/1000 · f · (1 + m1).
+Effective aperture N·(1 + m1) and equivalent object-side NA = m / (2 N (1 + m1)) feed the depth-of-field
+step suggestion. For exact scale, measure the µm per pixel with a ruler or stage micrometer.
+The manifest gets `optics.kind = "macro"` and the macro keys (see [docs/sequence-json.md](docs/sequence-json.md)).
+
+**Updating the lens database.** The app ships a snapshot; new lenses arrive with the next app release:
+
+```bash
+git clone --depth 1 https://github.com/lensfun/lensfun.git /tmp/lensfun
+python3 tools/lensfun_import.py /tmp/lensfun/data/db     # rewrites web/data/lenses-lensfun.json
+git diff --stat web/data/                                # then commit and publish as usual
+```
+
+The file records the Lensfun commit and date it was built from. Lenses in the personal list live in the
+settings and are not affected by an update.
+
+## Calibration frames and automatic exposure
+
+The **Calibration** tab has three cards:
+
+- **Light exposure**: with the focuser in the middle of the stack, it takes a few test shots, measures the
+  RAW data and sets the shutter speed so that the brightest channel reaches a target level (default: 99.5th
+  percentile at 85 % of saturation; or the mean). Exposure is computed once, before the stack, never per frame.
+- **Calibration frames**: darks (lens cap, same ISO and shutter speed as the lights), flats (evenly lit field,
+  shutter speed found automatically for a target mean level, default 50 %) and flat darks (lens cap, the
+  flats' ISO and shutter speed). The app asks to fit the cap before darks.
+- **Calibration library**: the sets in `<save folder>/_calibrazione/`, and which ones the next stack would use.
+
+Sets are shared by all stacks: each stack's `sequence.json` points to the most recent suitable sets (same
+camera, ISO and shutter speed for darks; same optics profile for flats). Format: [docs/calibration-json.md](docs/calibration-json.md).
+
+Measurements use `fs-rawstat`, a small tool built from **LibRaw 0.22.3** (git submodule `third_party/LibRaw`,
+the same version Focus Fusion uses) that reads RAW values without demosaicing; JPEG/PNG are read with macOS
+ImageIO and marked as estimates. For development build it once:
+
+```bash
+git submodule update --init third_party/LibRaw
+python3 tools/rawstat/build.py          # → build/rawstat/fs-rawstat (universal arm64 + x86_64)
+```
+
+`build_release.sh` builds it into the app (`Contents/Resources/app/bin`).
+
+## Smartphone progress
+
+*Configuration › Smartphone progress* turns on a read-only page on the local network (port 8766): shots
+taken, time left, expected end time and, on request, a small preview of the latest shot (made only when
+asked for, about 640 px). It is a second server separate from the one that drives the hardware, and it has
+no commands; every request needs the code in the link (*New link* changes it). Open it on the smartphone by
+scanning the QR code (generated by macOS CoreImage). The first time, the macOS firewall asks whether to
+allow incoming connections.
 
 ## Publishing a new version
 
@@ -309,6 +379,15 @@ build_release.sh       build and publish the universal app
 firmware/              focuser firmware source
 web/index.html …       main interface (PWA, no external dependencies)
 web/viewer.*           viewer with zoom and pan
+web/inspector.js       viewer Inspector (histograms, burnt/black pixels)
+backend/optics.py      magnification (microscope, macro) and the manifest's optics
+web/data/              lens database (Lensfun, CC BY-SA 3.0) and extra macro lenses
+tools/lensfun_import.py rebuilds web/data/lenses-lensfun.json from a Lensfun checkout
+backend/calibration.py calibration library, darks/flats capture, automatic exposure
+backend/rawstat.py     runs fs-rawstat (RAW levels)
+backend/remote.py      read-only progress page for the local network (smartphone)
+tools/rawstat/         fs-rawstat source and build script (LibRaw)
+third_party/LibRaw     LibRaw 0.22.3 (git submodule)
 web/i18n.js, web/lang/ interface and message translations
 docs/guida/            PDF guide generator (testo_<lang>.py)
 tools/i18n_check.py    translation check
@@ -318,3 +397,11 @@ tools/i18n_check.py    translation check
 
 MIT (see `LICENSE`). The firmware in `firmware/` derives from myFocuserPro2 by Robert Brown and
 contributors, also MIT-licensed: the original copyright notes are in the files.
+
+`web/data/lenses-lensfun.json` is derived from the [Lensfun](https://github.com/lensfun/lensfun) lens
+database and, like it, is licensed under **Creative Commons Attribution-Share Alike 3.0** (CC BY-SA 3.0),
+© the Lensfun contributors. It is a separate data file: the licence of the app's code does not change.
+
+`fs-rawstat` is statically linked with [LibRaw](https://www.libraw.org/) 0.22.3 (git submodule in
+`third_party/LibRaw`, unmodified), used under the **CDDL 1.0** (LibRaw is dual-licensed LGPL 2.1 / CDDL 1.0);
+LibRaw's source is in the submodule, © LibRaw LLC.

@@ -67,6 +67,10 @@ class SequenceStatus:
     repeat: int = 0              # scatto in corso nella posizione (0 = primo)
 
 
+CAPTURE_RETRIES = 2     # nuovi tentativi dopo uno scatto fallito
+RETRY_WAIT_S = 3        # attesa prima del primo nuovo tentativo (poi 6 s)
+
+
 class SequenceRunner:
     def __init__(self, focuser_getter: Callable, camera_getter: Callable, log: Callable[[str], None],
                  on_shot: Callable[[dict], None] | None = None):
@@ -145,12 +149,41 @@ class SequenceRunner:
         if self._stop:
             raise asyncio.CancelledError
 
+    async def _capture(self, camera, p: SequenceParams, base: Path | None) -> list[str]:
+        """Scatto con nuovi tentativi: se la fotocamera non risponde (per esempio sta ancora scrivendo il RAW
+        precedente sulla scheda, o in autofocus non trova il fuoco) aspetta 3 s, poi 6 s, e riprova; dopo
+        CAPTURE_RETRIES tentativi falliti ferma la sequenza con un messaggio che dice cosa controllare."""
+        for attempt in range(CAPTURE_RETRIES + 1):
+            try:
+                return await camera.capture(mode=p.capture_mode, dest_base=base, bulb_s=p.bulb_s,
+                                            mirror_s=p.mirror_delay_ms / 1000)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # noqa: BLE001  (errori di gphoto2 e della fotocamera)
+                if self._stop:
+                    raise
+                if attempt == CAPTURE_RETRIES:
+                    raise RuntimeError(tr(
+                        "La fotocamera non ha scattato dopo {n} tentativi ({exc}). Controlla: obiettivo in messa a "
+                        "fuoco manuale (MF), «Pausa dopo lo scatto» abbastanza lunga perché la fotocamera finisca di "
+                        "scrivere sulla scheda (con i RAW almeno 1–2 s), batteria e scheda.", n=attempt + 1, exc=exc)) from exc
+                wait = RETRY_WAIT_S * (attempt + 1)
+                msg = tr("Scatto non riuscito ({exc}): nuovo tentativo fra {s} s ({a} di {n})",
+                         exc=exc, s=wait, a=attempt + 1, n=CAPTURE_RETRIES)
+                self._log(msg)
+                self.status.message = msg
+                await asyncio.sleep(wait)
+                await self._checkpoint()
+                self.status.message = ""
+        return []
+
     async def _run(self, p: SequenceParams, ctx: dict) -> None:
         focuser, camera = self._focuser(), self._camera()
         positions = p.positions()
         repeats = max(1, int(p.shots_per_position or 1))
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in p.session_name) or "stack"
+        # al massimo 80 caratteri: cartella e file (nome_0001_1.NEF, …) restano sotto i 255 byte di macOS
+        safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in p.session_name)[:80] or "stack"
         # ogni sequenza ha sempre una cartella nuova, anche se ne parte un'altra nello stesso secondo
         folder = Path(p.output_root).expanduser() / f"{safe_name}_{stamp}"
         n = 2
@@ -241,8 +274,7 @@ class SequenceRunner:
                     else:
                         base = folder / f"{safe_name}_{i + 1:04d}" if download else None
                     shot_time = now_iso()
-                    files = await camera.capture(mode=p.capture_mode, dest_base=base, bulb_s=p.bulb_s,
-                                                 mirror_s=p.mirror_delay_ms / 1000)
+                    files = await self._capture(camera, p, base)
                     if frame["temperature_c"] is None and focuser.temperature is not None:
                         frame["temperature_c"] = round(focuser.temperature, 2)
                     exposure = {"repeat": k, "time": shot_time, "files": [Path(f).name for f in files]}
@@ -374,6 +406,8 @@ def build_manifest(p: SequenceParams, ctx: dict, positions: list[int], repeats: 
         m["notes"] = ctx["notes"]
     if ctx.get("optics_profile"):
         m["optics_profile"] = ctx["optics_profile"]
+    if ctx.get("calibration"):   # set della libreria _calibrazione adatti a questa pila (percorsi relativi)
+        m["calibration"] = ctx["calibration"]
     m["frames"] = []
     m["extra"] = {}
     return m

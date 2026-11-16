@@ -27,6 +27,8 @@ except ImportError:  # pragma: no cover
 GPHOTO_AVAILABLE = gp is not None
 
 # Chiave logica -> chiavi gphoto2 candidate (la prima esistente sulla fotocamera vince)
+SONY_SETTLE_S = 2.5   # eventi da leggere dopo ogni scatto Sony prima del successivo (vedi _capture_blocking)
+
 SETTING_KEYS: dict[str, list[str]] = {
     "shutterspeed": ["shutterspeed"],
     "iso": ["iso"],
@@ -124,6 +126,11 @@ class GPhotoCamera:
                     break
         except gp.GPhoto2Error:
             pass
+        if not self.model:   # alcune fotocamere (es. Sony) non mettono "Model:" nel riepilogo
+            try:
+                self.model = str(self._cam.get_abilities().model or "").strip()
+            except gp.GPhoto2Error:
+                pass
         self._resolve_keys()
         self._read_settings_blocking()
         if self._has("exposuredelaymode"):
@@ -167,12 +174,18 @@ class GPhotoCamera:
         key = self._keys.get(logical)
         if not key:
             raise CameraError(tr("Impostazione '{name}' non supportata da questa fotocamera", name=logical))
-        w = self._cam.get_single_config(key)
-        w.set_value(value)
-        self._cam.set_single_config(key, w)
-        # Sony vecchi modelli: il valore viene raggiunto "a scatti", rileggere
-        time.sleep(0.2)
-        return self._read_settings_blocking()
+        # Sony: il valore viene raggiunto "a scatti" e la fotocamera ignora il comando finché sta scrivendo
+        # l'ultimo RAW sulla scheda; si rilegge e, se non ha preso il valore, si riprova (fino a ~6 s)
+        out = {}
+        for attempt in range(6):
+            w = self._cam.get_single_config(key)
+            w.set_value(value)
+            self._cam.set_single_config(key, w)
+            time.sleep(0.2 + 0.4 * attempt)
+            out = self._read_settings_blocking()
+            if str((out.get(logical) or {}).get("current")) == str(value):
+                break
+        return out
 
     def _disconnect_blocking(self) -> None:
         if self._cam is not None:
@@ -334,6 +347,14 @@ class GPhotoCamera:
                           mirror_s: float = 0) -> list[str]:
         self._require()
         deadline = time.monotonic() + timeout_s
+        if "sony" in (self.model or "").lower():
+            # Sony: senza una lettura delle proprietà dopo lo scatto precedente, la fotocamera (via libgphoto2)
+            # crede di avere ancora un'immagine in memoria e lo scatto successivo va in timeout ([-1] dopo ~30 s).
+            # Rileggere le impostazioni aggiorna lo stato; costa una frazione di secondo.
+            try:
+                self._read_settings_blocking()
+            except gp.GPhoto2Error:
+                pass
         self._nikon_delay_blocking(mirror_s)
         canon_mlu = mirror_s > 0 and self.mirror_method == "canon"
         if bulb_s > 0:
@@ -375,6 +396,16 @@ class GPhotoCamera:
                 saved.append(target)
             if saved:
                 self.last_file = saved[0]
+        if "sony" in (self.model or "").lower():
+            # Sony (provato su ILCE-6400 in PC Remote): dopo lo scatto la fotocamera manda ancora eventi per ~2 s
+            # (oggetto rimosso dalla memoria, stati). Se lo scatto successivo parte prima che siano stati letti,
+            # la fotocamera non scatta e libgphoto2 va in timeout dopo 35 s ([-1]). Leggerli qui per 2,5 s lo evita.
+            end = time.monotonic() + SONY_SETTLE_S
+            while time.monotonic() < end:
+                try:
+                    self._cam.wait_for_event(200)
+                except gp.GPhoto2Error:
+                    break
         return saved
 
     async def capture(self, mode: str = "download", dest_base: Path | None = None,
@@ -393,24 +424,54 @@ class GPhotoCamera:
                 "last_file": self.last_file, "mirror_method": self.mirror_method, "live": self.live}
 
 
-def _sim_png(path: str, n: int) -> None:
+def _gain_lut(gain: float) -> bytes:
+    """Tabella sRGB → sRGB che moltiplica la luce (valori lineari) per gain, come un'esposizione diversa."""
+    def lin(v):
+        v /= 255
+        return v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
+
+    def enc(x):
+        x = min(1.0, max(0.0, x))
+        return round(255 * (x * 12.92 if x <= 0.0031308 else 1.055 * x ** (1 / 2.4) - 0.055))
+    return bytes(enc(lin(v) * gain) for v in range(256))
+
+
+def _sim_png(path: str, n: int, gain: float = 1.0, scene: str | None = None) -> None:
     """Scrive un PNG 1800×1200 di prova: sfondo sfumato e una fascia "a fuoco" con
-    scacchiera di 2 px che si sposta a ogni scatto (utile per provare zoom al 100%)."""
-    w, h = 1800, 1200
-    band_y = (n * 97) % (h - 160)
+    scacchiera di 2 px che si sposta a ogni scatto (utile per provare zoom al 100%).
+    gain = luce rispetto all'esposizione di riferimento (1/60, ISO 100, f/8).
+    scene: "dark" (tappo: quasi nero, qualche pixel caldo) o "flat" (campo uniforme con vignettatura, 600×400)."""
+    w, h = (600, 400) if scene in ("dark", "flat") else (1800, 1200)
+    lut = _gain_lut(gain)
 
     def chunk(tag, data):
         return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
 
-    checker = [bytes(b"\x00" + b"".join((b"\xf0\xf0\xf0" if ((x // 2) + k) % 2 else b"\x20\x24\x2a") for x in range(w)))
-               for k in (0, 1)]
     rows = []
-    for y in range(h):
-        if band_y <= y < band_y + 160:
-            rows.append(checker[(y // 2) % 2])
-        else:
-            g = 40 + (y * 120) // h
-            rows.append(b"\x00" + bytes((g, g // 2 + 30, 160 - g // 2)) * w)
+    if scene == "dark":
+        for y in range(h):
+            row = bytearray(b"\x02\x02\x03" * w)
+            if y % 97 == 13:
+                row[(y * 7 % w) * 3:(y * 7 % w) * 3 + 3] = b"\xff\xf0\xe0"   # pixel caldo
+            rows.append(b"\x00" + bytes(row))
+    elif scene == "flat":
+        cx, cy, r2 = w / 2, h / 2, (w / 2) ** 2 + (h / 2) ** 2
+        for y in range(h):
+            row = bytearray()
+            for x in range(w):
+                v = int(150 * (1 - 0.35 * ((x - cx) ** 2 + (y - cy) ** 2) / r2))
+                row += bytes((lut[v], lut[min(255, v + 12)], lut[max(0, v - 10)]))
+            rows.append(b"\x00" + bytes(row))
+    else:
+        band_y = (n * 97) % (h - 160)
+        checker = [bytes(b"\x00" + b"".join(bytes((lut[0xf0],) * 3) if ((x // 2) + k) % 2 else bytes((lut[0x20], lut[0x24], lut[0x2a]))
+                                            for x in range(w))) for k in (0, 1)]
+        for y in range(h):
+            if band_y <= y < band_y + 160:
+                rows.append(checker[(y // 2) % 2])
+            else:
+                g = 40 + (y * 120) // h
+                rows.append(b"\x00" + bytes((lut[g], lut[g // 2 + 30], lut[160 - g // 2])) * w)
     png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) \
         + chunk(b"IDAT", zlib.compress(b"".join(rows), 6)) + chunk(b"IEND", b"")
     Path(path).write_bytes(png)
@@ -456,6 +517,7 @@ class SimulatedCamera(GPhotoCamera):
         self._open = False
         self._n = 0
         self.focus_position = lambda: None   # impostata dal server: posizione del focheggiatore
+        self.scene: str | None = None         # calibrazione: "dark" (tappo) o "flat" (campo uniforme)
         self.settings = {
             "shutterspeed": {"key": "shutterspeed", "current": "1/60",
                              "choices": ["bulb", "30", "15", "8", "4", "2", "1", "1/2", "1/4", "1/8", "1/15",
@@ -477,6 +539,21 @@ class SimulatedCamera(GPhotoCamera):
     async def disconnect(self) -> None:
         self._open = False
         self.live = False
+
+    def _gain(self, bulb_s: float = 0) -> float:
+        """Luce raccolta rispetto a 1/60 s, ISO 100, f/8 (per provare l'esposizione automatica)."""
+        from .calibration import shutter_seconds
+        cur = lambda k: (self.settings.get(k) or {}).get("current") or ""
+        t = bulb_s or shutter_seconds(cur("shutterspeed")) or 1 / 60
+        try:
+            iso = float(cur("iso"))
+        except ValueError:
+            iso = 100
+        try:
+            n = float(cur("aperture").replace("f/", ""))
+        except ValueError:
+            n = 8
+        return t * 60 * iso / 100 * (8 / n) ** 2
 
     async def preview(self) -> bytes:
         self._require()
@@ -505,7 +582,7 @@ class SimulatedCamera(GPhotoCamera):
             self._n += 1
             if mode == "download" and dest_base:
                 target = f"{dest_base}.png"
-                await asyncio.to_thread(_sim_png, target, self._n)
+                await asyncio.to_thread(_sim_png, target, self._n, self._gain(bulb_s), self.scene)
                 self.last_file = target
                 return [target]
             return []

@@ -29,6 +29,7 @@ function apply() {
   const devicePct = view.scale * ratio * DPR() * 100;
   $("z-val").textContent = natW ? `${fmtNum(devicePct, devicePct >= 10 ? 0 : 1)}%` : "—";
   img.classList.toggle("pixelated", devicePct > 150);
+  Inspector.transform(img.style.transform, devicePct > 150);
   $("z-fit").setAttribute("aria-pressed", view.mode === "fit");
 }
 
@@ -94,6 +95,7 @@ function show(id, { keepView = lockView } = {}) {
     if (isFull) fullW = natW;
     img.src = el.src;
     $("msg").classList.add("hidden");
+    Inspector.analyze(el, inspectorInfo(shot, el, isFull));
     if (wasFit && !(isFull && view.mode === "free")) fit();
     else if (oldW) { view.scale *= oldW / natW; apply(); }   // stessa area sullo schermo
     else fit();
@@ -101,16 +103,38 @@ function show(id, { keepView = lockView } = {}) {
   };
   preview.onload = () => { if (!fullDone) swap(preview, false); };
   full.onload = () => { fullDone = true; swap(full, true); };
-  full.onerror = () => { $("loading").textContent = t("Piena risoluzione non disponibile"); };
+  full.onerror = () => {
+    $("loading").textContent = t("Piena risoluzione non disponibile");
+    // l'Ispettore resta sull'anteprima: lo dice invece di promettere numeri che non arriveranno
+    if (token === loadToken && preview.naturalWidth) {
+      Inspector.analyze(preview, { ...inspectorInfo(shot, preview, false),
+        basis: `${t("Piena risoluzione non disponibile")} · ${preview.naturalWidth} × ${preview.naturalHeight}` });
+    }
+  };
   preview.src = `/api/shots/${id}/image?size=preview&v=${shot.key}`;
   full.src = `/api/shots/${id}/image?size=full&v=${shot.key}`;
+}
+
+// cosa misura l'Ispettore: anteprima o piena risoluzione; con i RAW è la conversione per lo schermo
+const RAW_EXT = /\.(nef|nrw|cr2|cr3|crw|arw|srf|sr2|raf|orf|rw2|dng|pef|srw|3fr|iiq|x3f|erf|mef|mos|kdc|rwl)$/i;
+function inspectorInfo(shot, el, isFull) {
+  const w = el.naturalWidth, h = el.naturalHeight;
+  const basis = isFull
+    ? t("Tutti i pixel dell'immagine a 8 bit: {w} × {h} ({mp} MP)", { w, h, mp: fmtNum((w * h) / 1e6, 1) })
+    : t("Anteprima ridotta ({w} × {h}): fra poco i numeri della piena risoluzione", { w, h });
+  const files = shot.files || [shot.file];
+  let note = "";
+  if (RAW_EXT.test(shot.file)) note = t("Conversione del RAW per lo schermo: il RAW ha più margine nelle luci e nelle ombre.");
+  else if (files.some((f) => RAW_EXT.test(f))) note = t("JPEG della fotocamera: il RAW salvato insieme ha più margine nelle luci e nelle ombre.");
+  return { basis, note };
 }
 
 function renderMeta(shot) {
   $("v-name").textContent = shot.name;
   const pos = shots.indexOf(shot) + 1;
   const parts = [`${pos} / ${shots.length}`];
-  parts.push(shot.kind === "sequence" ? t("sequenza · scatto {n}", { n: shot.repeat ? `${shot.index}.${shot.repeat}` : shot.index }) : t("scatto di prova"));
+  parts.push(shot.kind === "sequence" ? t("sequenza · scatto {n}", { n: shot.repeat ? `${shot.index}.${shot.repeat}` : shot.index })
+    : shot.kind === "calibration" ? t("frame di calibrazione") : shot.kind === "exposure" ? t("prova di esposizione") : t("scatto di prova"));
   if (shot.position != null) parts.push(t("posizione {n}", { n: fmtNum(shot.position) }));
   if (shot.temperature != null) parts.push(`${fmtNum(shot.temperature, 1)} °C`);
   parts.push(shot.time);
@@ -133,7 +157,7 @@ function renderStrip() {
     b.dataset.id = s.id;
     b.dataset.key = s.key;
     b.title = s.name;
-    b.innerHTML = `<img loading="lazy" alt="" src="/api/shots/${s.id}/image?size=preview&v=${s.key}"><span>${s.kind === "sequence" ? (s.repeat ? `${s.index}.${s.repeat}` : s.index) : t("P")}</span>`;
+    b.innerHTML = `<img loading="lazy" alt="" src="/api/shots/${s.id}/image?size=preview&v=${s.key}"><span>${s.kind === "sequence" ? (s.repeat ? `${s.index}.${s.repeat}` : s.index) : s.kind === "calibration" ? t("C") : s.kind === "exposure" ? t("E") : t("P")}</span>`;
     b.onclick = () => { setLiveView(false, { restore: false }); setFollow(s.id === shots[shots.length - 1].id); show(s.id); };
     strip.appendChild(b);
   }
@@ -164,6 +188,7 @@ async function fetchShots() {
     if (!liveOn) {
       natW = natH = fullW = 0;
       img.removeAttribute("src");
+      Inspector.clear();
       $("msg").classList.remove("hidden");
       $("v-name").textContent = t("Nessuno scatto");
       $("v-meta").textContent = "";
@@ -223,6 +248,7 @@ function setLiveView(on, { restore = true } = {}) {
   liveStartedAt = Date.now();
   ++loadToken;                      // annulla i caricamenti di scatti in corso
   clearInterval(liveTimer);
+  Inspector.clear();
   natW = natH = fullW = 0;
   $("loading").classList.add("hidden");
   $("liveview").setAttribute("aria-pressed", String(on));
@@ -239,10 +265,12 @@ function setLiveView(on, { restore = true } = {}) {
     try { history.replaceState(null, "", "#live"); } catch { /* opzionale */ }
     // l'evento load di uno stream MJPEG non è affidabile: si controllano le dimensioni del fotogramma
     liveTimer = setInterval(checkLiveFrame, 100);
+    liveInspect();
     renderLiveView();
     return;
   }
   // togliere src chiude la connessione: il server spegne il live view della fotocamera
+  clearInterval(liveInspTimer);
   img.removeAttribute("src");
   img.style.visibility = "";
   $("msg").textContent = t("In attesa del primo scatto…");
@@ -268,6 +296,19 @@ function checkLiveFrame() {
   $("msg").classList.add("hidden");
   if (!oldW || view.mode === "fit") fit();
   else { view.scale *= oldW / natW; apply(); }   // la fotocamera ha cambiato risoluzione
+}
+
+// Ispettore sul live view: i numeri del fotogramma corrente, ricalcolati due volte al secondo
+let liveInspTimer = 0;
+function liveInspect() {
+  clearInterval(liveInspTimer);
+  if (!liveOn) return;
+  liveInspTimer = setInterval(() => {
+    if (!liveOn || !Inspector.open || !img.naturalWidth || seqRunning) return;
+    Inspector.analyze(img, { live: true,
+      basis: t("Fotogramma del live view ({w} × {h}), aggiornato di continuo", { w: img.naturalWidth, h: img.naturalHeight }),
+      note: t("Il live view è un'anteprima compressa della fotocamera: controlla l'esposizione anche su uno scatto di prova.") });
+  }, 500);
 }
 
 function renderLiveView() {
@@ -336,7 +377,12 @@ stage.addEventListener("pointerdown", (e) => {
   stage.classList.add("dragging");
 });
 stage.addEventListener("pointermove", (e) => {
-  if (!drag) return;
+  if (!drag) {
+    if (!Inspector.open || !natW) return;
+    const r = stage.getBoundingClientRect();
+    Inspector.pointer(Math.floor((e.clientX - r.left - view.tx) / view.scale), Math.floor((e.clientY - r.top - view.ty) / view.scale));
+    return;
+  }
   view.tx = drag.tx + (e.clientX - drag.x);
   view.ty = drag.ty + (e.clientY - drag.y);
   view.mode = "free";
@@ -344,6 +390,7 @@ stage.addEventListener("pointermove", (e) => {
 });
 const endDrag = () => { drag = null; stage.classList.remove("dragging"); };
 stage.addEventListener("pointerup", endDrag);
+stage.addEventListener("pointerleave", () => Inspector.pointer(null));
 stage.addEventListener("pointercancel", endDrag);
 
 // rotella: zoom centrato sul cursore. Trackpad: pinch = zoom, scorrimento a due dita = pan.
@@ -389,6 +436,7 @@ document.addEventListener("keydown", (e) => {
   else if (k === "u" || k === "U") $("follow").click();
   else if (k === "k" || k === "K") $("lock").click();
   else if (k === "f" || k === "F") $("fs").click();
+  else if (k === "i" || k === "I") Inspector.toggle();
   else return;
   e.preventDefault();
 });
@@ -404,5 +452,9 @@ window.addEventListener("hashchange", () => {
   }
 });
 
+Inspector.bind({
+  // aperto o chiuso: lo spazio dell'immagine cambia; sul live view riparte il calcolo periodico
+  onToggle: () => { if (view.mode === "fit") requestAnimationFrame(fit); if (liveOn) liveInspect(); },
+});
 apply();
 connectWS();   // il primo messaggio di stato carica l'elenco degli scatti

@@ -128,11 +128,14 @@ function render() {
   $("alarm-text").textContent = alarm;
 
   safe("focheggiatore", () => renderFocuser(f, run));
-  safe("fotocamera", () => renderCamera(c, run));
+  const calBusy = !!(S.calibration && S.calibration.busy);   // calibrazione o esposizione automatica in corso
+  safe("fotocamera", () => renderCamera(c, run || calBusy));
   safe("sequenza", () => renderSequence(f, c, q, run));
   safe("ultimo scatto", renderLastShot);
-  safe("live view", () => renderLive(c, run));
+  safe("live view", () => renderLive(c, run || calBusy));
+  safe("calibrazione", () => renderCalibration(c, run));
   safe("configurazione", () => renderConfig(f));
+  safe("iphone", renderRemote);
   safe("preset", renderPresets);
   safe("profili ottici", renderOpticsProfiles);
   safe("registro", renderLog);
@@ -146,6 +149,14 @@ function renderUpdates() {
   $("up-app").textContent = a.available ? t("{v} → disponibile {latest}", { v: ver, latest: a.latest })
     : a.error ? t("{v} (controllo non riuscito: verifica la connessione a internet)", { v: ver })
     : a.latest ? t("{v} (aggiornata)", { v: ver }) : ver;
+  // Note della versione su GitHub: della nuova se c'è un aggiornamento, altrimenti di quella installata
+  const notesVer = a.available ? a.latest : ver !== "sviluppo" && ver !== "?" ? ver : null;
+  const notes = $("up-notes");
+  notes.classList.toggle("hidden", !notesVer);
+  if (notesVer) {
+    notes.href = `https://github.com/teoteo/focus-stack/releases/tag/v${notesVer}`;
+    notes.textContent = a.available ? t("Novità della versione {v}", { v: notesVer }) : t("Note della versione {v}", { v: notesVer });
+  }
   const fwAvail = fw.bundled ? " → " + t("disponibile build {b}", { b: fw.bundled }) : "";
   let fwText;
   if (!f.connected || f.simulated) fwText = t("collega il focheggiatore per controllarlo");
@@ -350,7 +361,7 @@ function renderSequence(f, c, q, run) {
   setChip("s-chip", labels[q.state] || q.state,
     { running: "busy", paused: "busy", stopping: "busy", done: "ok", error: "bad" }[q.state] || "");
   const bothOk = f.connected && c.connected;
-  $("s-start-btn").disabled = run || !bothOk;
+  $("s-start-btn").disabled = run || !bothOk || !!(S.calibration && S.calibration.busy);
   $("s-start-btn").title = bothOk ? "" : t("Connetti focheggiatore e fotocamera");
   $("s-pause-btn").disabled = !run || q.state === "stopping";
   $("s-pause-btn").innerHTML = q.state === "paused" ? `▶&nbsp; ${t("Riprendi")}` : `❚❚&nbsp; ${t("Pausa")}`;
@@ -377,6 +388,16 @@ function renderSequence(f, c, q, run) {
   if (q.message) txt += (txt ? " · " : "") + q.message;
   if (q.folder && !run) txt += (txt ? " · " : "") + q.folder;
   $("s-progress").textContent = txt;
+
+  // nome della pila: dopo una pila finita (completata, interrotta o con errore) si prepara la successiva
+  const finished = !run && (q.state !== "idle" || q.total > 0);
+  $("s-new").classList.toggle("hidden", !finished);
+  $("s-new").disabled = run;
+  const safeName = (($("s-name").value.trim() || "stack").replace(/[^\p{L}\p{N}_-]/gu, "_"));
+  const last = q.folder ? q.folder.split("/").pop() : "";
+  $("s-name-hint").textContent = finished && last
+    ? t("Ultima pila: {folder}. Con «Nuova pila» la prossima va in una cartella nuova, anche con lo stesso nome.", { folder: last })
+    : t("Cartella: {name}_data-ora", { name: safeName });
 }
 
 function renderLastShot() {
@@ -516,6 +537,11 @@ function loadForms(cfg) {
   $("s-settle").value = q.settle_ms; $("s-post").value = q.post_shot_ms; $("s-backlash").value = q.backlash;
   $("s-mode").value = q.capture_mode; $("s-name").value = q.session_name; $("s-return").checked = q.return_to_start;
   $("s-repeats").value = q.shots_per_position || 1;
+  const cal = cfg.calibration || {};
+  $("x-stat").value = cal.light_stat || "highlights";
+  $("x-target").value = cal.light_target_pct ?? 85;
+  $("k-count").value = cal.count ?? 16;
+  $("k-target").value = cal.flat_target_pct ?? 50;
   renderOpticsProfiles();
   $("s-optics").value = opticsProfiles()[q.optics_profile] ? q.optics_profile : "";
   editProfile($("s-optics").value);
@@ -576,6 +602,7 @@ function updateSummary() {
   if (umPerStep()) html += " " + t("= <b>{um}</b> · passo <b>{step}</b>", { um: fmtUm(span), step: fmtUm(p.step) });
   html += "<br>" + t("Durata stimata <b>~{t}</b>", { t: fmtTime(n * perPos) });
   html += `<span class="optics-line">${opticsSummary()}</span>`;
+  if (p.capture_mode === "download") html += `<span class="optics-line">${calibrationSummary()}</span>`;
   // controllo fine corsa lato interfaccia (il server ricontrolla comunque)
   const [lo, hi] = S.focuser.connected ? S.focuser.bounds : [S.settings.limit_min, S.settings.limit_max];
   const dir = p.end >= p.start ? 1 : -1;
@@ -611,16 +638,80 @@ function updateMechResult() {
     { u: fmtNum(u, 4), p: fmtNum(1 / u, 2), k: fmtNum(u * 1000, 1) });
 }
 
+// ---------------- avanzamento da smartphone ----------------
+let remoteUrl = null;
+function renderRemote() {
+  const r = S.remote || {}, want = !!(S.settings.remote && S.settings.remote.enabled);
+  $("r-enabled").checked = want;
+  $("r-info").classList.toggle("hidden", !(r.running && r.url));
+  $("r-error").textContent = want && !r.running && r.error ? r.error
+    : want && r.running && !r.url ? t("Il Mac non sembra collegato a una rete locale.") : "";
+  if (r.url && r.url !== remoteUrl) {      // il QR cambia solo con il link (nuovo codice o nuovo indirizzo)
+    remoteUrl = r.url;
+    $("r-url").textContent = r.url; $("r-url").href = r.url;
+    $("r-qr").src = "/api/remote/qr.png?u=" + encodeURIComponent(r.url);
+  }
+}
+function bindRemote() {
+  // in caso di errore la casella torna allo stato salvato al prossimo aggiornamento (renderRemote)
+  $("r-enabled").addEventListener("change", (e) => act(null, () => api("/api/remote", { enabled: e.target.checked })));
+  $("r-new").onclick = () => {
+    if (!confirm(t("Creare un nuovo link? Quello attuale smetterà di funzionare."))) return;
+    act($("r-new"), () => api("/api/remote", { enabled: true, new_link: true }), t("Nuovo link creato"));
+  };
+}
+
 // ---------------- profondità di campo ----------------
 // Formula di Berek/Shillaber: DOF = λ·n/NA² + n·e/(M·NA)
+// Macro: NA equivalente lato soggetto = m / (2 N (1 + m1)), calcolata dal diaframma (vedi macroNumbers)
 function dof() {
-  const na = num("d-na"), mag = totalMag(opticsForm()) || 0, px = num("d-px"), ov = num("d-ov") / 100;
-  if (!(na > 0 && mag > 0)) { $("d-result").textContent = t("Inserisci NA e ingrandimento"); return 0; }
+  const o = opticsForm(), macro = o.kind === "macro";
+  const na = macro ? macroNumbers(o).na : num("d-na"), mag = totalMag(o) || 0, px = num("d-px"), ov = num("d-ov") / 100;
+  if (!(na > 0 && mag > 0)) {
+    $("d-result").textContent = macro ? t("Inserisci obiettivo, rapporto di riproduzione e diaframma") : t("Inserisci NA e ingrandimento");
+    return 0;
+  }
   const d = (0.55 * 1.0) / (na * na) + (1.0 * px) / (mag * na);
   const step = d * (1 - ov), um = umPerStep();
-  $("d-result").innerHTML = t("Profondità di campo ≈ <b>{d} µm</b> · passo consigliato <b>{s} µm</b>", { d: fmtNum(d, 2), s: fmtNum(step, 2) })
-    + (um ? " = " + t("<b>{n} passi</b>", { n: Math.max(1, Math.round(step / um)) }) : " · " + t("configura la meccanica per convertirlo in passi"));
+  let html = t("Profondità di campo ≈ <b>{d} µm</b> · passo consigliato <b>{s} µm</b>", { d: fmtNum(d, 2), s: fmtNum(step, 2) });
+  if (!um) html += " · " + t("configura la meccanica per convertirlo in passi");
+  else {
+    const n = stepsFor(step, um);
+    html += " = " + (n === 1 ? t("<b>1 passo</b>") : t("<b>{n} passi</b>", { n }));
+    if (step < um) html += microstepAdvice(step, um);
+  }
+  $("d-result").innerHTML = html;
   return step;
+}
+
+// passi della slitta per il passo consigliato: mai più lungo del consigliato (la sovrapposizione resta), almeno 1
+function stepsFor(step, um) {
+  return Math.max(1, Math.floor(step / um + 1e-9));
+}
+
+// Un passo della slitta è più lungo del passo consigliato: tra gli scatti resterebbero zone sfocate.
+// Suggerisce il microstep più grosso che dà almeno MIN_STEPS passi per il passo consigliato.
+const MICROSTEPS = [1, 2, 4, 8, 16, 32];
+const MIN_STEPS = 3;
+function microstepAdvice(step, um) {
+  let html = `<span class="warn-text">${t("Un passo della slitta ({u} µm) è più lungo del passo consigliato: tra uno scatto e l'altro resterebbero zone sfocate.",
+    { u: fmtNum(um, 2) })}</span>`;
+  const f = S && S.focuser;
+  const micro = f && f.connected && f.motor && f.motor.step_mode;
+  if (!micro) {   // scheda senza microstep leggibile: indica solo di quanto accorciare il passo
+    return html + `<span class="muted">${t("Serve un passo almeno {k} volte più corto: microstep più fine o più riduzione meccanica.",
+      { k: fmtNum(Math.ceil(MIN_STEPS * um / step), 0) })}</span>`;
+  }
+  const full = um * micro;   // µm per passo intero
+  const pick = MICROSTEPS.find((m) => m > micro && step / (full / m) >= MIN_STEPS);
+  if (!pick) {
+    return html + `<span class="muted">${t("Anche con il microstep 1/32 il passo resta troppo lungo: serve più riduzione meccanica.")}</span>`;
+  }
+  const u2 = full / pick;
+  let tip = t("Imposta il microstep a 1/{m} (Configurazione › Motore): {u} µm/passo, passo consigliato {n} passi.",
+    { m: pick, u: fmtNum(u2, 3), n: stepsFor(step, u2) });
+  if (mechMode === "manual") tip += " " + t("Poi scrivi {u} µm/passo in Configurazione meccanica: il valore inserito a mano non segue il microstep.", { u: fmtNum(u2, 3) });
+  return html + `<span class="muted">${tip}</span>`;
 }
 
 // ---------------- profili di ottica, filtro e illuminazione (finiscono in sequence.json) ----------------
@@ -633,7 +724,44 @@ const FILTER_TYPE_LABELS = () => ({ bandpass: t("Passa banda"), longpass: t("Lon
 const ILLUMINATION_SUGGESTIONS = () => [t("Campo chiaro (luce trasmessa)"), t("Luce riflessa"), t("LED ad anello"),
   t("Epifluorescenza"), t("Campo scuro"), t("Luce polarizzata")];
 const opticsProfiles = () => (S && S.settings.optics_profiles) || {};
-const BLANK_OPTICS = { dof_overlap: 30, filter_mode: "unknown", filter: { type: "bandpass" }, illumination: {} };
+const BLANK_OPTICS = { kind: "microscope", dof_overlap: 30, filter_mode: "unknown", filter: { type: "bandpass" }, illumination: {} };
+let opticsKind = "microscope";
+const MAX_CLOSEUP = 3;
+// lenti addizionali comuni (potenza in diottrie dalle schede dei produttori): suggerimenti del campo Nome
+const CLOSEUP_PRESETS = { "Raynox DCR-250": 8, "Raynox DCR-150": 4.8, "Canon 500D": 2, "Canon 250D": 4,
+  "Nikon 5T": 1.5, "Nikon 6T": 2.9, "Marumi Achromat Macro 330": 3, "Marumi Achromat Macro 200": 5 };
+
+function setOpticsKind(kind) {
+  opticsKind = kind === "macro" ? "macro" : "microscope";
+  $("card-optics").dataset.kind = opticsKind;
+  $$("#o-kind button").forEach((b) => b.setAttribute("aria-checked", b.dataset.kind === opticsKind));
+}
+
+// righe delle lenti addizionali (nome + diottrie)
+function renderCloseups(list) {
+  const box = $("m-closeups");
+  box.innerHTML = "";
+  for (const c of list) addCloseupRow(c);
+  $("m-closeup-add").disabled = box.children.length >= MAX_CLOSEUP;
+}
+function addCloseupRow(c = {}) {
+  const box = $("m-closeups");
+  const row = document.createElement("div");
+  row.className = "closeup-row";
+  row.innerHTML = `<label>${t("Lente addizionale")}<input type="text" class="cu-name" list="m-closeup-list" autocomplete="off" placeholder="${t("es. Raynox DCR-250")}"></label>`
+    + `<label>${t("Diottrie")}<input type="number" class="cu-d" step="0.1" min="0" placeholder="${t("es. 8")}"></label>`
+    + `<button class="btn ghost small cu-del" title="${t("Togli questa lente")}" aria-label="${t("Togli questa lente")}">✕</button>`;
+  row.querySelector(".cu-name").value = c.name || "";
+  row.querySelector(".cu-d").value = c.diopters ?? "";
+  row.querySelector(".cu-name").addEventListener("change", (e) => {
+    const d = CLOSEUP_PRESETS[e.target.value.trim()], dIn = row.querySelector(".cu-d");
+    if (d && !dIn.value) { dIn.value = d; updateOptics(); }
+  });
+  row.querySelector(".cu-del").onclick = () => { row.remove(); $("m-closeup-add").disabled = false; updateOptics(); };
+  box.append(row);
+  $("m-closeup-add").disabled = box.children.length >= MAX_CLOSEUP;
+  return row;
+}
 
 function setFilterMode(mode) {
   filterMode = mode;
@@ -654,8 +782,15 @@ function loadOptics(o) {
   set("d-px", o.sensor_pixel_um); set("o-pxcal", o.pixel_size_um); set("d-ov", o.dof_overlap ?? 30);
   set("o-fname", f.name); $("o-ftype").value = f.type || "bandpass";
   set("o-fcenter", f.center_nm); set("o-fwidth", f.bandwidth_nm); set("o-fedge", f.edge_nm);
-  set("o-illum", il.type); set("o-level", il.level_percent); set("o-notes", o.notes);
+  set("o-illum", il.type); set("o-level", il.level_percent); set("o-cct", il.color_temp_k); set("o-notes", o.notes);
   setFilterMode(o.filter_mode || "unknown");
+  const mc = o.macro || {}, lens = mc.lens || {};
+  set("m-maker", lens.maker); set("m-model", lens.model); set("m-focal", lens.focal_mm); set("m-fmax", lens.max_aperture);
+  lensSource = lens.source || "";
+  set("m-mag", mc.lens_magnification); set("m-fnum", mc.f_number); set("m-ext", mc.extension_mm);
+  $("m-search").value = "";
+  renderCloseups(mc.closeup || []);
+  setOpticsKind(o.kind);
 }
 
 // carica nell'editor un profilo ("" = nuovo profilo vuoto)
@@ -669,7 +804,16 @@ function editProfile(name) {
 }
 
 function opticsForm() {
+  const closeup = [...$$("#m-closeups .closeup-row")].map((r) => ({
+    name: r.querySelector(".cu-name").value.trim(),
+    diopters: r.querySelector(".cu-d").value.trim() === "" ? null : Number(r.querySelector(".cu-d").value) }));
   return {
+    kind: opticsKind,
+    macro: {
+      lens: { maker: $("m-maker").value.trim(), model: $("m-model").value.trim(), focal_mm: optNum("m-focal"),
+        max_aperture: optNum("m-fmax"), source: lensSource },
+      lens_magnification: optNum("m-mag"), f_number: optNum("m-fnum"), extension_mm: optNum("m-ext"), closeup,
+    },
     objective: $("o-objective").value.trim(), objective_magnification: optNum("d-mag"),
     intermediate: { name: $("o-inter-name").value.trim(), factor: optNum("o-inter") },
     relay: { name: $("o-relay-name").value.trim(), factor: optNum("o-relay") },
@@ -678,7 +822,7 @@ function opticsForm() {
     dof_overlap: optNum("d-ov") ?? 30, filter_mode: filterMode,
     filter: { name: $("o-fname").value.trim(), type: $("o-ftype").value, center_nm: optNum("o-fcenter"),
       bandwidth_nm: optNum("o-fwidth"), edge_nm: optNum("o-fedge") },
-    illumination: { type: $("o-illum").value.trim(), level_percent: optNum("o-level") },
+    illumination: { type: $("o-illum").value.trim(), level_percent: optNum("o-level"), color_temp_k: optNum("o-cct") },
     notes: $("o-notes").value.trim(),
   };
 }
@@ -686,8 +830,24 @@ function opticsForm() {
 // numero con i soli decimali che servono (40 · 1,6 · 0,63)
 const fmtMag = (x) => fmtNum(x, Math.abs(x - Math.round(x)) < 1e-9 ? 0 : Math.abs(x * 10 - Math.round(x * 10)) < 1e-9 ? 1 : 2);
 
+// Macro fotografica (lente sottile, stima; stessa formula di backend/optics.py):
+// m1 = m0 + tubi / f · m = m1 + ΣD/1000 · f · (1 + m1) · diaframma effettivo N (1 + m1) · NA = m / (2 N (1 + m1))
+function macroNumbers(o) {
+  const mc = o.macro || {}, f = (mc.lens || {}).focal_mm, m0 = mc.lens_magnification, ext = mc.extension_mm || 0;
+  const power = (mc.closeup || []).reduce((a, c) => a + (c.diopters > 0 ? c.diopters : 0), 0);
+  if (m0 == null && !(ext || power)) return {};
+  if ((ext || power) && !(f > 0)) return { needFocal: true };
+  const m1 = (m0 || 0) + (ext ? ext / f : 0);
+  const m = power ? m1 + (power / 1000) * f * (1 + m1) : m1;
+  if (!(m > 0)) return {};
+  const out = { magnification: m, lensSide: m1, power };
+  if (mc.f_number > 0) { out.nEff = mc.f_number * (1 + m1); out.na = m / (2 * mc.f_number * (1 + m1)); }
+  return out;
+}
+
 // ingrandimento sul sensore = obiettivo × cambio intermedio × adattatore (fattori vuoti = 1)
 function totalMag(o) {
+  if (o.kind === "macro") return macroNumbers(o).magnification || null;
   const obj = o.objective_magnification ?? o.magnification;
   if (!obj) return null;
   return obj * ((o.intermediate && o.intermediate.factor) || 1) * ((o.relay && o.relay.factor) || 1);
@@ -696,10 +856,18 @@ function totalMag(o) {
 // testo breve di un profilo: obiettivo · totale sul sensore · NA · filtro
 function opticsText(o) {
   const parts = [], total = totalMag(o), obj = o.objective_magnification ?? o.magnification;
-  if (o.objective) parts.push(o.objective);
-  else if (obj) parts.push(`${fmtNum(obj, 1)}×`);
-  if (total && total !== obj) parts.push(t("{m}× sul sensore", { m: fmtMag(total) }));
-  if (o.na) parts.push(`NA ${fmtNum(o.na, 2)}`);
+  if (o.kind === "macro") {
+    const lens = (o.macro || {}).lens || {}, mc = o.macro || {};
+    const name = lensName(lens);
+    parts.push(name || t("macro fotografica"));
+    if (total) parts.push(t("≈ {m}× sul sensore", { m: fmtNum(total, 2) }));
+    if (mc.f_number) parts.push(`f/${fmtNum(mc.f_number, 1)}`);
+  } else {
+    if (o.objective) parts.push(o.objective);
+    else if (obj) parts.push(`${fmtNum(obj, 1)}×`);
+    if (total && total !== obj) parts.push(t("{m}× sul sensore", { m: fmtMag(total) }));
+    if (o.na) parts.push(`NA ${fmtNum(o.na, 2)}`);
+  }
   const f = o.filter || {};
   if (o.filter_mode === "none") parts.push(t("nessun filtro"));
   else if (o.filter_mode === "filter") parts.push(t("filtro {name}", { name: f.name || FILTER_TYPE_LABELS()[f.type] || t("Altro") }));
@@ -718,7 +886,19 @@ const escapeHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "
 function updateOptics() {
   const o = opticsForm(), total = totalMag(o);
   let txt = "";
-  if (total) {
+  if (o.kind === "macro") {
+    const mn = macroNumbers(o), mc = o.macro;
+    if (mn.needFocal) txt = t("Indica la focale dell'obiettivo: tubi e lenti addizionali dipendono da quella") + "<br>";
+    else if (total) {
+      const steps = [];
+      if (mc.extension_mm) steps.push(t("con i tubi {m}×", { m: fmtNum(mn.lensSide, 2) }));
+      if (mn.power) steps.push(t("lenti +{d} D", { d: fmtNum(mn.power, 1) }));
+      txt = t("Ingrandimento sul sensore ≈ <b>{m}×</b>", { m: fmtNum(total, 2) })
+        + (steps.length ? ` (${t("obiettivo {m}×", { m: fmtNum(mc.lens_magnification || 0, 2) })} · ${steps.join(" · ")})` : "") + "<br>";
+      if (mn.nEff) txt += t("Diaframma effettivo ≈ <b>f/{n}</b> · NA equivalente <b>{na}</b>", { n: fmtNum(mn.nEff, 1), na: fmtNum(mn.na, 3) }) + "<br>";
+    }
+    if (!mn.needFocal && !total) txt += t("Indica il rapporto di riproduzione dell'obiettivo (o tubi e lenti con la focale)") + "<br>";
+  } else if (total) {
     const factors = [o.objective_magnification, o.intermediate.factor, o.relay.factor].filter((f) => f);
     txt = t("Ingrandimento sul sensore: <b>{m}×</b>", { m: fmtMag(total) })
       + (factors.length > 1 ? ` (${factors.map(fmtMag).join(" × ")})` : "") + "<br>";
@@ -726,13 +906,15 @@ function updateOptics() {
   if (o.pixel_size_um) txt += t("Sul campione: <b>{v} µm/pixel</b> (misurato)", { v: fmtNum(o.pixel_size_um, 4) });
   else if (o.sensor_pixel_um && total)
     txt += t("Sul campione: <b>{v} µm/pixel</b> (pixel del sensore ÷ ingrandimento)", { v: fmtNum(o.sensor_pixel_um / total, 4) });
-  else txt += t("Indica ingrandimento e pixel del sensore per avere la scala in µm");
+  else if (o.kind !== "macro" || total) txt += t("Indica ingrandimento e pixel del sensore per avere la scala in µm");
+  if (o.kind === "macro" && total && !o.pixel_size_um) txt += "<br>" + `<span class="hint">${t("Stima con lenti sottili: per misure esatte fotografa un righello o un micrometro e scrivi qui sotto i µm per pixel misurati.")}</span>`;
   $("o-pxresult").innerHTML = txt;
   dof();
   const dirty = JSON.stringify(o) !== opticsSaved;
   setChip("o-chip", editingProfile || t("Nuovo profilo"), editingProfile ? (dirty ? "busy" : "ok") : "");
   $("o-dirty").textContent = dirty ? t("Modifiche non salvate") : "";
   $("o-profile-del").disabled = !editingProfile;
+  renderLensButtons();
 }
 
 // riempie i due menu dei profili (editor e sequenza) solo quando l'elenco cambia
@@ -767,10 +949,18 @@ function bindOptics() {
   for (const v of ILLUMINATION_SUGGESTIONS()) list.append(new Option(v, v));
   $$("#o-filter-mode button").forEach((b) => (b.onclick = () => { setFilterMode(b.dataset.fmode); updateOptics(); }));
   $("o-ftype").addEventListener("change", () => setFilterMode(filterMode));
-  $$("#card-optics input, #card-optics select:not(#o-profile)").forEach((el) => {
-    el.addEventListener("input", updateOptics);
-    el.addEventListener("change", updateOptics);
-  });
+  // delega: vale anche per le righe delle lenti addizionali create dopo
+  for (const ev of ["input", "change"]) {
+    $("card-optics").addEventListener(ev, (e) => {
+      if (e.target.id === "o-profile" || e.target.id === "m-search") return;
+      if (["m-maker", "m-model", "m-focal", "m-fmax"].includes(e.target.id) && ev === "input") lensSource = "";
+      updateOptics();
+    });
+  }
+  $$("#o-kind button").forEach((b) => (b.onclick = () => { setOpticsKind(b.dataset.kind); updateOptics(); }));
+  for (const name of Object.keys(CLOSEUP_PRESETS)) $("m-closeup-list").append(new Option(`+${fmtNum(CLOSEUP_PRESETS[name], 1)} D`, name));
+  $("m-closeup-add").onclick = () => { addCloseupRow().querySelector(".cu-name").focus(); };
+  bindLensSearch();
   $("o-profile").onchange = (e) => {
     if ($("o-dirty").textContent && !window.confirm(t("Le modifiche non salvate andranno perse. Continuare?"))) {
       e.target.value = editingProfile;
@@ -802,6 +992,296 @@ function bindOptics() {
     switchTab("optics");
     if (!$("o-dirty").textContent) editProfile($("s-optics").value);
   };
+}
+
+// ---------------- obiettivi fotografici: database Lensfun + elenco personale ----------------
+// web/data/lenses-lensfun.json (CC BY-SA 3.0, generato da tools/lensfun_import.py) e
+// web/data/lenses-extra.json (ottiche macro dedicate che Lensfun non ha) si caricano alla prima ricerca.
+let lensSource = "", lensDb = null, lensDbLoading = null, lensHits = [], lensActive = -1;
+const customLenses = () => (S && S.settings.custom_lenses) || [];
+// marca + modello senza ripetere la marca («Nikon» + «Nikon AF-S …»), come lens_name in backend/optics.py
+const lensName = (l) => {
+  const maker = (l.maker || "").trim(), model = (l.model || "").trim();
+  return maker && model.toLowerCase().startsWith(maker.toLowerCase()) ? model : [maker, model].filter(Boolean).join(" ");
+};
+const lensKey = (l) => `${(l.maker || "").toLowerCase()}|${(l.model || "").toLowerCase()}`;
+
+function loadLensDb() {
+  if (lensDb) return Promise.resolve(lensDb);
+  lensDbLoading = lensDbLoading || Promise.all(["/data/lenses-lensfun.json", "/data/lenses-extra.json"].map((u) =>
+    fetch(u).then((r) => (r.ok ? r.json() : { lenses: [] })).catch(() => ({ lenses: [] }))))
+    .then(([lf, extra]) => {
+      const norm = (l, source) => ({ maker: l.maker, model: l.model, mounts: l.mounts || [], focal: l.focal,
+        f: l.f, mag: l.mag, macro: !!l.macro, source });
+      lensDb = [...(extra.lenses || []).map((l) => norm(l, "extra")), ...(lf.lenses || []).map((l) => norm(l, "lensfun"))];
+      $("m-db-hint").title = lf.count ? t("{n} obiettivi da Lensfun ({date})", { n: lf.count, date: lf.source_date || "" }) : "";
+      return lensDb;
+    });
+  return lensDbLoading;
+}
+
+function allLenses() {
+  const mine = customLenses().map((l) => ({ maker: l.maker, model: l.model, mounts: l.mounts || [],
+    focal: [l.focal_mm, l.focal_mm], f: l.max_aperture, mag: l.max_magnification, macro: true, source: "custom" }));
+  return [...mine, ...(lensDb || [])];
+}
+
+// tutte le parole devono comparire in marca, modello o attacco; prima i propri, poi i macro
+function searchLenses(q) {
+  const words = q.toLowerCase().replace(/[,]/g, ".").split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const hits = [];
+  for (const l of allLenses()) {
+    const hay = `${l.maker} ${l.model} ${l.mounts.join(" ")}`.toLowerCase();
+    if (words.every((w) => hay.includes(w))) hits.push(l);
+  }
+  const rank = (l) => (l.source === "custom" ? 0 : l.macro ? 1 : 2);
+  hits.sort((a, b) => rank(a) - rank(b) || a.maker.localeCompare(b.maker) || a.model.localeCompare(b.model));
+  return hits.slice(0, 40);
+}
+
+function lensLine(l) {
+  const [a, b] = l.focal || [];
+  const parts = [a ? (b && b !== a ? `${fmtNum(a)}–${fmtNum(b)} mm` : `${fmtNum(a)} mm`) : ""];
+  if (l.f) parts.push(`f/${fmtNum(l.f, 1)}`);
+  if (l.mag) parts.push(t("fino a {m}×", { m: fmtNum(l.mag, 2) }));
+  if (l.mounts.length) parts.push(l.mounts.slice(0, 3).join(", ") + (l.mounts.length > 3 ? "…" : ""));
+  return parts.filter(Boolean).join(" · ");
+}
+
+function renderLensResults() {
+  const ul = $("m-results"), q = $("m-search").value.trim();
+  ul.innerHTML = "";
+  if (!q) { ul.classList.add("hidden"); return; }
+  if (!lensHits.length) {
+    ul.innerHTML = `<li class="empty">${escapeHtml(t("Nessun obiettivo trovato: scrivilo nei campi qui sotto e aggiungilo al tuo elenco"))}</li>`;
+  }
+  lensHits.forEach((l, i) => {
+    const li = document.createElement("li");
+    li.setAttribute("role", "option");
+    li.setAttribute("aria-selected", String(i === lensActive));
+    const tags = (l.source === "custom" ? `<span class="tag">${escapeHtml(t("mio"))}</span>` : "")
+      + (l.macro && l.source !== "custom" ? `<span class="tag macro">macro</span>` : "");
+    li.innerHTML = `<b>${escapeHtml(lensName(l))}${tags}</b><span>${escapeHtml(lensLine(l))}</span>`;
+    li.onmousedown = (e) => { e.preventDefault(); pickLens(l); };
+    ul.append(li);
+  });
+  ul.classList.remove("hidden");
+}
+
+function pickLens(l) {
+  const [a, b] = l.focal || [];
+  $("m-maker").value = l.maker || "";
+  $("m-model").value = l.model || "";
+  $("m-focal").value = a ?? "";
+  $("m-fmax").value = l.f ?? "";
+  lensSource = l.source === "extra" ? "focus_stack" : l.source;
+  let note = "";
+  if (b && a && b !== a) note = t("Zoom {a}–{b} mm: correggi la focale con quella usata", { a: fmtNum(a), b: fmtNum(b) });
+  if (l.mag) {
+    if ($("m-mag").value === "") $("m-mag").value = l.mag;
+    note = (note ? note + " · " : "") + t("Rapporto massimo dell'obiettivo: {m}×", { m: fmtNum(l.mag, 2) });
+  } else if (!note) note = t("Indica sotto il rapporto di riproduzione usato (sulla scala dell'obiettivo)");
+  $("m-lens-note").textContent = note;
+  $("m-search").value = "";
+  lensHits = []; lensActive = -1;
+  renderLensResults();
+  updateOptics();
+}
+
+function renderLensButtons() {
+  const key = lensKey({ maker: $("m-maker").value.trim(), model: $("m-model").value.trim() });
+  const mine = customLenses().some((l) => lensKey(l) === key);
+  $("m-lens-del").classList.toggle("hidden", !mine);
+  // il testo si riscrive solo se cambia: Safari annulla il clic se il testo del pulsante viene sostituito
+  // fra pressione e rilascio (l'uscita dal campo Focale lancia "change" proprio in quel momento)
+  const label = mine ? t("Aggiorna nel mio elenco") : t("＋ Aggiungi al mio elenco");
+  if ($("m-lens-add").textContent !== label) $("m-lens-add").textContent = label;
+  $("m-lens-add").disabled = !$("m-model").value.trim() || !(optNum("m-focal") > 0);
+}
+
+function bindLensSearch() {
+  const input = $("m-search");
+  input.addEventListener("focus", () => loadLensDb());
+  input.addEventListener("input", async () => {
+    await loadLensDb();
+    lensHits = searchLenses(input.value); lensActive = lensHits.length ? 0 : -1;
+    renderLensResults();
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      if (!lensHits.length) return;
+      e.preventDefault();
+      lensActive = (lensActive + (e.key === "ArrowDown" ? 1 : -1) + lensHits.length) % lensHits.length;
+      renderLensResults();
+      $("m-results").children[lensActive]?.scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Enter" && lensActive >= 0) { e.preventDefault(); pickLens(lensHits[lensActive]); }
+    else if (e.key === "Escape") { input.value = ""; lensHits = []; renderLensResults(); }
+  });
+  input.addEventListener("blur", () => setTimeout(() => $("m-results").classList.add("hidden"), 150));
+  for (const id of ["m-maker", "m-model", "m-focal"]) $(id).addEventListener("input", () => { $("m-lens-note").textContent = ""; renderLensButtons(); });
+  $("m-lens-add").onclick = (e) => act(e.target, async () => {
+    const lens = { maker: $("m-maker").value.trim(), model: $("m-model").value.trim(), focal_mm: optNum("m-focal"),
+      max_aperture: optNum("m-fmax"), max_magnification: optNum("m-mag") };
+    S.settings.custom_lenses = await api("/api/lenses/save", lens);
+    lensSource = "custom";
+    renderLensButtons(); updateOptics();
+  }, t("Obiettivo salvato nel tuo elenco"));
+  $("m-lens-del").onclick = (e) => {
+    const name = lensName({ maker: $("m-maker").value, model: $("m-model").value });
+    if (!window.confirm(t("Togliere «{name}» dal tuo elenco? I profili che lo usano restano invariati.", { name }))) return;
+    act(e.target, async () => {
+      S.settings.custom_lenses = await api("/api/lenses/delete", { maker: $("m-maker").value.trim(), model: $("m-model").value.trim() });
+      if (lensSource === "custom") lensSource = "";
+      renderLensButtons(); updateOptics();
+    }, t("Obiettivo tolto dal tuo elenco"));
+  };
+}
+
+// ---------------- calibrazione (dark, flat, dark dei flat) ed esposizione automatica ----------------
+// La libreria sta in <cartella delle pile>/_calibrazione; il server sceglie i set adatti all'avvio di ogni pila.
+let calibKind = "dark", calibView = null, calibSig = "", calibLoading = false, calibRunKey = null;
+const CALIB_LABELS = () => ({ dark: t("Dark"), flat: t("Flat"), flat_dark: t("Dark dei flat") });
+const CALIB_HINTS = () => ({
+  dark: t("Tappo sull'obiettivo e oculare del mirino coperto. Stessi ISO, tempo di posa (o posa B) dei light, e possibilmente la stessa temperatura: imposta la fotocamera come per la pila."),
+  flat: t("Campo illuminato in modo uniforme (diffusore, vetrino o cartoncino bianco fuori fuoco), con la stessa ottica, lo stesso diaframma e lo stesso profilo ottico dei light. Il tempo di posa si trova da solo."),
+  flat_dark: t("Tappo sull'obiettivo. ISO e tempo di posa vengono presi dall'ultimo set di flat di questa fotocamera."),
+});
+
+function setCalibKind(kind) {
+  calibKind = kind;
+  $$("#k-kind button").forEach((b) => b.setAttribute("aria-checked", b.dataset.kind === kind));
+  $("k-hint").textContent = CALIB_HINTS()[kind];
+  $$("#card-calib .k-flat").forEach((el) => el.classList.toggle("hidden", kind !== "flat"));
+  if (S) renderCalibration(S.camera, running());
+}
+
+// la libreria si rilegge quando cambiano fotocamera, ISO, tempo, profilo o lo stato della calibrazione
+async function refreshCalibration(force = false) {
+  if (!S || calibLoading) return;
+  const c = S.camera, cur = (k) => (c.settings && c.settings[k] && c.settings[k].current) || "";
+  const sig = [c.connected, c.model, cur("iso"), cur("shutterspeed"), cur("aperture"), S.settings.output_root,
+    S.settings.sequence.optics_profile, $("s-optics").value, S.calibration && S.calibration.state, S.sequence.state].join("|");
+  if (!force && sig === calibSig) return;
+  calibSig = sig;
+  calibLoading = true;
+  try { calibView = await api("/api/calibration", undefined, "GET"); } catch { /* server non raggiungibile */ }
+  calibLoading = false;
+  renderLibrary();
+  updateSummary();
+}
+
+const shortDate = (iso) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleString(LOCALE, { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+};
+
+function matchText(m) {
+  if (!m) return t("Connetti la fotocamera per sapere quali set userebbe la prossima pila");
+  const part = (key, label) => {
+    const e = m[key];
+    return e ? `${label} ✓ <span class="muted">(${escapeHtml(t("{n} fotogrammi", { n: e.frames }))} · ${escapeHtml(shortDate(e.created))})</span>`
+      : `${label} —`;
+  };
+  return `${part("darks", t("Dark"))} · ${part("flats", t("Flat"))} · ${part("flat_darks", t("Dark dei flat"))}`;
+}
+
+// riga nel riepilogo della sequenza
+function calibrationSummary() {
+  if (!calibView || !calibView.match) return "";
+  const m = calibView.match, n = ["darks", "flats", "flat_darks"].filter((k) => m[k]).length;
+  return t("Calibrazione per questa pila: {txt}", { txt: matchText(m) }) + (n ? "" : " · " + t("nessun set adatto nella libreria"));
+}
+
+function renderLibrary() {
+  if (!calibView) return;
+  $("k-root").textContent = t("Cartella: {path}", { path: calibView.root });
+  $("k-match").innerHTML = t("Per la prossima pila, con le impostazioni attuali: {txt}", { txt: matchText(calibView.match) });
+  const tbody = $("k-table").querySelector("tbody");
+  const rows = calibView.sets.map((s) => {
+    const lv = s.mean_level_pct ? Math.max(...Object.values(s.mean_level_pct)) : null;
+    const temp = s.temperature_c ? `${fmtNum(s.temperature_c.mean, 1)} °C` : "—";
+    const state = s.state === "completed" ? "" : ` (${s.state === "interrupted" ? t("interrotto") : s.state === "running" ? t("in corso") : t("errore")})`;
+    const cells = [CALIB_LABELS()[s.type] + state, shortDate(s.created), s.camera.model || "—", s.camera.iso || "—",
+      s.bulb_s ? t("posa B {s} s", { s: fmtNum(s.bulb_s, 1) }) : s.camera.shutterspeed || "—",
+      s.type === "flat" ? (s.optics_profile || t("nessuno")) : "—", s.frames, lv == null ? "—" : `${fmtNum(lv, 1)} %`, temp];
+    const del = `<td><button class="btn ghost small" data-del="${escapeHtml(s.name)}" data-frames="${s.frames}" title="${escapeHtml(t("Sposta nel Cestino la cartella di questo set"))}">${escapeHtml(t("Elimina"))}</button></td>`;
+    return `<tr title="${escapeHtml(s.path)}">${cells.map((v) => `<td>${escapeHtml(String(v))}</td>`).join("")}${del}</tr>`;
+  });
+  tbody.innerHTML = rows.length ? rows.join("")
+    : `<tr class="empty"><td colspan="10">${escapeHtml(t("Nessun set di calibrazione: scatta dark e flat con la card qui sopra"))}</td></tr>`;
+}
+
+function renderCalibration(c, run) {
+  const k = S.calibration || {}, busy = !!k.busy, cur = (key) => (c.settings && c.settings[key] && c.settings[key].current) || "—";
+  refreshCalibration();
+  const labels = { idle: t("Pronta"), exposing: t("Esposizione…"), running: t("In corso"), stopping: t("Arresto…"), done: t("Completata"), error: t("Errore") };
+  const isExpo = k.state === "exposing" && !k.kind;
+  // card esposizione dei light
+  setChip("x-chip", isExpo ? labels.exposing : k.exposure && !k.kind ? (k.exposure.within_tolerance ? t("Fatto") : t("Approssimata")) : "—",
+    isExpo ? "busy" : k.exposure && !k.kind ? (k.exposure.within_tolerance ? "ok" : "busy") : "");
+  $("x-start").disabled = busy || run || !c.connected || !k.tool;
+  $("x-stop").classList.toggle("hidden", !isExpo);
+  if (!k.tool) $("x-result").textContent = t("Strumento di misura fs-rawstat mancante: python3 tools/rawstat/build.py");
+  else if (!k.kind && (isExpo || k.exposure || k.state === "error")) {
+    const hist = (k.history || []).map((h) => `${escapeHtml(h.shutter)} → ${fmtNum(h.level_pct, 1)} %`).join(" · ");
+    $("x-result").innerHTML = `${escapeHtml(k.message || "")}${hist ? `<br><span class="muted">${hist}</span>` : ""}`
+      + (k.exposure && k.exposure.linear === false ? `<br><span class="warn-text">${escapeHtml(t("Misura su JPEG: valori stimati. Con il RAW la misura è esatta."))}</span>` : "");
+  }
+  // card frame di calibrazione
+  const mine = !!k.kind;
+  // il tipo selezionato segue la calibrazione avviata (anche da un'altra finestra): mai «Dark» acceso mentre scatta flat
+  const runKey = mine ? `${k.kind}|${k.folder || ""}|${k.total}` : "";
+  if (runKey && runKey !== calibRunKey && k.kind !== calibKind) setCalibKind(k.kind);
+  calibRunKey = runKey;
+  setChip("k-chip", mine ? labels[k.state] || k.state : t("Pronta"),
+    mine ? { exposing: "busy", running: "busy", stopping: "busy", done: "ok", error: "bad" }[k.state] || "" : "");
+  const flat = calibView && calibView.flat;
+  let info = t("Fotocamera: {model} · ISO {iso} · {sh} · {ap}", { model: c.connected ? c.model : t("non connessa"), iso: cur("iso"), sh: cur("shutterspeed"), ap: cur("aperture") });
+  if (calibKind === "dark" && S.settings.sequence.bulb_s) info += " · " + t("posa B {s} s (come i light)", { s: fmtNum(S.settings.sequence.bulb_s, 1) });
+  if (calibKind === "flat") {
+    const prof = $("s-optics").value;
+    info += "<br>" + (prof ? t("Profilo ottico: «{name}» (quello scelto nella card Sequenza)", { name: escapeHtml(prof) })
+      : t("Nessun profilo ottico scelto nella card Sequenza: i flat varranno per le pile senza profilo"));
+  }
+  if (calibKind === "flat_dark") info += "<br>" + (flat
+    ? t("Flat di riferimento: {date} · ISO {iso} · {sh}", { date: escapeHtml(shortDate(flat.created)), iso: escapeHtml(flat.camera.iso || "—"), sh: escapeHtml(flat.camera.shutterspeed || "—") })
+    : `<span class="warn-text">${escapeHtml(t("Nessun set di flat per questa fotocamera: scatta prima i flat"))}</span>`);
+  if (calibKind !== "flat" && !(S.settings.sequence.capture_mode === "download")) info += `<br><span class="warn-text">${escapeHtml(t("I frame vengono sempre scaricati sul Mac, nella libreria."))}</span>`;
+  $("k-info").innerHTML = info;
+  $("k-start").disabled = busy || run || !c.connected || !k.tool || (calibKind === "flat_dark" && !flat);
+  $("k-stop").disabled = !busy || !mine;
+  $$("#k-kind button, #k-count, #k-target, #k-table button[data-del]").forEach((el) => (el.disabled = busy || run));
+  const total = mine ? k.total : num("k-count") || 0;
+  $("k-count-label").textContent = `${mine ? k.index : 0} / ${total}`;
+  $("k-bar").style.width = `${mine && k.total ? (k.index / k.total) * 100 : 0}%`;
+  $("k-level").textContent = mine && k.level_pct != null ? t("livello {v} %", { v: fmtNum(k.level_pct, 1) }) : "";
+  $("k-progress").textContent = mine ? [CALIB_LABELS()[k.kind], k.message, k.state !== "running" && k.folder ? k.folder : ""].filter(Boolean).join(" · ") : "";
+}
+
+function bindCalibration() {
+  $$("#k-kind button").forEach((b) => (b.onclick = () => setCalibKind(b.dataset.kind)));
+  setCalibKind("dark");
+  $("k-start").onclick = (e) => {
+    const capped = calibKind !== "flat";
+    if (capped && !window.confirm(t("Metti il tappo sull'obiettivo e copri l'oculare del mirino, poi premi OK."))) return;
+    if (!capped && !window.confirm(t("Illumina il campo in modo uniforme con la stessa ottica e lo stesso diaframma dei light, poi premi OK."))) return;
+    act(e.target, () => api("/api/calibration/start", { kind: calibKind, count: Math.round(num("k-count") || 16), target_pct: num("k-target") || 50 }));
+  };
+  $("k-stop").onclick = (e) => act(e.target, () => api("/api/calibration/stop"));
+  $("x-stop").onclick = (e) => act(e.target, () => api("/api/calibration/stop"));
+  $("x-start").onclick = (e) => act(e.target, () => api("/api/exposure/auto", { target_pct: num("x-target") || 85, stat: $("x-stat").value }));
+  $("k-open").onclick = (e) => act(e.target, () => api("/api/calibration/open"));
+  // Elimina (delega: le righe della tabella si ricreano a ogni aggiornamento della libreria)
+  $("k-table").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-del]");
+    if (!b) return;
+    const name = b.dataset.del;
+    if (!window.confirm(t("Spostare nel Cestino il set «{name}» ({n} fotogrammi)? Le pile che lo indicano nel loro sequence.json non lo troveranno più.", { name, n: b.dataset.frames }))) return;
+    act(b, async () => { calibView = await api("/api/calibration/delete", { name }); renderLibrary(); updateSummary(); }, t("Set spostato nel Cestino"));
+  });
+  $("k-count").addEventListener("input", () => S && renderCalibration(S.camera, running()));
 }
 
 // ---------------- visualizzatore ----------------
@@ -934,6 +1414,7 @@ function switchTab(name) {
   $$(".tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === name));
   $$(".view").forEach((v) => v.classList.toggle("hidden", v.id !== `view-${name}`));
   if (name === "log" && S) { renderLog(); $("log").scrollTop = $("log").scrollHeight; }
+  if (name === "calib" || name === "session") refreshCalibration(true);
   try { localStorage.setItem("fs-tab", name); } catch { /* opzionale */ }
 }
 
@@ -1018,6 +1499,14 @@ function bind() {
     if (r && r.path) { S.settings.output_root = r.path; toast(t("Cartella di salvataggio aggiornata")); }
   });
   $("s-finder").onclick = (e) => act(e.target, () => api("/api/open-stack-folder"));
+  $("s-new").onclick = (e) => act(e.target, async () => {
+    await api("/api/sequence/reset");
+    const name = $("s-name");
+    name.focus();
+    name.select();
+  }, t("Pronta per una nuova pila: cambia il nome se serve"));
+  $("s-name").addEventListener("input", () => S && renderSequence(S.focuser, S.camera, S.sequence, running()));
+  $("s-name").addEventListener("keydown", (e) => { if (e.key === "Enter") e.target.blur(); });
 
   // preset
   $("s-preset").onchange = () => {
@@ -1110,9 +1599,11 @@ function bind() {
   // profondità di campo
   ["d-na", "d-mag", "d-px", "d-ov"].forEach((id) => $(id).addEventListener("input", dof));
   bindOptics();
+  bindCalibration();
+  bindRemote();
   $("d-apply").onclick = () => {
     if (!umPerStep()) return toast(t("Configura prima la meccanica (µm per passo)"), true);
-    $("s-step").value = Math.max(1, Math.round(dof() / umPerStep()));
+    $("s-step").value = stepsFor(dof(), umPerStep());
     syncCount(); updateSummary();
     switchTab("session");
     toast(t("Passo della sequenza aggiornato"));
@@ -1150,7 +1641,7 @@ bind();
 try {
   setJogSize(Number(localStorage.getItem("fs-jog")) || 100);
   const hashTab = location.hash.slice(1);
-  switchTab(["session", "optics", "config", "log"].includes(hashTab) ? hashTab : localStorage.getItem("fs-tab") || "session");
+  switchTab(["session", "optics", "calib", "config", "log"].includes(hashTab) ? hashTab : localStorage.getItem("fs-tab") || "session");
 } catch { setJogSize(100); }
 refreshPorts();
 connectWS();

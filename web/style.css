@@ -59,7 +59,7 @@ code, kbd { font: 13px ui-monospace, "SF Mono", Menlo, monospace; background: va
 .tabs button { font: inherit; font-size: 14px; font-weight: 550; color: var(--text-2); background: none; border: 0;
   padding: 7px 16px; border-radius: 9px; cursor: pointer; }
 @media (max-width: 520px) {
-  .tabs { width: 100%; }
+  .tabs { width: 100%; flex-wrap: wrap; }
   .tabs button { flex: 1 1 auto; padding: 7px 8px; font-size: 13.5px; }
 }
 .tabs button[aria-selected="true"] { background: var(--card-2); color: var(--text); box-shadow: 0 0 0 1px var(--line); }
@@ -91,6 +91,7 @@ code, kbd { font: 13px ui-monospace, "SF Mono", Menlo, monospace; background: va
   display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .update-bar .grow { flex: 1; }
 .up-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.up-links { display: flex; gap: 6px 18px; flex-wrap: wrap; margin: -6px 0 14px; font-size: 14px; }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0 0 14px; font-size: 15px; }
 .kv dt { color: var(--text-2); }
 .kv dd { margin: 0; font-weight: 600; }
@@ -112,6 +113,31 @@ code, kbd { font: 13px ui-monospace, "SF Mono", Menlo, monospace; background: va
 .subsection { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
 .optics-line { display: block; margin-top: 4px; color: var(--muted); }
 @media (max-width: 860px) { .optics-grid { grid-template-columns: 1fr; } }
+/* tipo di ottica: le sezioni dell'altro tipo spariscono */
+#card-optics[data-kind="macro"] .only-micro, #card-optics:not([data-kind="macro"]) .only-macro { display: none; }
+/* ricerca obiettivi (Lensfun + elenco personale) */
+.lens-search { position: relative; margin: 6px 0 0; }
+.lens-results { position: absolute; z-index: 15; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px;
+  list-style: none; max-height: 320px; overflow-y: auto; background: var(--card); border: 1px solid var(--line);
+  border-radius: 10px; box-shadow: var(--shadow); }
+.lens-results li { padding: 7px 10px; border-radius: 7px; cursor: pointer; display: flex; flex-direction: column; gap: 1px; }
+.lens-results li[aria-selected="true"], .lens-results li:hover { background: var(--accent-soft); }
+.lens-results li b { font-weight: 600; font-size: 14.5px; }
+.lens-results li span { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.lens-results li.empty { cursor: default; color: var(--muted); font-size: 14px; }
+.lens-results .tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 6px; margin-left: 6px;
+  border: 1px solid var(--line); color: var(--text-2); vertical-align: 1px; }
+.lens-results .tag.macro { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
+.lens-actions { margin-top: 0; }
+.closeup-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; gap: 8px 10px; align-items: end; margin: 0 0 10px; }
+.closeup-row .btn { min-height: 40px; }
+@media (max-width: 480px) { .closeup-row { grid-template-columns: minmax(0, 1fr) 90px auto; } }
+/* nome della pila in testa alla card Sequenza: si cambia spesso */
+.stack-name { margin: 0 0 14px; padding: 12px 14px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; }
+.stack-name > label { font-size: 13.5px; color: var(--text-2); font-weight: 600; margin-bottom: 6px; }
+.stack-name input { font-size: 17px; font-weight: 600; height: 44px; }
+.stack-name .btn { min-height: 44px; }
+.stack-name .hint { margin: 6px 0 0; font-size: 13px; overflow-wrap: anywhere; }
 @media (max-width: 1240px) {
   .grid-session { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid-session > .col { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -260,6 +286,19 @@ details.more summary { cursor: pointer; padding: 12px 0; font-weight: 600; color
 .progress div { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 60%, var(--ok))); transition: width .3s; border-radius: 999px; }
 .progress-text { font-size: 13.5px; color: var(--text-2); margin-top: 8px; min-height: 20px; word-break: break-all; }
 .seq-actions { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 10px; margin-top: 14px; }
+.seq-actions.two-actions { grid-template-columns: 1.4fr 1fr; }
+/* libreria di calibrazione */
+#card-library { min-width: 0; }
+#k-root, #k-match, #k-progress, #x-result { overflow-wrap: anywhere; }   /* percorsi lunghi senza spazi */   /* la tabella scorre nella sua cornice invece di allargare la pagina */
+.table-wrap { max-width: 100%; overflow-x: auto; margin: 10px 0; border: 1px solid var(--line); border-radius: 10px; }
+.lib-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.lib-table th { text-align: left; font-weight: 600; color: var(--text-2); font-size: 12.5px; padding: 8px 10px; background: var(--bg-2); white-space: nowrap; }
+.lib-table td { padding: 7px 10px; border-top: 1px solid var(--line); white-space: nowrap; }
+.lib-table td.muted { color: var(--muted); }
+.lib-table .empty td { color: var(--muted); text-align: center; padding: 14px; white-space: normal; }
+.result .muted, .summary .muted { color: var(--muted); }
+.result .warn-text { color: var(--warn); display: block; margin-top: 8px; }
+.result .warn-text + .muted { display: block; margin-top: 4px; }
 @media (max-width: 480px) { .seq-actions { grid-template-columns: 1fr; } }
 
 /* ---------------- ultimo scatto ---------------- */
@@ -308,3 +347,11 @@ details.more summary { cursor: pointer; padding: 12px 0; font-weight: 600; color
   font-size: 14.5px; transition: all .2s; pointer-events: none; max-width: calc(100% - 32px); box-shadow: 0 10px 30px rgba(0,0,0,.35); }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 #toast.err { border-color: var(--bad); color: var(--bad); }
+
+/* avanzamento da smartphone */
+.remote-link { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin: 4px 0 8px; }
+.remote-link p { margin: 0 0 6px; font-size: 14px; }
+.remote-link a { display: block; font-family: ui-monospace, Menlo, monospace; font-size: 13px; overflow-wrap: anywhere; margin-bottom: 10px; color: var(--accent); }
+#r-qr { image-rendering: pixelated; background: #fff; padding: 8px; border-radius: 8px; flex: none; }
+#r-error:empty { display: none; }
+#r-error { color: var(--warn); }

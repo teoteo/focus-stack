@@ -71,6 +71,10 @@ RES="$APP/Contents/Resources"
 mkdir -p "$RES/app/firmware"
 cp -R "$ROOT/backend" "$ROOT/web" "$ROOT/run.py" "$ROOT/VERSION" "$RES/app/"
 cp -R "$FWOUT" "$RES/app/firmware/build"
+# misura dei RAW per calibrazione ed esposizione automatica: LibRaw 0.22.3 (sottomodulo third_party/LibRaw)
+[ -f "$ROOT/third_party/LibRaw/Makefile.dist" ] || git -C "$ROOT" submodule update --init third_party/LibRaw
+echo "== fs-rawstat (LibRaw)"
+python3 "$ROOT/tools/rawstat/build.py" --out "$RES/app/bin" | tail -1
 find "$RES/app" -name __pycache__ -type d -prune -exec rm -rf {} +
 
 # ---------- Python per Apple Silicon e Intel ----------
