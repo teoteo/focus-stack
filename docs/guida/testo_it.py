@@ -55,12 +55,13 @@ add("""
 <div class="toc"><ol>
 <li><span>1</span>Che cos'è Focus Stack<em>come funziona, che cosa serve</em></li>
 <li><span>2</span>Installazione, avvio e aggiornamenti</li>
-<li><span>3</span>L'interfaccia in breve<em>le quattro schede e la barra superiore</em></li>
+<li><span>3</span>L'interfaccia in breve<em>le cinque schede, la barra superiore e la guida</em></li>
 <li><span>4</span>Collegare il focheggiatore e la fotocamera<em>impostazioni della Nikon D5600 e delle altre fotocamere</em></li>
-<li><span>5</span>Il focheggiatore: posizione, movimenti, STOP</li>
+<li><span>5</span>Il focheggiatore: posizione, movimenti, STOP<em>movimento continuo a tratti, la slitta che non avanza</em></li>
 <li><span>6</span>Fotocamera, scatto di prova e live view</li>
-<li><span>7</span>La sequenza di stacking<em>profili di ottica e filtro, più scatti per posizione, i file della pila</em></li>
-<li><span>8</span>Il visualizzatore</li>
+<li><span>7</span>La sequenza di stacking<em>profili ottici, macro fotografica, più scatti per posizione, i file della pila,
+calibrazione (dark, flat, esposizione), avanzamento da smartphone</em></li>
+<li><span>8</span>Il visualizzatore<em>zoom, live view, Ispettore</em></li>
 <li><span>9</span>Fine corsa di sicurezza</li>
 <li><span>10</span>Configurazione meccanica: i calcoli<em>risoluzione in µm per passo, misura di verifica, corsa, velocità, gioco</em></li>
 <li><span>11</span>Scegliere il passo della sequenza<em>profondità di campo, numero di scatti, durata</em></li>
@@ -74,8 +75,8 @@ add("""
 # 1
 add("""
 <h1><span class="n">1</span>Che cos'è Focus Stack</h1>
-<p class="lead">Focus Stack comanda dal Mac un focheggiatore motorizzato montato sulla vite micrometrica del
-microscopio e una fotocamera collegata via USB. Esegue in automatico sequenze <b>sposta → attendi →
+<p class="lead">Focus Stack comanda dal Mac un focheggiatore motorizzato, montato sulla vite micrometrica del
+microscopio o su una slitta macro, e una fotocamera collegata via USB. Esegue in automatico sequenze <b>sposta → attendi →
 scatta</b>: decine di foto a fuochi diversi, pronte da fondere in un'unica immagine tutta a fuoco con
 <b>Helicon Focus</b> (o un programma simile).</p>
 <h2>Come funziona</h2>
@@ -96,7 +97,9 @@ scatta</b>: decine di foto a fuochi diversi, pronte da fondere in un'unica immag
 <li>Un focheggiatore <b>myFocuserPro2</b> (versione con driver DRV8825) oppure <b>Ardufocus</b> (circuito rev1 con
   DRV8825), collegato con il suo cavo USB e alimentato (12 V).</li>
 <li>Una fotocamera Nikon, Canon o Sony con il cavo USB. In questa guida l'esempio è una <b>Nikon D5600</b>.</li>
-<li>Un adattatore che proietti l'immagine del microscopio sul sensore (fototubo, raccordo T2 o simile).</li>
+<li>Al microscopio, un adattatore che proietti l'immagine sul sensore (fototubo, raccordo T2 o simile). In
+  <b>macro fotografica</b>, un obiettivo macro (con eventuali tubi o lenti addizionali) e una slitta mossa dal
+  focheggiatore.</li>
 </ul>
 <div class="box warn"><span class="t">Focheggiatori supportati</span>Focus Stack funziona con le schede
 <b>myFocuserPro2</b> e <b>Ardufocus</b>, con il firmware incluso nell'app. Un myFocuserPro2 con il firmware originale si
@@ -135,7 +138,8 @@ add("""
 barra con <span class="ui">Aggiorna e riavvia</span>: l'app scarica la nuova versione, si chiude e si riapre da
 sola. Lo stesso controllo si fa a mano in <span class="ui">Configurazione › Aggiornamenti › Controlla ora</span>.</p>
 <p>Anche il <b>firmware del focheggiatore</b> si aggiorna dall'app (capitolo 12): quando quello sulla
-scheda è più vecchio di quello incluso nell'app, la stessa barra lo segnala.</p>
+scheda è più vecchio di quello incluso nell'app, la stessa barra lo segnala. Conviene installarlo: la build 5,
+per esempio, rende il movimento continuo senza soste e ferma da sola il motore se il Mac smette di comunicare (capitolo 12).</p>
 <h2>Lingua</h2>
 <p>L'app parla italiano, inglese, francese, tedesco e spagnolo. Con <span class="ui">Automatica (lingua del sistema)</span> segue la lingua di macOS,
 e per le altre lingue usa l'inglese; in <span class="ui">Configurazione › Lingua</span> si può scegliere una lingua
@@ -145,26 +149,32 @@ fissa. La scelta vale per l'interfaccia, i messaggi e il registro, e questa guid
 # 3
 add(f"""
 <h1><span class="n">3</span>L'interfaccia in breve</h1>
-<p>La pagina ha quattro schede, che si scelgono in alto:</p>
+<p>La pagina ha cinque schede, che si scelgono in alto:</p>
 <ul>
 <li><b>Sessione</b>: il lavoro al microscopio. Focheggiatore, sequenza, fotocamera e ultimo scatto.</li>
-<li><b>Ottica</b>: i <b>profili</b> di obiettivo, filtro e illuminazione, che finiscono nei dati di ogni pila,
-  e il calcolo della profondità di campo (capitoli 7.2 e 11).</li>
-<li><b>Configurazione</b>: fine corsa, meccanica, comandi manuali, motore, aggiornamenti e temperatura.
-  Si regola una volta e poi si tocca di rado.</li>
+<li><b>Ottica</b>: i <b>profili</b> di obiettivo, filtro e illuminazione, per il microscopio o per la macro
+  fotografica, che finiscono nei dati di ogni pila, e il calcolo della profondità di campo (capitoli 7.2, 7.3 e 11).</li>
+<li><b>Calibrazione</b>: l'esposizione dei light e i frame di calibrazione (dark, flat, dark dei flat) per il
+  software di fusione (capitolo 7.6).</li>
+<li><b>Configurazione</b>: fine corsa, meccanica, comandi manuali, motore, avanzamento da smartphone, lingua,
+  aggiornamenti e temperatura. Si regola una volta e poi si tocca di rado.</li>
 <li><b>Registro</b>: l'elenco di tutto quello che è successo nella sessione, con l'ora. È il primo posto
   dove guardare se qualcosa non va.</li>
 </ul>
 {fig("sessione", layout="full", caption="La scheda Sessione: a sinistra il focheggiatore, al centro la sequenza, a destra fotocamera e ultimo scatto.")}
 <h2>Barra superiore</h2>
 {fig("barra-superiore", [
-    "<b>Schede</b> Sessione, Ottica, Configurazione e Registro.",
+    "<b>Schede</b> Sessione, Ottica, Calibrazione, Configurazione e Registro.",
     "<b>Stato dei collegamenti</b>: Server, Focheggiatore e Fotocamera. Verde = collegato, grigio = scollegato, rosso = errore.",
     "<b>Temperatura</b> letta dalla sonda del focheggiatore.",
+    "<b>?</b> apre questa <b>guida</b> sul capitolo della scheda aperta.",
     "<b>Tema</b> scuro o chiaro. Il tema scuro stanca meno durante le sessioni lunghe al microscopio.",
-], layout="full below-marks", anchors={1: "b", 2: "b", 3: "b", 4: "b"})}
+], layout="full below-marks", anchors={1: "b", 2: "b", 3: "b", 4: "b", 5: "b"})}
 <p>Sotto la barra possono comparire due fasce: quella blu degli <b>aggiornamenti</b> e quella rossa di
 <b>allarme</b>, per esempio quando i pulsanti fisici portano il focheggiatore oltre un fine corsa.</p>
+<div class="box tip"><span class="t">La guida dentro l'app</span>Oltre al <b>?</b> in alto, quasi ogni card ha un piccolo
+<b>?</b> accanto al titolo: apre questa guida direttamente sulla parte che spiega quella card. La guida ha un indice
+e una ricerca (tasto <kbd>/</kbd>) e si apre sempre nella stessa finestra.</div>
 """)
 
 # 4
@@ -188,7 +198,7 @@ add(f"""
 {table(["Fotocamera", "Cosa impostare"], [
     ["<b>Nikon D5600</b> e altre Nikon", "Ghiera dei modi su <b>M</b> (manuale). Nel menu di riproduzione disattiva la <b>revisione immagine</b>. Spegni SnapBridge/Wi-Fi e Bluetooth, che possono occupare il collegamento. Tieni una scheda di memoria inserita e la batteria carica (o l'alimentatore EH-5/EP-5A)."],
     ["Canon", "Modo <b>M</b>. Lo scatto va nella memoria della fotocamera o sulla scheda secondo <i>Destinazione</i>. Per il ritardo dello specchio attiva il <b>blocco dello specchio</b> nel menu."],
-    ["Sony", "Menu USB › <b>PC Remote</b>; modo <b>M</b>. Per il live view la fotocamera deve permetterlo in PC Remote."],
+    ["Sony", "Menu USB › <b>PC Remote</b>; modo <b>M</b>. Per scaricare le foto sul Mac imposta la destinazione su <b>Solo PC</b> (MENU › Impostazione › Impostazioni Remote PC › Destinazione salvataggio foto). Per il live view la fotocamera deve permetterlo in PC Remote."],
 ])}
 <div class="box warn"><span class="t">Se la fotocamera non si collega</span>macOS prova a impossessarsi della
 fotocamera appena la colleghi. L'app chiude quel servizio da sola; se non basta, chiudi <b>Foto</b>,
@@ -207,9 +217,9 @@ add(f"""
     "<b>Barra della corsa</b>: vedi la figura qui sotto.",
     "<b>Ampiezza del passo</b> dei pulsanti Allontana/Avvicina: 1, 10, 100… passi. Le ampiezze disponibili si scelgono in Configurazione › Comandi manuali.",
     "Lo stesso spostamento <b>in micrometri</b>.",
-    "<b>Allontana / Avvicina</b>: un clic sposta dell'ampiezza scelta. Tenendo premuto il motore si muove senza fermarsi e rallenta fino a fermarsi al rilascio.",
+    "<b>Allontana / Avvicina</b>: un clic sposta dell'ampiezza scelta. Tenendo premuto il motore continua ad avanzare, a tratti (capitolo 12), e al rilascio rallenta fino a fermarsi.",
     "<b>Vai alla posizione</b>: scrivi un numero di passi e premi Vai.",
-    "<b>STOP</b>: ferma subito il motore e l'eventuale sequenza. Da tastiera: <kbd>Esc</kbd>.",
+    "<b>STOP</b>: ferma subito il motore e l'eventuale sequenza. Da tastiera: <kbd>Esc</kbd>. Dopo lo STOP il motore resta fermo finché non premi di nuovo un pulsante.",
 ])}
 <h2>La barra della corsa</h2>
 {fig("binario", [
@@ -220,14 +230,20 @@ add(f"""
 <p>Sotto la barra: il fine corsa inferiore, la freccia che indica <b>da che parte sta il campione</b> e il
 fine corsa superiore. “Avvicina” muove sempre verso il campione, qualunque sia il verso dei numeri: lo
 si imposta in Configurazione › Fine corsa (capitolo 9).</p>
-<div class="box tip"><span class="t">Tastiera</span><kbd>↑</kbd> allontana, <kbd>↓</kbd> avvicina,
-<kbd>⇧</kbd> insieme alla freccia moltiplica il passo per 10, i tasti numerici <kbd>1</kbd> <kbd>2</kbd>
+<div class="box tip"><span class="t">Tastiera</span><kbd>↑</kbd> allontana, <kbd>↓</kbd> avvicina: un tocco fa un
+passo, il tasto tenuto premuto muove di continuo fino al rilascio (come i pulsanti). <kbd>⇧</kbd> insieme alla freccia moltiplica il passo per 10, i tasti numerici <kbd>1</kbd> <kbd>2</kbd>
 <kbd>3</kbd>… scelgono l'ampiezza, <kbd>Esc</kbd> è lo STOP. Funzionano nella scheda Sessione anche
 mentre guardi il live view.</div>
 <div class="box warn"><span class="t">Pulsanti fisici</span>I pulsanti sul focheggiatore muovono il motore senza
 passare dall'app. L'app li sorveglia e, se la posizione esce dai fine corsa, invia STOP e mostra un
 allarme; per una protezione completa leggi il capitolo 9. Se li premi durante una sequenza, la sequenza va
 in pausa.</div>
+<div class="box warn"><span class="t">Se la slitta non avanza con i passi piccoli</span>Con <span class="ui">Bobine
+alimentate a motore fermo</span> spento (Configurazione › Motore) il motore, a ogni fermata, perde la forza che lo tiene in
+posizione: il carico (peso della fotocamera, una molla, la cinghia) può riportarlo indietro. Il contatore dei passi avanza,
+ma la slitta resta dov'è e una pila viene tutta sullo stesso piano. Durante la sequenza l'app alimenta le bobine da sola
+(capitolo 12); per i movimenti a mano di pochi passi accendile, oppure controlla nel live view che l'immagine si sposti
+davvero.</div>
 """)
 
 # 6
@@ -254,14 +270,16 @@ add(f"""
 ], layout="stack")}
 {fig("live", [
     "<b>■ Ferma live</b> spegne il live view.",
-    "Stato: <b>LIVE</b>, <b>SCATTO…</b> durante uno scatto di prova, <b>IN PAUSA</b> durante la sequenza.",
+    "Stato: <b>LIVE</b>, oppure <b>SCATTO…</b> durante uno scatto di prova.",
     "Modello della fotocamera. Doppio clic sull'immagine: schermo intero.",
 ], layout="stack")}
 </div>
 <p>Il live view arriva fino a 15 immagini al secondo ed è il modo più comodo per trovare il punto di
-partenza e di arrivo della sequenza mentre muovi il focheggiatore con la tastiera. Durante la sequenza
-viene spento (lo specchio deve scendere e la fotocamera deve scattare come al solito) e riparte da solo
-alla fine. Sulle reflex lo specchio resta sollevato finché il live è acceso.</p>
+partenza e di arrivo della sequenza mentre muovi il focheggiatore con la tastiera. Quando parte la sequenza il
+live si chiude (lo specchio deve scendere e la fotocamera deve scattare come al solito) e il riquadro torna a
+mostrare l'ultimo scatto, anche nel visualizzatore; finita la pila lo riaccendi con <span class="ui">● Live</span>.
+Sulle reflex lo specchio resta sollevato finché il live è acceso. Il live acceso dalla finestra principale parte
+anche nel visualizzatore, se è aperto.</p>
 <div class="box tip"><span class="t">Per mettere a fuoco con precisione</span>Apri il live nel
 <b>visualizzatore</b>: puoi ingrandire al 100% e oltre e spostarti sul dettaglio che ti interessa
 (capitolo 8).</div>
@@ -273,25 +291,29 @@ add(f"""
 <h2 style="margin-top:0">7.1 Impostare la sequenza</h2>
 {fig("sequenza", [
     "<b>Stato</b>: Pronta, In corso, In pausa, Completata, Errore.",
+    "<b>Nome della pila</b>: le foto vanno in una sottocartella <code>nome_data-ora</code>, con nomi <code>nome_0001</code>, <code>nome_0002</code>…",
+    "<b>＋ Nuova pila</b>: finita una pila, prepara la successiva (lo stato torna Pronta). Anche con lo stesso nome, ogni pila va in una cartella nuova.",
     "<b>Inizio</b> e <b>Fine</b> in passi. <span class='ui'>⌖ qui</span> copia la posizione attuale.",
     "<b>Passo</b> fra uno scatto e il successivo, in passi del motore (capitolo 11).",
-    "<b>Numero di scatti</b>. È collegato al passo: se cambi uno dei due, l'altro si ricalcola.",
+    "<b>Numero di scatti</b>. Se cambi Inizio, Fine o Passo si ricalcola il numero di scatti; se cambi il numero di scatti si ricalcola il passo. Il campo ricalcolato diventa arancione e mostra <span class='ui'>↺ era …</span>: un clic annulla la modifica.",
+    "<b>Attesa dopo il movimento</b>: tempo per far smorzare le vibrazioni prima dello scatto (1–3 s al microscopio).",
     "<b>Ottica e filtro (profilo)</b>: il profilo di obiettivo, filtro e illuminazione da scrivere nei dati della pila (7.2). <span class='ui'>Modifica</span> lo apre nella scheda Ottica. Senza profilo la pila risulta «nessun filtro».",
     "<b>Riepilogo</b>: scatti, escursione in passi e in µm, passo in µm, durata stimata e profilo ottico usato. Se la sequenza esce dai fine corsa compare un avviso rosso e la sequenza non parte.",
     "<b>Salva in</b>: la cartella delle foto. <span class='ui'>Scegli…</span> apre il pannello del Finder, <span class='ui'>Apri</span> la mostra nel Finder.",
-    "<b>Scatti per posizione</b>: quante foto fare a ogni posizione (predefinito 1). Con più scatti il software di fusione può farne la media e ridurre il rumore (7.3).",
-    "<b>Attesa dopo il movimento</b>: tempo per far smorzare le vibrazioni prima dello scatto (1–3 s al microscopio). <b>Pausa dopo lo scatto</b>: tempo per scrivere sulla scheda e ricaricare il flash.",
+    "<b>Scatti per posizione</b>: quante foto fare a ogni posizione (predefinito 1). Con più scatti il software di fusione può farne la media e ridurre il rumore (7.4).",
+    "<b>Pausa dopo lo scatto</b>: tempo per scrivere sulla scheda e ricaricare il flash.",
     "<b>Compensazione gioco</b>: prima del primo scatto il motore arretra di questi passi e poi avanza, così ogni scatto viene raggiunto dalla stessa direzione.",
     "<b>Modalità di scatto</b>: <i>Scarica sul Mac</i> (consigliata), <i>Solo sulla scheda</i>, <i>Solo trigger</i> (più veloce: imposta la destinazione su scheda).",
-    "<b>Nome della sessione</b>: le foto vanno in una sottocartella <code>nome_data-ora</code>, con nomi <code>nome_0001</code>, <code>nome_0002</code>…",
     "<b>Torna all'inizio</b> a fine sequenza.",
+    "<b>Suono sul Mac a fine sequenza</b>: un suono chiaro se la pila è completata, uno grave se si è fermata per un errore o è andata in pausa da sola.",
     "<b>Preset</b>: salva e richiama le impostazioni della sequenza, per esempio uno per obiettivo.",
     "<b>Avanzamento</b>: scatti fatti, tempo che resta, posizione.",
     "<b>Avvia</b>, <b>Pausa</b>/<b>Riprendi</b> e <b>Interrompi</b>.",
-    "<b>Apri nel Finder</b>: a fine sequenza apre la cartella della pila, con le foto, <code>sequence.json</code> e <code>sequence.txt</code> (7.4).",
+    "<b>Apri nel Finder</b>: a fine sequenza apre la cartella della pila, con le foto, <code>sequence.json</code> e <code>sequence.txt</code> (7.5).",
 ])}
-<p>Scatti per posizione, tempi e gioco sono nel riquadro richiudibile <span class="ui">Tempi, gioco, scatti per
-posizione e nome della sessione</span>.</p>
+<p>Scatti per posizione, pausa dopo lo scatto, gioco, modalità, ritorno all'inizio e suono sono nel riquadro
+richiudibile <span class="ui">Tempi, gioco e scatti per posizione</span>. Se le bobine del motore sono spente e
+l'app non le alimenta durante la sequenza, sotto compare un avviso arancione (capitolo 12).</p>
 <h2>Durante la sequenza</h2>
 {fig("sequenza-in-corso", [
     "Lo stato diventa <b>In corso</b> (ambra).",
@@ -301,21 +323,32 @@ posizione e nome della sessione</span>.</p>
 <ul>
 <li>Se premi i <b>pulsanti fisici</b> del focheggiatore, la sequenza va in pausa; alla ripresa torna alla
   posizione giusta e ripete lo scatto.</li>
+<li><b>Se uno scatto non riesce</b> l'app riprova dopo 3 s; al secondo errore ricollega da sola la fotocamera e
+  riprova ancora. Se non basta, la sequenza <b>va in pausa</b> (non si ferma) e il messaggio dice cosa controllare:
+  sistema la fotocamera (batteria, cavo, scheda) e premi <span class="ui">Riprendi</span>. L'app ricollega la fotocamera,
+  torna alla stessa posizione e ripete lo scatto; le foto continuano nella stessa cartella.</li>
+<li><b>Il Mac non va in stop</b> finché la sequenza è in corso: lo stop sospenderebbe l'USB e la fotocamera
+  sparirebbe a metà pila. Lo schermo può spegnersi lo stesso. Attenzione: chiudendo il coperchio di un portatile
+  senza monitor esterno il Mac va comunque in stop.</li>
+<li>Se le bobine del motore sono spente a motore fermo, l'app le alimenta per tutta la pila e le rispegne dopo il
+  ritorno all'inizio (capitolo 12).</li>
 <li>I campi della sequenza sono bloccati finché la sequenza è in corso.</li>
-<li>Ogni nuova foto arriva in Ultimo scatto e nel visualizzatore.</li>
+<li>Ogni nuova foto arriva in Ultimo scatto e nel visualizzatore. Per seguire la pila lontano dal Mac c'è
+  l'avanzamento da smartphone (7.7).</li>
 </ul>
 
 <h2>7.2 Ottica e filtro: i profili</h2>
 <p>Il software di fusione lavora meglio se sa con che cosa sono state fatte le foto: con l'ingrandimento e il pixel
 del sensore può dare la mappa di profondità e la vista 3D in micrometri veri. Questi dati si salvano nella scheda
 <b>Ottica</b> come <b>profili</b> con un nome, uno per ogni combinazione di obiettivo, filtro e illuminazione
-(per esempio «10× GFP», «4× campo chiaro»), e si scelgono nella sequenza (numero 5 della figura sopra). Nella
-figura, lo stesso obiettivo con il cambio d'ingrandimento Optovar 1,6× e la fotocamera su un raccordo T2 senza
-lenti.</p>
+(per esempio «10× GFP», «4× campo chiaro»), e si scelgono nella sequenza (numero 8 della figura sopra). Ogni profilo
+è di tipo <b>Microscopio</b> oppure <b>Macro fotografica</b> (7.3). Nella figura, un profilo per microscopio: un
+obiettivo 10× con il cambio d'ingrandimento Optovar 1,6× e la fotocamera su un raccordo T2 senza lenti.</p>
 {fig("ottica", [
     "<b>Profilo da modificare</b>: sceglilo per caricarne i valori; <i>— nuovo profilo —</i> parte da un modulo vuoto.",
     "<b>Salva come nuovo profilo…</b>: chiede un nome e salva una copia, lasciando com'è il profilo di partenza.",
     "<b>Elimina profilo</b>, dopo una conferma.",
+    "<b>Tipo di ottica</b>: <i>Microscopio</i> (obiettivo con ingrandimento e NA incisi) oppure <i>Macro fotografica</i> (obiettivo fotografico, tubi e lenti addizionali, 7.3).",
     "<b>Pixel del sensore</b> (pixel pitch) in µm. Nikon D5600: <b>3,9 µm</b> (23,5 mm ÷ 6000 pixel). Si trova nella scheda tecnica della fotocamera, su <b>digicamdb.com</b> (fotocamere fotografiche) o nel database dei sensori di <b>AstroBin</b> (camere dedicate, cercando per esempio IMX571).",
     "<b>Adattatore / oculare di proiezione</b> fra il microscopio e la fotocamera: nome e fattore, per esempio un adattatore C-mount 0,5× o 0,63×, un fotoculare 2,5×, un raccordo T2 senza lenti 1×. Vuoto = 1×.",
     "<b>Cambio d'ingrandimento intermedio</b>, se lo stativo ce l'ha: nome e fattore, per esempio <i>Optovar</i> 1,25×, 1,6× o 2×. Vuoto = 1×.",
@@ -328,7 +361,7 @@ lenti.</p>
     "<b>Filtro</b>: <i>Non indicato</i> (non si sa), <i>Nessun filtro</i> oppure <i>Filtro montato</i>.",
     "<b>Nome</b> e <b>tipo</b> del filtro: passa banda, long pass, short pass, neutro, polarizzatore, altro.",
     "<b>Centro</b> e <b>larghezza di banda</b> in nm per un passa banda; per long pass e short pass la lunghezza d'onda di taglio.",
-    "<b>Illuminazione</b> (testo libero, con suggerimenti) e <b>intensità</b> in %.",
+    "<b>Illuminazione</b> (testo libero, con suggerimenti), <b>intensità</b> in % e <b>temperatura di colore</b> in K (per esempio 4000 K per una luce neutra).",
     "<b>Note</b> libere, che finiscono nei dati della pila.",
     "<b>Salva profilo</b>: sovrascrive il profilo scelto; se è nuovo chiede il nome.",
     "Il <b>profilo</b> aperto; in ambra se ci sono modifiche non salvate.",
@@ -338,23 +371,112 @@ risulta fatta <b>senza filtro</b> e senza dati ottici. Gli stessi valori di NA, 
 calcolo della profondità di campo (capitolo 11). Ricorda di cambiare profilo quando cambi obiettivo o filtro: il
 riepilogo della sequenza mostra sempre quello che verrà scritto.</p>
 
-<h2>7.3 Più scatti per posizione</h2>
+<h2>7.3 Macro fotografica</h2>
+<p>Con il tipo <span class="ui">Macro fotografica</span> il profilo descrive un obiettivo fotografico invece di un
+obiettivo da microscopio. L'app ne ricava l'ingrandimento sul sensore, il diaframma effettivo e una NA equivalente,
+che servono alla scala in µm e alla profondità di campo esattamente come al microscopio.</p>
+{fig("ottica-macro", [
+    "<b>Macro fotografica</b>: mostra i campi dell'obiettivo fotografico al posto di quelli del microscopio.",
+    "<b>Cerca nel database</b>: scrivi parte del nome (per esempio «90 macro») e scegli l'obiettivo. Il database è quello di <b>Lensfun</b> (1162 obiettivi), più alcune macro dedicate che Lensfun non ha (Canon MP-E 65, Laowa 25/90/100, OM 90) e il tuo elenco personale.",
+    "<b>Marca</b> e <b>modello</b>: compilati dalla ricerca, oppure scritti a mano.",
+    "<b>Focale</b> e <b>diaframma più aperto</b>. Con uno zoom indica la focale usata.",
+    "<b>＋ Aggiungi al mio elenco</b>: salva un obiettivo che il database non ha, per ritrovarlo nella ricerca.",
+    "<b>Rapporto di riproduzione dell'obiettivo</b>, letto sulla sua scala alla distanza di messa a fuoco usata: 1 = 1:1, 0,5 = 1:2, 0 = a fuoco all'infinito.",
+    "<b>Diaframma impostato</b> sull'obiettivo.",
+    "<b>Tubi di prolunga / soffietto</b>: la lunghezza totale aggiunta fra obiettivo e fotocamera, in mm.",
+    "<b>Lenti addizionali</b> davanti all'obiettivo (Raynox e simili), fino a 3, con la loro potenza in diottrie.",
+    "<b>Risultato</b>: ingrandimento sul sensore, diaframma effettivo, NA equivalente e scala sul campione in µm per pixel.",
+], layout="full")}
+<p>I conti sono quelli delle ottiche fotografiche ravvicinate, con <i>f</i> = focale, <i>m₀</i> = rapporto
+dell'obiettivo, <i>e</i> = tubi in mm, <i>D</i> = diottrie delle lenti addizionali e <i>N</i> = diaframma impostato:</p>
+<div class="formula">m₁ = m₀ + {frac("e", "f")} &nbsp;&nbsp;&nbsp; ingrandimento m = m₁ + {frac("ΣD", "1000")} · f · (1 + m₁)
+<span class="lbl">diaframma effettivo = N · (1 + m₁) &nbsp;·&nbsp; NA equivalente = {frac("m", "2 · N · (1 + m₁)")}</span></div>
+<div class="calc">Esempio: obiettivo 90 mm macro a 1:2 (m₀ = 0,5), f/8, nessun tubo, lente addizionale da +8 diottrie
+m₁ = 0,5 + 0 = 0,5
+m  = 0,5 + 8 ÷ 1000 × 90 × (1 + 0,5) = 0,5 + 1,08 = <b>1,58×</b>
+diaframma effettivo = 8 × 1,5 = <b>f/12</b>      NA equivalente = 1,58 ÷ (2 × 8 × 1,5) = <b>0,066</b>
+con un sensore da 3,9 µm: 3,9 ÷ 1,58 = <b>2,47 µm per pixel</b> sul campione</div>
+<p>Come al microscopio, un valore misurato con un righello millimetrato (campo <span class="ui">µm per pixel sul campione,
+misurati</span>) ha la precedenza sul calcolo, che con le lenti addizionali è solo una stima. In macro la profondità di
+campo è spesso di decine o centinaia di µm: se un passo della slitta risulta più lungo del passo consigliato, la scheda
+Ottica lo segnala e suggerisce il microstep adatto (capitolo 10.2).</p>
+
+<h2>7.4 Più scatti per posizione</h2>
 <p>Con <span class="ui">Scatti per posizione</span> maggiore di 1 la fotocamera scatta più volte a ogni posizione,
 senza muovere il motore fra uno scatto e l'altro: l'attesa contro le vibrazioni si fa solo dopo il movimento, fra
 gli scatti c'è solo la pausa dopo lo scatto. Il software di fusione ne fa la media: con 4 scatti il rumore si
 dimezza. I file si chiamano <code>stack_0001_1</code>, <code>stack_0001_2</code>…; con un solo scatto restano
 <code>stack_0001</code>, <code>stack_0002</code>… Il riepilogo mostra posizioni × scatti e la durata giusta.</p>
 
-<h2>7.4 I file della pila</h2>
+<h2>7.5 I file della pila</h2>
 <p>Nella cartella della pila, accanto alle foto, l'app scrive due file. Li riscrive dopo ogni scatto, quindi sono
 validi anche se la sequenza viene interrotta. Le foto non vengono mai modificate.</p>
 <ul>
 <li><code>sequence.json</code>: tutti i dati per il <b>software di fusione</b>: posizione di ogni scatto in passi
-  e in µm, ora, temperatura, guida, fotocamera, profilo ottico, filtro e illuminazione. Il formato è descritto in
-  <code>docs/sequence-json.md</code> su GitHub.</li>
+  e in µm, ora, temperatura, guida, fotocamera, profilo ottico (microscopio o macro), filtro, illuminazione e i set di
+  calibrazione adatti (7.6). Il formato è descritto in <code>docs/sequence-json.md</code> su GitHub.</li>
 <li><code>sequence.txt</code>: un <b>riepilogo da leggere</b>, nella lingua dell'app. Per esempio:</li>
 </ul>
 <div class="calc long">{SEQ_TXT}</div>
+
+<h2>7.6 Calibrazione: esposizione, dark e flat</h2>
+<p>La scheda <b>Calibrazione</b> prepara quello che serve al software di fusione per correggere le foto: un tempo di
+posa giusto per la pila e i <b>frame di calibrazione</b>. I livelli si misurano sui <b>RAW veri</b>, senza conversione
+del colore, con <i>fs-rawstat</i>, un piccolo programma incluso nell'app e basato su LibRaw; i pixel bruciati si
+riconoscono canale per canale. Con il simulatore i livelli sono solo una stima.</p>
+<h3>Esposizione dei light</h3>
+{fig("calibrazione-esposizione", [
+    "<b>Misura su</b>: <i>Luci</i> (il 99,5° percentile, cioè le parti più chiare) oppure <i>Media</i>.",
+    "<b>Livello obiettivo</b> in % della saturazione del sensore, per esempio 85% sulle luci.",
+    "<b>Calcola e imposta il tempo</b>: l'app fa qualche foto di prova, misura i RAW e imposta il tempo di posa, preferendo i tempi senza pixel bruciati. ISO e diaframma restano quelli impostati.",
+    "<b>Risultato</b>: tempo scelto, livello misurato e pixel bruciati.",
+], layout="side")}
+<p>Porta il focheggiatore a metà della pila e accendi l'illuminazione come per la sequenza. L'esposizione si
+calcola <b>una volta, prima della pila</b>: cambiarla fra un piano e l'altro renderebbe diversa la luminosità dei
+fotogrammi.</p>
+<h3>Frame di calibrazione</h3>
+{fig("calibrazione-frame", [
+    "<b>Tipo</b>: <i>Dark</i> (tappo sull'obiettivo, stessi ISO e tempo dei light: rumore termico e pixel caldi), <i>Flat</i> (campo illuminato in modo uniforme, stessa ottica e diaframma: vignettatura e polvere) o <i>Dark dei flat</i> (tappo, stessi ISO e tempo dei flat).",
+    "<b>Fotogrammi</b> da scattare, per esempio 16.",
+    "<b>Livello dei flat</b> in % della saturazione, per esempio 50%: il tempo di posa lo trova l'app.",
+    "<b>Avanzamento</b>: fotogrammi fatti e livello misurato.",
+    "<b>Scatta i frame</b> e <b>Interrompi</b>.",
+], layout="side")}
+<ul>
+<li><b>Dark</b>: tappo sull'obiettivo e oculare del mirino coperto, stessi ISO e tempo di posa (o posa B) dei light,
+  possibilmente alla stessa temperatura.</li>
+<li><b>Flat</b>: campo illuminato in modo uniforme (un vetrino vuoto, un diffusore), con lo stesso profilo ottico e lo
+  stesso diaframma della pila: correggono vignettatura e polvere solo se l'ottica è la stessa.</li>
+<li><b>Dark dei flat</b>: subito dopo i flat, con il tappo: l'app usa da sola ISO e tempo dei flat più recenti.</li>
+</ul>
+<h3>La libreria di calibrazione</h3>
+{fig("calibrazione-libreria", [
+    "<b>Cartella</b> della libreria: <code>_calibrazione</code> dentro la cartella delle pile. <span class='ui'>Apri nel Finder</span> la mostra.",
+    "<b>Set adatti</b> a una pila avviata adesso, con la fotocamera e le impostazioni attuali.",
+    "<b>Tabella dei set</b>: tipo, data, fotocamera, ISO, tempo, profilo ottico, fotogrammi, livello medio e temperatura. <span class='ui'>Elimina</span> sposta il set nel Cestino del Mac (recuperabile dal Finder).",
+], layout="full")}
+<p>Ogni set ha la sua cartella con i fotogrammi e un <code>calibration.json</code> (formato in
+<code>docs/calibration-json.md</code>). All'avvio di una pila, <code>sequence.json</code> indica i set più recenti
+adatti: per i dark stessa fotocamera, ISO e tempo; per i flat anche lo stesso profilo ottico. I fotogrammi non vengono
+copiati. È la stessa libreria che usa <b>Focus Fusion</b>, che ci salva accanto i suoi «master».</p>
+
+<h2>7.7 Avanzamento da smartphone</h2>
+<p>Per seguire una pila lunga lontano dal Mac, in <span class="ui">Configurazione › Avanzamento da smartphone</span> si
+attiva una pagina <b>di sola lettura</b> sulla rete locale.</p>
+{fig("smartphone", [
+    "<b>Mostra l'avanzamento sulla rete locale</b>: accende la pagina (spenta finché non la attivi).",
+    "<b>Codice QR</b>: inquadralo con la fotocamera dello smartphone, che deve essere sulla stessa rete Wi-Fi del Mac.",
+    "<b>Nuovo link</b>: cambia il codice del link; quello vecchio smette di funzionare.",
+], layout="side")}
+{fig("smartphone-pagina", [
+    "Nome della pila, stato, scatti fatti, tempo che resta e ora di fine prevista.",
+    "<b>Avvisami con un suono a fine sequenza</b>: lo smartphone suona (e su Android vibra) quando la pila finisce, si ferma per un errore o va in pausa da sola; finché il suono è attivo lo schermo resta acceso.",
+    "<b>Mostra / Aggiorna l'ultimo scatto</b>: l'ultima foto, a tutta larghezza.",
+    "L'ultimo scatto: allarga con due dita, trascina o tocca due volte per ingrandire. Ingrandendo si carica un dettaglio ad alta risoluzione; lo zoom resta passando allo scatto successivo, per confrontare la stessa zona. <span class='ui'>Adatta</span> torna all'immagine intera.",
+], layout="side narrow", width="70%")}
+<p>Dalla pagina <b>non si comanda nulla</b> e senza il codice del link non si vede niente. La prima volta macOS chiede se
+consentire le connessioni in entrata: rispondi <b>Consenti</b>. Per il suono, tieni la pagina aperta in primo piano: un
+telefono bloccato sospende le pagine web.</p>
 """)
 
 # 8
@@ -372,9 +494,12 @@ al volo) con zoom e spostamento, e il live view della fotocamera.</p>
     "<b>Segui ultimo</b> (<kbd>U</kbd>): mostra da solo ogni nuovo scatto.",
     "<b>Blocca vista</b> (<kbd>K</kbd>): cambiando scatto mantiene zoom e posizione, per confrontare la messa a fuoco nello stesso punto.",
     "<b>Finder</b>: mostra il file nel Finder.",
+    "<b>Svuota</b>: ricomincia da capo. Gli scatti escono dal visualizzatore e la sequenza torna Pronta; i file restano nella cartella.",
+    "<b>Ispettore</b> (<kbd>I</kbd>): istogrammi, pixel bruciati e neri, valori sotto il puntatore (vedi sotto).",
     "<b>Schermo intero</b> (<kbd>F</kbd>).",
-    "<b>Miniature</b>: un clic apre lo scatto. <i>P</i> = scatto di prova, i numeri sono gli scatti della sequenza.",
-], layout="full", anchors={n: "b" for n in range(1, 10)})}
+    "<b>?</b>: questa guida, al capitolo del visualizzatore.",
+    "<b>Miniature</b>: un clic apre lo scatto. <i>P</i> = scatto di prova, <i>C</i> = frame di calibrazione, <i>E</i> = foto per l'esposizione, i numeri sono gli scatti della sequenza.",
+], layout="full", anchors={n: "b" for n in range(1, 12)})}
 <p>Con il mouse: trascina per spostare l'immagine, rotella (o pizzico sul trackpad) per lo zoom centrato
 sul cursore, doppio clic per passare da “adatta” al 100% e viceversa. Oltre il 150% i pixel restano netti,
 senza sfocatura.</p>
@@ -382,6 +507,17 @@ senza sfocatura.</p>
     "<b>■ Ferma live</b> torna alle foto; anche ◀ ▶ o un clic su una miniatura escono dal live.",
     "Stato del live: LIVE, SCATTO…, IN PAUSA durante la sequenza.",
 ], layout="full", anchors={1: "b"}, caption="Il live view nel visualizzatore, qui con il simulatore a fuoco (la scacchiera è nitida). Al 100% il live view ha la risoluzione dell'anteprima della fotocamera, più bassa di quella delle foto.")}
+<h2>Ispettore</h2>
+<p>Il pannello <span class="ui">Ispettore</span> (tasto <kbd>I</kbd>) controlla l'esposizione di una foto con le stesse
+regole di Focus Fusion. È di sola lettura: non modifica le foto. Funziona anche sul live view, aggiornato ogni mezzo
+secondo.</p>
+{fig("ispettore", [
+    "<b>Pixel bruciati e neri</b>: percentuale e regole usate. <span class='ui'>Evidenzia sull'immagine</span> segna in rosso i bruciati e in blu i neri; i due pulsanti li mostrano o nascondono separatamente.",
+    "<b>Istogrammi</b> di rosso, verde, blu e luminanza. Con il puntatore su un livello si legge quanti pixel ci sono.",
+    "<b>Sotto il puntatore</b>: i valori R, G, B e la luminanza del pixel su cui si trova il mouse.",
+], layout="full")}
+<p>Con le foto RAW l'Ispettore lavora sull'anteprima convertita; per il livello esatto del sensore usa
+<span class="ui">Esposizione dei light</span> (7.6), che misura i RAW veri.</p>
 """)
 
 # 9
@@ -642,25 +778,41 @@ add(f"""
     "<b>Microstep</b>: passo intero, 1/2 … 1/32 (vedi 10.2). Cambiarlo cambia la scala delle posizioni: dopo, ricontrolla i fine corsa.",
     "<b>Velocità</b> del firmware: lenta, media, veloce.",
     "<b>Bobine alimentate a motore fermo</b>: il motore tiene la posizione, ma scalda.",
+    "<b>Alimentale comunque durante la sequenza</b> (compare con le bobine spente; attiva in partenza): le bobine si accendono all'avvio della pila e si rispengono dopo il ritorno all'inizio.",
     "<b>Inverti verso di rotazione</b>.",
     "<b>Compensa il gioco IN / OUT</b>: a ogni inversione verso posizioni più basse (IN) o più alte (OUT) il firmware fa dei passi in più senza contarli, anche con i pulsanti fisici.",
     "<b>Gioco IN / OUT</b> in passi, da 0 a 255 (vedi 10.5).",
     "<b>Rileggi</b> i valori dal firmware.",
 ])}
+<div class="box warn"><span class="t">Bobine spente: la slitta può non avanzare</span>Senza corrente a motore fermo, a ogni
+fermata il carico può riportare indietro la slitta, e con il microstep il motore torna anche sul passo intero più vicino:
+il contatore avanza ma la slitta no. Per questo, con le bobine spente, l'app le accende durante la sequenza (numero 4) e un
+avviso arancione lo ricorda se togli l'opzione. Se il motore scalda troppo, abbassa la corrente sul driver invece di
+spegnere le bobine.</div>
 <h2>Comandi manuali</h2>
 {fig("comandi-manuali", [
     "<b>Ampiezze</b> dei pulsanti Allontana/Avvicina: per decine fino a 1000, 10 000 o 100 000 passi. Con un riduttore servono ampiezze grandi.",
     "<b>Tieni premuto per muovere senza fermarti</b>: al rilascio il motore rallenta e si ferma; si ferma comunque al fine corsa e, se la pagina smette di rispondere, dopo circa un secondo.",
+    "<b>Tratto massimo per comando</b>: tenendo premuto, il motore non va mai più di un tratto (500 passi in partenza) oltre l'ultima conferma della pagina che il pulsante è ancora premuto.",
 ], layout="side")}
+<p>Il movimento continuo è fatto così per sicurezza: se la comunicazione si interrompe (rete, app bloccata, cavo) il motore
+percorre al massimo un tratto. Con il <b>firmware build 5</b> a ogni conferma la meta si sposta un tratto più avanti e il
+motore non si ferma mai; con firmware più vecchi avanza un tratto alla volta, con una breve sosta fra un tratto e l'altro
+(tratti corti sono più sicuri ma più a scatti). Dalla <b>build 4</b> c'è una protezione in più: durante il movimento
+continuo il focheggiatore si ferma da solo se per 1,5 s non riceve più comandi dal Mac. <span class="ui">Vai</span>, i pulsanti con un singolo clic e la sequenza
+invece arrivano sempre a destinazione, anche se il movimento dura molti secondi.</p>
 <h2>Aggiornamenti</h2>
 {fig("aggiornamenti", [
     "Versione dell'<b>app</b> e stato dell'ultimo controllo.",
     "Versione del <b>firmware</b> sul focheggiatore.",
-    "<b>Aggiorna firmware</b>: circa 20 secondi, le impostazioni del focheggiatore restano. Non scollegare il cavo; se qualcosa va storto, basta ripetere.",
+    "<b>Aggiorna firmware</b>: circa 20 secondi, le impostazioni del focheggiatore restano. Non scollegare il cavo; se qualcosa va storto, basta ripetere. La build 5 rende continuo il movimento con il pulsante tenuto premuto; dalla build 4 c'è l'arresto automatico se il Mac smette di comunicare.",
     "<b>Controlla ora</b> se ci sono aggiornamenti dell'app.",
 ], layout="side")}
 <p>L'app sceglie da sola il firmware adatto alla scheda (myFocuserPro2 o Ardufocus). L'<b>Ardufocus</b> non si
 riavvia dal cavo USB: durante l'aggiornamento l'app chiede di premere il <b>tasto reset</b> della scheda.</p>
+<p>La scheda salva posizione e impostazioni nella sua memoria permanente solo una decina di secondi dopo l'ultimo
+movimento. Per non perdere la posizione, l'app la fa salvare subito ogni volta che chiude la connessione (Disconnetti,
+uscita dall'app, aggiornamento).</p>
 <h2>Temperatura</h2>
 {fig("temperatura", [
     "Temperatura attuale della sonda.",
@@ -676,8 +828,9 @@ add("""
 <li><b>Meccanica</b>: inserisci i dati e controlla la risoluzione con una misura (capitolo 10).</li>
 <li><b>Verso del campione</b> e <b>fine corsa</b>, con i limiti scritti nel firmware (capitolo 9).</li>
 <li><b>Gioco</b>: misuralo col live view e scegli dove compensarlo (sequenza oppure firmware).</li>
+<li><b>Motore</b>: controlla le bobine (capitolo 12) e, se l'app lo propone, aggiorna il firmware.</li>
 <li><b>Profili ottici</b>: nella scheda Ottica salva un profilo per ogni combinazione di obiettivo, filtro e
-  illuminazione (capitolo 7.2).</li>
+  illuminazione, al microscopio o in macro (capitoli 7.2 e 7.3).</li>
 <li><b>Preset</b>: per ogni obiettivo calcola il passo dalla profondità di campo e salva un preset; il preset
   ricorda anche il profilo ottico.</li>
 </ol>
@@ -688,8 +841,10 @@ add("""
 <li>Imposta tempo di posa, ISO e formato; fai uno <b>scatto di prova</b> e controllalo nel visualizzatore al 100%.</li>
 <li>Scegli il <b>preset</b> dell'obiettivo (oppure il passo) e controlla il <b>profilo ottico</b> nella sequenza.</li>
 <li>Con il <b>live</b> e la tastiera trova la <b>fine</b> e l'<b>inizio</b> della sequenza e premi ⌖ qui.</li>
+<li>Se servono, prepara i <b>dark</b> e i <b>flat</b> e calcola l'esposizione dei light (capitolo 7.6).</li>
 <li>Controlla il riepilogo: numero di scatti, escursione, durata, nessun avviso rosso.</li>
-<li><b>Avvia sequenza</b>. Non toccare il microscopio: le vibrazioni rovinano gli scatti.</li>
+<li><b>Avvia sequenza</b>. Non toccare il microscopio: le vibrazioni rovinano gli scatti. Per seguirla da
+  lontano usa l'avanzamento da smartphone (capitolo 7.7).</li>
 <li>A fine sequenza premi <b>Apri nel Finder</b> e apri la cartella nel software di fusione.</li>
 </ol>
 """)
@@ -710,6 +865,10 @@ add(table(["Problema", "Che cosa fare"], [
     ["La sequenza non parte", "Leggi l'avviso rosso nel riepilogo: di solito la sequenza, con la compensazione del gioco, esce dai fine corsa."],
     ["Foto mosse o doppie", "Aumenta l'attesa dopo il movimento e il ritardo specchio; usa la posa B o lo scatto silenzioso se la fotocamera lo permette."],
     ["“Focus Stack è chiuso” nella pagina", "L'app è stata chiusa: riaprila e la pagina si ricarica da sola."],
+    ["La pila è tutta sullo stesso piano: la slitta non avanza", "Le bobine del motore sono spente e il carico riporta indietro la slitta a ogni fermata (capitolo 12): lascia attiva <i>Alimentale comunque durante la sequenza</i>. Prova con un movimento piccolo guardando il live view."],
+    ["La sequenza è andata in pausa da sola", "Lo scatto non è riuscito nemmeno dopo aver ricollegato la fotocamera. Leggi il messaggio, controlla batteria, cavo e scheda, poi premi <i>Riprendi</i>: lo scatto si ripete dalla stessa posizione."],
+    ["La fotocamera sparisce a metà pila", "Di solito il Mac è andato in stop e ha sospeso l'USB. Durante la sequenza l'app lo impedisce, ma non se chiudi il coperchio di un portatile senza monitor esterno. Controlla anche la batteria della fotocamera."],
+    ["Lo smartphone non apre la pagina dell'avanzamento", "Il telefono deve essere sulla stessa rete Wi-Fi del Mac; al primo avvio macOS chiede di consentire le connessioni in entrata (rispondi Consenti). Dopo <i>Nuovo link</i> il codice vecchio non vale più."],
 ]))
 
 # 15
@@ -719,6 +878,7 @@ add("""<h1><span class="n">15</span>Scorciatoie da tastiera</h1>
 <table><tbody>
 <tr><td><kbd>↑</kbd></td><td>allontana l'obiettivo dal campione</td></tr>
 <tr><td><kbd>↓</kbd></td><td>avvicina l'obiettivo al campione</td></tr>
+<tr><td><kbd>↑</kbd>/<kbd>↓</kbd> tenuti premuti</td><td>movimento continuo fino al rilascio</td></tr>
 <tr><td><kbd>⇧</kbd> + <kbd>↑</kbd>/<kbd>↓</kbd></td><td>passo × 10</td></tr>
 <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> …</td><td>ampiezza del passo: 1, 10, 100 …</td></tr>
 <tr><td><kbd>Esc</kbd></td><td>STOP</td></tr>
@@ -732,6 +892,7 @@ add("""<h1><span class="n">15</span>Scorciatoie da tastiera</h1>
 <tr><td><kbd>1</kbd></td><td>100%</td></tr>
 <tr><td><kbd>U</kbd></td><td>segui ultimo</td></tr>
 <tr><td><kbd>K</kbd></td><td>blocca vista</td></tr>
+<tr><td><kbd>I</kbd></td><td>Ispettore</td></tr>
 <tr><td><kbd>F</kbd></td><td>schermo intero</td></tr>
 </tbody></table></div>
 </div>

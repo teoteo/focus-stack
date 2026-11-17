@@ -66,6 +66,9 @@ plutil -replace CFBundleShortVersionString -string "$VERSION" "$PLIST"
 plutil -replace CFBundleVersion -string "$VERSION" "$PLIST"
 plutil -replace LSMinimumSystemVersion -string "13.0" "$PLIST"
 
+# ---------- guida HTML (web/guide/, aperta dai «?» dell'app) ----------
+python3 "$ROOT/docs/guida/genera_guida_web.py" | tail -1
+
 # ---------- codice ----------
 RES="$APP/Contents/Resources"
 mkdir -p "$RES/app/firmware"

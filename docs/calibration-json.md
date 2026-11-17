@@ -16,6 +16,9 @@ Focus Stack keeps calibration frames in a **shared library** inside the folder w
   found automatically for a target level (mean of the brightest channel, default 50 % of saturation).
 - **flat_dark**: lens cap on, ISO and shutter speed of the latest flat set of the same camera.
 - No bias frames: darks at the lights' exposure already contain the bias.
+- `focusfusion/` inside a set folder is written **only by Focus Fusion**: its calibration masters
+  (`master_<kind>_<key>.tif` + `master_<kind>_<key>.json`, format `focus-fusion-master`). Focus Stack never reads or
+  changes it; it is safe to delete (Focus Fusion rebuilds the masters) and it goes to the Trash with its set.
 
 Frames are never copied into stacks. When a stack starts, its `sequence.json` gets a `calibration` key with
 the **most recent suitable completed set** of each type (paths relative to the stack folder):
@@ -35,7 +38,7 @@ A missing key means no suitable set was found.
 | Key | Meaning |
 |---|---|
 | `format`, `version` | `"focus-stack-calibration"`, `1` |
-| `software` | e.g. `"Focus Stack 1.0.12"` |
+| `software` | e.g. `"Focus Stack 1.1.0"` |
 | `type` | `dark`, `flat`, `flat_dark` |
 | `state` | `running`, `completed`, `interrupted`, `error` (only `completed` sets are linked to stacks) |
 | `created`, `updated`, `finished` | ISO 8601 with milliseconds and time zone |

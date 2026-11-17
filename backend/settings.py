@@ -28,6 +28,12 @@ DEFAULTS: dict = {
     # premuto il motore si muove senza fermarsi fino al rilascio
     "jog_max": 1000,
     "jog_hold": True,
+    # movimento continuo a tratti: il motore non riceve mai più di tanti passi per comando, così anche
+    # perdendo la comunicazione non va oltre (vedi focuser_hold)
+    "hold_chunk_steps": 500,
+    # bobine del motore accese durante la sequenza anche se il firmware le spegne a motore fermo
+    # (con le bobine spente il carico può riportare indietro la slitta a ogni fermata)
+    "coil_during_sequence": True,
     "sequence": {
         "start": 0,
         "end": 1000,
@@ -40,6 +46,7 @@ DEFAULTS: dict = {
         "capture_mode": "download",
         "session_name": "stack",
         "shots_per_position": 1,
+        "sound_on_end": True,      # suono sul Mac a fine sequenza
         "optics_profile": "",      # profilo di ottica/filtro usato dalla sequenza ("" = nessun filtro)
     },
     # Profili di ottica, filtro e illuminazione (tab Ottica), scritti nel manifesto sequence.json.

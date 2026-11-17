@@ -261,8 +261,8 @@ void DriverBoard::stop_motortimer(void) {
 //-----------------------------------------------------------------------
 // Movimento con rampa: parte a MOVE_STARTSPEED, accelera di MOVE_ACCEL fino alla
 // velocità massima e decelera in modo da arrivare al target a MOVE_STARTSPEED.
-// La velocità dipende dai passi già fatti e da quelli mancanti:
-//   v = min( sqrt(v0^2 + 2*a*fatti), sqrt(v0^2 + 2*a*mancanti), vmax )
+// Dopo ogni passo: v^2 = min( v_attuale^2 + 2*a, v0^2 + 2*a*mancanti, vmax^2 ), mai sotto v0
+// (da fermo equivale a sqrt(v0^2 + 2*a*fatti); build 5: vale anche quando la meta viene allungata).
 //-----------------------------------------------------------------------
 void DriverBoard::start_rampmove(void) {
   // la velocità motore lenta/media riduce la massima come fa get_stepdelay()
@@ -281,10 +281,15 @@ void DriverBoard::update_ramp(void) {
   if (!_rampenabled) {
     return;
   }
-  float done = (float)labs(fcurrentposition - _rampstartposition);
+  // accelerazione: al massimo MOVE_ACCEL rispetto alla velocità attuale (v^2 cresce di 2a per passo); così
+  // anche una meta allungata durante la frenata (extend_target) fa riaccelerare gradualmente.
+  // Decelerazione: quella che serve per arrivare alla meta a MOVE_STARTSPEED.
   float left = (float)labs(ftargetposition - fcurrentposition);
   float v0sq = MOVE_STARTSPEED * MOVE_STARTSPEED;
-  float vsq = v0sq + 2.0 * MOVE_ACCEL * ((done < left) ? done : left);
+  float vsq = _rampspeed * _rampspeed + 2.0 * MOVE_ACCEL;
+  float vdecsq = v0sq + 2.0 * MOVE_ACCEL * left;
+  vsq = (vsq < vdecsq) ? vsq : vdecsq;
+  vsq = (vsq < v0sq) ? v0sq : vsq;
   float vmaxsq = _rampmaxspeed * _rampmaxspeed;
   _rampspeed = (vsq > vmaxsq) ? _rampmaxspeed : sqrt(vsq);
   unsigned long period = (unsigned long)(1000000.0 / _rampspeed);
@@ -311,6 +316,24 @@ bool DriverBoard::ramp_stop(void) {
   }
   interrupts();
   return true;
+}
+
+// Focus Stack build 5: allunga un movimento con rampa in corso, nello stesso verso, senza fermarsi
+// (tieni premuto dell'app: a ogni conferma la meta va un tratto più avanti). La rampa si calcola dai passi
+// mancanti, quindi con la meta più lontana il motore non rallenta. Rifiuta tutto il resto: niente rampa
+// in corso (movimento finito, pulsanti, backlash), verso opposto o meta più vicina.
+bool DriverBoard::extend_target(long newtarget) {
+  noInterrupts();
+  if (!_rampenabled || !_motortimerstate) {
+    interrupts();
+    return false;
+  }
+  bool further = (movedirection == MOVINGIN) ? (newtarget < ftargetposition) : (newtarget > ftargetposition);
+  if (further) {
+    ftargetposition = newtarget;
+  }
+  interrupts();
+  return further;
 }
 
 //-----------------------------------------------------------------------

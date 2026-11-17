@@ -355,3 +355,21 @@ details.more summary { cursor: pointer; padding: 12px 0; font-weight: 600; color
 #r-qr { image-rendering: pixelated; background: #fff; padding: 8px; border-radius: 8px; flex: none; }
 #r-error:empty { display: none; }
 #r-error { color: var(--warn); }
+
+/* guida: «?» in alto a destra e nel titolo delle card */
+.guide-btn { display: inline-grid; place-items: center; text-decoration: none; font-weight: 700; font-size: 16px; }
+.card-head h2 .help { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-left: 4px;
+  border-radius: 50%; border: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 700;
+  text-decoration: none; vertical-align: 2px; letter-spacing: 0; text-transform: none; }
+.card-head h2 .help:hover, .card-head h2 .help:focus-visible { color: var(--accent); border-color: var(--accent); }
+.vbar .guide-link { text-decoration: none; display: inline-grid; place-items: center; font-weight: 700; }
+
+/* simbolo ⌖ nei pulsanti «qui» / «Usa posizione attuale»: più grande del testo */
+.btn .ico { font-size: 1.45em; line-height: 0; vertical-align: -0.14em; margin-right: 1px; }
+/* campi della pila ricalcolati da soli (Numero di scatti ↔ Passo): evidenziati, con «↺ era X» per tornare indietro */
+#card-seq .fields > label { position: relative; }
+input.auto-upd { border-color: var(--warn); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 22%, transparent); }
+.revert { position: absolute; top: -3px; right: 0; font: inherit; font-size: 12px; font-weight: 600; line-height: 1.5;
+  color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); border-radius: 999px; padding: 0 8px; cursor: pointer; }
+.revert:hover, .revert:focus-visible { background: color-mix(in srgb, var(--warn) 24%, transparent); outline: none; }

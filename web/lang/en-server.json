@@ -272,5 +272,21 @@
   "Preparo l'anteprima…": "Preparing the preview…",
   "Scatto {i} · {t}": "Shot {i} · {t}",
   "Avanzamento": "Progress",
-  "Solo lettura: i comandi restano sul Mac.": "Read only: the controls stay on the Mac."
+  "Solo lettura: i comandi restano sul Mac.": "Read only: the controls stay on the Mac.",
+  "Avvisami con un suono a fine sequenza": "Alert me with a sound when the sequence ends",
+  "Suono a fine sequenza attivo (tocca per spegnere)": "End-of-sequence sound on (tap to turn off)",
+  "Tieni questa pagina aperta: lo schermo resta acceso finché il suono è attivo.": "Keep this page open: the screen stays on while the sound is on.",
+  "Ricollego la fotocamera…": "Reconnecting the camera…",
+  "Fotocamera ricollegata: {model}": "Camera reconnected: {model}",
+  "Fotocamera non ricollegata: {exc}": "Camera not reconnected: {exc}",
+  "la fotocamera non ha scattato dopo {n} tentativi ({exc}). Controlla che sia accesa e collegata, batteria, scheda e messa a fuoco manuale (MF), poi premi Riprendi: lo scatto si ripete dalla stessa posizione": "the camera did not shoot after {n} attempts ({exc}). Check that it is on and connected, battery, card and manual focus (MF), then press Resume: the shot is repeated from the same position",
+  "Impossibile impedire lo stop del Mac ({exc}): disattiva lo stop automatico nelle Impostazioni di Sistema (Batteria o Risparmio energia)": "Cannot keep the Mac from sleeping ({exc}): turn off automatic sleep in System Settings (Battery or Energy Saver)",
+  "Allarga con due dita o tocca due volte per ingrandire": "Spread two fingers or double-tap to zoom",
+  "Carico il dettaglio…": "Loading the detail…",
+  "Adatta": "Fit",
+  "Bobine alimentate durante la sequenza": "Coils powered during the sequence",
+  "Impossibile alimentare le bobine: {exc}": "Cannot power the coils: {exc}",
+  "Bobine di nuovo spente a motore fermo": "Coils off again when idle",
+  "Impossibile rispegnere le bobine: {exc}": "Cannot switch the coils off: {exc}",
+  "Tratto del movimento continuo: da {lo} a {hi} passi": "Continuous move segment: {lo} to {hi} steps"
 }

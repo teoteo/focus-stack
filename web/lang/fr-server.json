@@ -272,5 +272,21 @@
   "Preparo l'anteprima…": "Préparation de l'aperçu…",
   "Scatto {i} · {t}": "Prise {i} · {t}",
   "Avanzamento": "Avancement",
-  "Solo lettura: i comandi restano sul Mac.": "Lecture seule : les commandes restent sur le Mac."
+  "Solo lettura: i comandi restano sul Mac.": "Lecture seule : les commandes restent sur le Mac.",
+  "Avvisami con un suono a fine sequenza": "M'avertir par un son à la fin de la séquence",
+  "Suono a fine sequenza attivo (tocca per spegnere)": "Son de fin de séquence activé (touchez pour désactiver)",
+  "Tieni questa pagina aperta: lo schermo resta acceso finché il suono è attivo.": "Gardez cette page ouverte : l'écran reste allumé tant que le son est activé.",
+  "Ricollego la fotocamera…": "Reconnexion de l'appareil photo…",
+  "Fotocamera ricollegata: {model}": "Appareil photo reconnecté : {model}",
+  "Fotocamera non ricollegata: {exc}": "Appareil photo non reconnecté : {exc}",
+  "la fotocamera non ha scattato dopo {n} tentativi ({exc}). Controlla che sia accesa e collegata, batteria, scheda e messa a fuoco manuale (MF), poi premi Riprendi: lo scatto si ripete dalla stessa posizione": "l'appareil photo n'a pas déclenché après {n} tentatives ({exc}). Vérifiez qu'il est allumé et branché, la batterie, la carte et la mise au point manuelle (MF), puis appuyez sur Reprendre : la photo est refaite à la même position",
+  "Impossibile impedire lo stop del Mac ({exc}): disattiva lo stop automatico nelle Impostazioni di Sistema (Batteria o Risparmio energia)": "Impossible d'empêcher la suspension du Mac ({exc}) : désactivez la suspension automatique dans Réglages Système (Batterie ou Économiseur d'énergie)",
+  "Allarga con due dita o tocca due volte per ingrandire": "Écartez deux doigts ou touchez deux fois pour agrandir",
+  "Carico il dettaglio…": "Chargement du détail…",
+  "Adatta": "Ajuster",
+  "Bobine alimentate durante la sequenza": "Bobines alimentées pendant la séquence",
+  "Impossibile alimentare le bobine: {exc}": "Impossible d'alimenter les bobines : {exc}",
+  "Bobine di nuovo spente a motore fermo": "Bobines de nouveau éteintes à l'arrêt",
+  "Impossibile rispegnere le bobine: {exc}": "Impossible d'éteindre les bobines : {exc}",
+  "Tratto del movimento continuo: da {lo} a {hi} passi": "Tronçon du mouvement continu : de {lo} à {hi} pas"
 }

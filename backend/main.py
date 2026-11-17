@@ -65,6 +65,13 @@ class App:
         # scadenza: la pagina la rinnova di continuo, se smette il motore viene fermato
         self.hold_dir = 0
         self.hold_deadline = 0.0
+        # dopo uno STOP le conferme del pulsante vengono rifiutate finché non lo si preme di nuovo
+        self.hold_blocked = False
+        self.hold_lock = asyncio.Lock()   # un solo tratto alla volta anche se le conferme si accavallano
+        # una connessione alla volta: due richieste insieme (due finestre, due clic) aprivano due volte la
+        # stessa porta seriale e le risposte si mescolavano (letta "posizione 1")
+        self.focuser_lock = asyncio.Lock()
+        self.camera_lock = asyncio.Lock()
         # live view: pagine collegate allo stream e ultimo errore (es. fotocamera senza live view)
         self.live_clients = 0
         self.live_error = ""
@@ -241,12 +248,12 @@ class App:
                 "name": self.cfg["sequence"].get("session_name") or (Path(st.folder).name if st.folder else ""),
                 "last": {"key": last["key"], "time": last["time"], "label": label} if last else None}
 
-    async def remote_preview(self) -> Path | None:
-        """Anteprima dell'ultimo scatto per la pagina remota (quella già pronta per l'interfaccia)."""
+    async def remote_preview(self, size: str = "preview") -> Path | None:
+        """Ultimo scatto per la pagina remota: "preview" (quella già pronta per l'interfaccia) o "full" (per lo zoom)."""
         if not self.shots:
             return None
         try:
-            return await render_image(self.shots[-1]["file"], "preview")
+            return await render_image(self.shots[-1]["file"], size)
         except HTTPException:
             return None
 
@@ -342,9 +349,12 @@ async def poll_loop():
                 hold_watchdog(f)
                 last_pos = f.position
             except Exception as exc:  # noqa: BLE001
-                app_state.log(tr("Errore lettura focheggiatore: {exc}", exc=exc))
-                await asyncio.sleep(2)
-        elif not (f and f.connected):
+                if f.connected and f is app_state.focuser:   # non durante una disconnessione
+                    app_state.log(tr("Errore lettura focheggiatore: {exc}", exc=exc))
+                    await asyncio.sleep(2)
+        else:
+            # scollegato o sequenza in corso: la posizione letta prima non vale più come riferimento (a fine
+            # sequenza la slitta è altrove e il confronto la scambiava per un movimento dai pulsanti)
             last_pos = None
         if tick % 10 == 0:
             try:
@@ -383,17 +393,19 @@ def watchdog(f: MyFocuserPro2, last_pos: int | None) -> None:
 _once: set[str] = set()
 
 HOLD_TIMEOUT = 1.0  # s senza conferma dalla pagina prima di fermare il movimento continuo
+HOLD_CHUNK_DEFAULT = 500   # passi per tratto del movimento continuo (vedi focuser_hold)
+HOLD_CHUNK_RANGE = (10, 100_000)
 
 
 def hold_watchdog(f: MyFocuserPro2) -> None:
     if not app_state.hold_dir:
         return
-    if not f.moving:  # arrivato al fine corsa o fermato in altro modo
+    # fra un tratto e l'altro il motore è fermo: il movimento continuo resta attivo finché arrivano conferme
+    if time.monotonic() > app_state.hold_deadline:
         app_state.hold_dir = 0
-    elif time.monotonic() > app_state.hold_deadline:
-        app_state.hold_dir = 0
-        asyncio.get_running_loop().create_task(f.halt())
-        app_state.log(tr("Movimento continuo fermato: la pagina non risponde"))
+        if f.moving:
+            asyncio.get_running_loop().create_task(f.halt())
+            app_state.log(tr("Movimento continuo fermato: la pagina non risponde"))
 
 
 async def update_check_loop():
@@ -413,12 +425,17 @@ async def lifespan(_: FastAPI):
     task = asyncio.create_task(poll_loop())
     update_task = asyncio.create_task(update_check_loop())
     app_state.log(tr("Server avviato (Focus Stack {version})", version=app_state.updater.describe()["version"]))
-    if app_state.cfg["remote"].get("enabled"):
+    async def remote_on_boot() -> None:
+        # in background: al riavvio la porta può restare occupata qualche secondo dal server vecchio
         try:
             await app_state.remote_apply()
         except RuntimeError as exc:
             app_state.log(tr("Errore: {exc}", exc=exc))
+
+    remote_task = asyncio.create_task(remote_on_boot()) if app_state.cfg["remote"].get("enabled") else None
     yield
+    if remote_task:
+        remote_task.cancel()
     await app_state.remote.stop()
     task.cancel()
     update_task.cancel()
@@ -470,7 +487,7 @@ async def shutdown():
     app_state.log(tr("Spegnimento del server…"))
     # il ritardo lascia il tempo di inviare la risposta alla pagina
     asyncio.get_running_loop().call_later(0.5, os.kill, os.getpid(), signal.SIGINT)
-    return {"ok": True}
+    return {"ok": True, "pid": os.getpid()}   # run.py aspetta che questo processo esca (porte seriali libere)
 
 
 def guard(fn):
@@ -517,13 +534,60 @@ async def get_state():
 
 @api.websocket("/ws")
 async def ws_state(ws: WebSocket):
+    """Stato ogni 250 ms verso la pagina; dalla pagina arrivano i comandi del tieni premuto.
+
+    Il tieni premuto passa da qui e non da fetch: Safari tiene al massimo 6 connessioni verso l'app e con il
+    live view aperto in due finestre le richieste potevano restare in coda più di un secondo (motore che partiva
+    in ritardo, fermato dalla sorveglianza o rilascio in ritardo). La WebSocket è già aperta e non fa coda.
+    """
     await ws.accept()
-    try:
+    # comandi solo dalle pagine dell'app: un sito qualsiasi aperto nel browser può aprire una WebSocket verso
+    # localhost, ma con la sua Origin (per HTTP la stessa protezione la dà l'intestazione X-FocusStack)
+    trusted = ws.headers.get("origin") == f"http://{ws.headers.get('host', '')}"
+    send_lock = asyncio.Lock()
+    tasks: set[asyncio.Task] = set()
+
+    async def send(obj) -> None:
+        async with send_lock:
+            await ws.send_text(json.dumps(obj))
+
+    async def command(msg: dict) -> None:
+        reply = {"reply": msg.get("id")}
+        try:
+            if not trusted:
+                raise HTTPException(403, "origin")
+            if msg.get("type") != "hold":
+                raise ValueError(tr("Valore non valido"))
+            reply.update(await focuser_hold(Hold(direction=int(msg.get("direction", 0)), start=bool(msg.get("start")))))
+        except HTTPException as exc:
+            reply["error"] = str(exc.detail)
+        except Exception as exc:  # noqa: BLE001  (messaggio non valido)
+            reply["error"] = str(exc)
+        try:
+            await send(reply)
+        except (WebSocketDisconnect, RuntimeError):
+            pass
+
+    async def receive() -> None:
         while True:
-            await ws.send_text(json.dumps(app_state.state()))
+            try:
+                msg = json.loads(await ws.receive_text())
+            except ValueError:
+                continue
+            # un task per comando: una conferma che aspetta il motore non deve trattenere le successive
+            task = asyncio.create_task(command(msg if isinstance(msg, dict) else {}))
+            tasks.add(task)
+            task.add_done_callback(tasks.discard)
+
+    rx = asyncio.create_task(receive())
+    try:
+        while not rx.done():
+            await send(app_state.state())
             await asyncio.sleep(0.25)
     except (WebSocketDisconnect, RuntimeError):
         pass
+    finally:
+        rx.cancel()
 
 
 # ---------------- focheggiatore ----------------
@@ -555,6 +619,14 @@ async def ports():
 @guard
 async def focuser_connect(body: FocuserConnect):
     not_running()
+    async with app_state.focuser_lock:
+        return await _focuser_connect(body)
+
+
+async def _focuser_connect(body: FocuserConnect):
+    old = app_state.focuser
+    if old and old.connected and not body.simulate and not old.simulated and old.port == body.port:
+        return old.describe()   # già collegato a questa porta (richiesta doppia): niente seconda apertura
     if app_state.focuser:
         await app_state.focuser.disconnect()
     if body.simulate:
@@ -683,7 +755,16 @@ async def focuser_jog(body: Delta):
 
 
 class Hold(BaseModel):
-    direction: int  # -1 / +1 = muovi verso il fine corsa e continua; 0 = fermati
+    direction: int  # -1 / +1 = muovi e continua; 0 = fermati
+    start: bool = False   # True = pulsante appena premuto, False = conferma "ancora premuto"
+
+
+def hold_target(f: MyFocuserPro2, direction: int) -> int:
+    """Meta del movimento continuo: un tratto (hold_chunk_steps) oltre la posizione attuale, entro i fine corsa."""
+    lo, hi = f.bounds()
+    chunk = int(app_state.cfg.get("hold_chunk_steps") or HOLD_CHUNK_DEFAULT)
+    target = f.position + direction * chunk
+    return max(lo, target) if direction < 0 else (min(hi, target) if hi is not None else target)
 
 
 @api.post("/api/focuser/hold")
@@ -691,12 +772,19 @@ class Hold(BaseModel):
 async def focuser_hold(body: Hold):
     """Movimento continuo mentre un pulsante della pagina è tenuto premuto.
 
-    La pagina ripete la chiamata ogni 250 ms: ogni chiamata rinnova la scadenza e, se la pagina
-    smette (rete, scheda chiusa), hold_watchdog ferma il motore. Il firmware rallenta e si ferma
-    con la rampa sia al rilascio (:27#) sia arrivando al fine corsa.
+    Il motore riceve un TRATTO alla volta (hold_chunk_steps passi, Configurazione › Comandi manuali) e solo
+    una conferma fresca della pagina (ogni 250 ms) fa partire il tratto successivo: se la comunicazione si
+    interrompe (pagina, rete, server bloccato, cavo del focheggiatore) il motore percorre al massimo il
+    tratto in corso. Se la pagina smette di confermare, hold_watchdog lo ferma anche prima.
+    Con il firmware build 5 ogni conferma sposta la meta del movimento in corso un tratto più avanti
+    (extend_to): niente soste fra un tratto e l'altro, e al massimo un tratto oltre l'ultima conferma.
+    Dopo uno STOP o il rilascio le conferme vengono rifiutate finché il pulsante non viene premuto di nuovo
+    (start=True): una conferma in ritardo o una pagina che ha perso il rilascio non fanno ripartire il motore.
     """
     f = need_focuser()
     if body.direction == 0:
+        # rilascio: una conferma ancora in viaggio non deve far ripartire il motore (serve start=True)
+        app_state.hold_blocked = True
         if app_state.hold_dir:
             app_state.hold_dir = 0
             await f.halt()
@@ -704,21 +792,38 @@ async def focuser_hold(body: Hold):
     not_running()
     if body.direction not in (-1, 1):
         raise ValueError(tr("Verso non valido"))
+    if body.start:
+        app_state.hold_blocked = False
+    elif app_state.hold_blocked:
+        return {"ok": False, "stopped": True}   # fermato con STOP: la pagina smette di confermare
     app_state.hold_deadline = time.monotonic() + HOLD_TIMEOUT
-    if app_state.hold_dir == body.direction:
-        return {"ok": True}
-    await f.poll()
-    if f.moving:  # il firmware ignora un nuovo target mentre si muove (es. sta ancora rallentando)
-        await f.wait_idle(timeout=5)
-    f.check_direction(body.direction)
-    lo, hi = f.bounds()
-    target = lo if body.direction < 0 else (hi if hi is not None else f.position + 1_000_000)
-    # mai nel verso opposto a quello chiesto (succedeva con la posizione già oltre un fine corsa)
-    if (target - f.position) * body.direction <= 0:
-        raise LimitError(tr("Fine corsa raggiunto"))
-    app_state.hold_dir = body.direction
-    app_state.hold_deadline = time.monotonic() + HOLD_TIMEOUT
-    await f.move_to(target)
+    if app_state.hold_dir == body.direction and f.moving:
+        if f.extendable and not app_state.hold_lock.locked():
+            # firmware build 5: la meta resta un tratto più avanti dell'ultima conferma, il motore non si ferma
+            target = hold_target(f, body.direction)
+            if (target - f.position) * body.direction > 0:
+                await f.extend_to(target)
+        return {"ok": True}   # tratto in corso
+    if app_state.hold_lock.locked():
+        return {"ok": True}   # il tratto successivo lo sta già preparando un'altra conferma
+    async with app_state.hold_lock:
+        await f.poll()
+        if f.moving:
+            if app_state.hold_dir == body.direction:
+                return {"ok": True}
+            await f.wait_idle(timeout=5)   # il firmware ignora un nuovo target mentre si muove (sta rallentando)
+        if app_state.hold_blocked and not body.start:
+            return {"ok": False, "stopped": True}
+        f.check_direction(body.direction)
+        target = hold_target(f, body.direction)
+        # mai nel verso opposto a quello chiesto (succedeva con la posizione già oltre un fine corsa)
+        if (target - f.position) * body.direction <= 0:
+            app_state.hold_dir = 0
+            raise LimitError(tr("Fine corsa raggiunto"))
+        app_state.hold_dir = body.direction
+        app_state.hold_deadline = time.monotonic() + HOLD_TIMEOUT
+        # firmware build 4+: il tratto è anche sorvegliato dal firmware (si ferma se il Mac tace per 1,5 s)
+        await f.move_to(target, supervised=True)
     return {"ok": True, "target": target}
 
 
@@ -726,6 +831,7 @@ async def focuser_hold(body: Hold):
 @guard
 async def focuser_halt():
     app_state.hold_dir = 0
+    app_state.hold_blocked = True   # una pagina che conferma ancora il pulsante non deve far ripartire il motore
     await app_state.calib.stop()   # STOP ferma tutto, anche gli scatti di calibrazione
     if app_state.runner.busy:
         await app_state.runner.stop()
@@ -781,6 +887,23 @@ async def focuser_sim_button(body: Delta):
     if not isinstance(f, SimulatedFocuser):
         raise ValueError(tr("Disponibile solo con il simulatore"))
     f.simulate_button(body.delta)
+    return {"ok": True}
+
+
+class SimCameraLost(BaseModel):
+    lost: str = ""     # "" = funziona, "session" = sessione morta, "unplugged" = sparita
+
+
+@api.post("/api/camera/sim-lost")
+@guard
+async def camera_sim_lost(body: SimCameraLost):
+    """Solo simulatore: fa sparire la fotocamera (per provare pausa e ricollegamento della sequenza)."""
+    cam = app_state.camera
+    if not isinstance(cam, SimulatedCamera):
+        raise ValueError(tr("Disponibile solo con il simulatore"))
+    if body.lost not in ("", "session", "unplugged"):
+        raise ValueError("lost: '', 'session' o 'unplugged'")
+    cam.lost = body.lost
     return {"ok": True}
 
 
@@ -893,6 +1016,15 @@ async def camera_detect():
 @guard
 async def camera_connect(body: CameraConnect):
     not_running()
+    async with app_state.camera_lock:
+        return await _camera_connect(body)
+
+
+async def _camera_connect(body: CameraConnect):
+    old = app_state.camera
+    if (old and old.connected and not body.simulate and not old.simulated
+            and body.model in ("", old.model) and body.port in ("", old.port)):
+        return old.describe()   # già collegata (richiesta doppia): niente seconda sessione PTP
     if app_state.camera:
         await app_state.camera.disconnect()
         app_state.camera = None
@@ -1006,7 +1138,7 @@ async def camera_set(body: CameraSetting):
     cam = need_camera()
     settings = await cam.set_setting(body.name, body.value)
     actual = settings.get(body.name, {}).get("current")
-    if body.name == "capturetarget" and actual != body.value and "sony" in (cam.model or "").lower():
+    if body.name == "capturetarget" and actual != body.value and cam.is_sony:
         # Sony: la destinazione si sceglie solo dal menu della fotocamera, prima del controllo remoto
         app_state.log(tr("{name} = {actual} (richiesto {requested})", name=body.name, actual=actual, requested=body.value))
         raise ValueError(tr("La Sony non permette di cambiare la destinazione dal computer. Premi «Disconnetti», poi "
@@ -1132,6 +1264,7 @@ class SequenceBody(BaseModel):
     output_root: str = ""
     bulb_s: float = 0
     shots_per_position: int = 1
+    sound_on_end: bool = True
     optics_profile: str = ""      # profilo di ottica/filtro (tab Ottica); "" = nessun filtro
 
 
@@ -1160,7 +1293,8 @@ async def sequence_start(body: SequenceBody):
         found = calibration.match(calibration.list_library(data["output_root"]), ctx.get("camera"), profile, body.bulb_s)
         if found:
             ctx["calibration"] = found
-    app_state.runner.start(SequenceParams(**data), ctx)   # verifica anche i fine corsa
+    app_state.runner.start(SequenceParams(**data), ctx,   # verifica anche i fine corsa
+                           hold_coils=bool(app_state.cfg.get("coil_during_sequence", True)))
     app_state.cfg["sequence"].update({k: v for k, v in data.items() if k != "output_root"},
                                      optics_profile=profile)
     app_state.cfg["output_root"] = data["output_root"]
@@ -1302,6 +1436,8 @@ class SettingsBody(BaseModel):
     output_root: str | None = None
     jog_max: int | None = None
     jog_hold: bool | None = None
+    coil_during_sequence: bool | None = None
+    hold_chunk_steps: int | None = None
     language: str | None = None   # "auto" (lingua di macOS) oppure un codice di i18n.SUPPORTED
 
 
@@ -1415,6 +1551,13 @@ async def save_settings(body: SettingsBody):
         app_state.cfg["jog_max"] = body.jog_max
     if body.jog_hold is not None:
         app_state.cfg["jog_hold"] = body.jog_hold
+    if body.coil_during_sequence is not None:
+        app_state.cfg["coil_during_sequence"] = body.coil_during_sequence
+    if body.hold_chunk_steps is not None:
+        lo, hi = HOLD_CHUNK_RANGE
+        if not lo <= body.hold_chunk_steps <= hi:
+            raise ValueError(tr("Tratto del movimento continuo: da {lo} a {hi} passi", lo=lo, hi=hi))
+        app_state.cfg["hold_chunk_steps"] = body.hold_chunk_steps
     store.save(app_state.cfg)
     return app_state.cfg
 

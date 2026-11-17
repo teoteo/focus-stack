@@ -106,6 +106,7 @@ public:
   // movimento con rampa di accelerazione/decelerazione (vedi MOVE_* in focuserconfig.h)
   void start_rampmove(void);
   bool ramp_stop(void);
+  bool extend_target(long);  // Focus Stack build 5: sposta più avanti la meta di un movimento in corso
   void update_ramp(void);  // chiamata dal timer dopo ogni passo
   // move motor one step, takes parameter direction 0 | 1
   void movemotor(byte);

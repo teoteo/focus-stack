@@ -272,5 +272,21 @@
   "Preparo l'anteprima…": "Vorschau wird vorbereitet…",
   "Scatto {i} · {t}": "Aufnahme {i} · {t}",
   "Avanzamento": "Fortschritt",
-  "Solo lettura: i comandi restano sul Mac.": "Nur lesen: die Steuerung bleibt auf dem Mac."
+  "Solo lettura: i comandi restano sul Mac.": "Nur lesen: die Steuerung bleibt auf dem Mac.",
+  "Avvisami con un suono a fine sequenza": "Mit einem Ton am Ende der Serie benachrichtigen",
+  "Suono a fine sequenza attivo (tocca per spegnere)": "Ton am Serienende aktiv (zum Ausschalten tippen)",
+  "Tieni questa pagina aperta: lo schermo resta acceso finché il suono è attivo.": "Lassen Sie diese Seite geöffnet: Der Bildschirm bleibt an, solange der Ton aktiv ist.",
+  "Ricollego la fotocamera…": "Kamera wird neu verbunden…",
+  "Fotocamera ricollegata: {model}": "Kamera neu verbunden: {model}",
+  "Fotocamera non ricollegata: {exc}": "Kamera nicht neu verbunden: {exc}",
+  "la fotocamera non ha scattato dopo {n} tentativi ({exc}). Controlla che sia accesa e collegata, batteria, scheda e messa a fuoco manuale (MF), poi premi Riprendi: lo scatto si ripete dalla stessa posizione": "die Kamera hat nach {n} Versuchen nicht ausgelöst ({exc}). Prüfen Sie, ob sie eingeschaltet und verbunden ist, Akku, Karte und manuellen Fokus (MF), dann drücken Sie Fortsetzen: die Aufnahme wird an derselben Position wiederholt",
+  "Impossibile impedire lo stop del Mac ({exc}): disattiva lo stop automatico nelle Impostazioni di Sistema (Batteria o Risparmio energia)": "Ruhezustand des Mac kann nicht verhindert werden ({exc}): schalten Sie den automatischen Ruhezustand in den Systemeinstellungen aus (Batterie oder Energie sparen)",
+  "Allarga con due dita o tocca due volte per ingrandire": "Mit zwei Fingern aufziehen oder doppelt tippen zum Vergrößern",
+  "Carico il dettaglio…": "Detail wird geladen…",
+  "Adatta": "Einpassen",
+  "Bobine alimentate durante la sequenza": "Spulen während der Serie bestromt",
+  "Impossibile alimentare le bobine: {exc}": "Spulen können nicht bestromt werden: {exc}",
+  "Bobine di nuovo spente a motore fermo": "Spulen im Stillstand wieder aus",
+  "Impossibile rispegnere le bobine: {exc}": "Spulen können nicht ausgeschaltet werden: {exc}",
+  "Tratto del movimento continuo: da {lo} a {hi} passi": "Abschnitt der Dauerbewegung: {lo} bis {hi} Schritte"
 }

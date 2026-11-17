@@ -77,7 +77,7 @@ class MyFocuserPro2:
         self.port = port
         self.baud = baud
         self._ser: serial.Serial | None = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()   # rientrante: la chiusura lo tiene mentre manda :48#
         self.position = 0
         self.moving = False
         self.temperature: float | None = None
@@ -190,11 +190,28 @@ class MyFocuserPro2:
         return out
 
     def _close_blocking(self) -> None:
-        if self._ser:
+        # Tutto sotto il lock: una lettura periodica in un altro thread non deve usare la porta mentre si chiude
+        # (dava "Bad file descriptor" nel registro).
+        with self._lock:
+            ser, self._ser = self._ser, None
+            if ser is None:
+                return
+            # Il firmware salva posizione e impostazioni nella EEPROM solo 10 s dopo l'ultimo movimento; chiudere la
+            # porta resetta la scheda (DTR) e chi si ricollega prima ritrova la posizione VECCHIA (contatore diverso dalla
+            # slitta, fine corsa sbagliati). :48# salva subito (c'è anche nel firmware myFocuserPro2 originale).
+            # Con il cavo staccato la porta dà errori di ogni tipo (anche termios.error, che non è un OSError):
+            # la chiusura deve riuscire comunque.
             try:
-                self._ser.close()
-            finally:
-                self._ser = None
+                ser.reset_input_buffer()
+                ser.write(b":48#")
+                ser.flush()
+                time.sleep(0.3)   # scrittura della EEPROM prima del reset
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                ser.close()
+            except Exception:  # noqa: BLE001
+                pass
 
     def _poll_blocking(self, with_temp: bool = False) -> None:
         self.position = int(self._value(":00#"))
@@ -270,13 +287,37 @@ class MyFocuserPro2:
     async def poll(self, with_temp: bool = False) -> None:
         await asyncio.to_thread(self._poll_blocking, with_temp)
 
-    async def move_to(self, pos: int, wait: bool = False, timeout: float = 600) -> None:
+    # movimento sorvegliato (:96#, firmware Focus Stack build 4): il firmware si ferma da solo se il Mac
+    # smette di mandare comandi per 1,5 s. Solo per il "tieni premuto": "Vai" e la sequenza usano :05#
+    SUPERVISED_BUILD = 4
+
+    @property
+    def supervised(self) -> bool:
+        return (self.fs_build or 0) >= self.SUPERVISED_BUILD
+
+    async def move_to(self, pos: int, wait: bool = False, timeout: float = 600, supervised: bool = False) -> None:
         pos = self.check_move(pos)
         self._mark_commanded()
-        await asyncio.to_thread(self._send, f":05{pos}#")
+        cmd = "96" if supervised and self.supervised else "05"
+        await asyncio.to_thread(self._send, f":{cmd}{pos}#")
         self.moving = True
         if wait:
             await self.wait_idle(timeout, target=pos)
+
+    # firmware build 5: :96# durante un movimento sorvegliato sposta la meta più avanti nello stesso verso, senza
+    # fermarsi. Il tieni premuto lo usa a ogni conferma della pagina: niente soste fra un tratto e l'altro.
+    EXTEND_BUILD = 5
+
+    @property
+    def extendable(self) -> bool:
+        return (self.fs_build or 0) >= self.EXTEND_BUILD
+
+    async def extend_to(self, pos: int) -> None:
+        """Allunga il movimento sorvegliato in corso fino a pos. Il firmware ignora la richiesta se il movimento
+        è finito, è stato fermato (STOP o Mac muto) o andrebbe nell'altro verso."""
+        pos = self.check_move(pos)
+        self._mark_commanded()
+        await asyncio.to_thread(self._send, f":96{pos}#")
 
     async def wait_idle(self, timeout: float = 600, target: int | None = None) -> None:
         deadline = time.monotonic() + timeout
@@ -292,9 +333,11 @@ class MyFocuserPro2:
             await asyncio.sleep(0.1)
 
     async def halt(self) -> None:
+        self._mark_commanded()   # la frenata dopo lo STOP (rampa del firmware) non è un movimento dai pulsanti
         await asyncio.to_thread(self._send, ":27#")
 
     async def sync(self, pos: int) -> None:
+        self._mark_commanded()   # il salto del contatore non è un movimento dai pulsanti
         await asyncio.to_thread(self._send, f":31{max(0, int(pos))}#")
         await self.poll()
 
@@ -379,7 +422,7 @@ class SimulatedFocuser(MyFocuserPro2):
         if with_temp:
             self.temperature = round(21.5 + 0.6 * math.sin(time.time() / 300), 2)
 
-    async def move_to(self, pos: int, wait: bool = False, timeout: float = 600) -> None:
+    async def move_to(self, pos: int, wait: bool = False, timeout: float = 600, supervised: bool = False) -> None:
         pos = self.check_move(pos)
         self._mark_commanded()
         self._advance()
@@ -388,12 +431,26 @@ class SimulatedFocuser(MyFocuserPro2):
         if wait:
             await self.wait_idle(timeout, target=self._target)
 
+    @property
+    def extendable(self) -> bool:
+        return True
+
+    async def extend_to(self, pos: int) -> None:
+        pos = self.check_move(pos)
+        self._advance()
+        ahead, wanted = self._target - self.position, pos - self.position
+        if self.moving and ahead * wanted > 0 and abs(wanted) > abs(ahead):
+            self._mark_commanded()
+            self._target = pos
+
     async def halt(self) -> None:
+        self._mark_commanded()
         self._advance()
         self._target = self.position
         self._pos = float(self.position)
 
     async def sync(self, pos: int) -> None:
+        self._mark_commanded()
         self._advance()
         self._target = self.position = max(0, int(pos))
         self._pos = float(self._target)

@@ -56,12 +56,13 @@ add("""
 <div class="toc"><ol>
 <li><span>1</span>Was ist Focus Stack?<em>Funktionsweise, was Sie brauchen</em></li>
 <li><span>2</span>Installation, Start und Updates</li>
-<li><span>3</span>Die Oberfläche im Überblick<em>die vier Bereiche und die obere Leiste</em></li>
+<li><span>3</span>Die Oberfläche im Überblick<em>die fünf Bereiche, die obere Leiste und die Anleitung</em></li>
 <li><span>4</span>Fokussierer und Kamera verbinden<em>Einstellungen der Nikon D5600 und anderer Kameras</em></li>
-<li><span>5</span>Der Fokussierer: Position, Bewegungen, STOP</li>
+<li><span>5</span>Der Fokussierer: Position, Bewegungen, STOP<em>Dauerbewegung in Abschnitten, der Schlitten, der nicht vorrückt</em></li>
 <li><span>6</span>Kamera, Testaufnahme und Live-View</li>
-<li><span>7</span>Die Stacking-Serie<em>Optik- und Filterprofile, mehrere Aufnahmen pro Position, die Dateien des Stapels</em></li>
-<li><span>8</span>Der Betrachter</li>
+<li><span>7</span>Die Stacking-Serie<em>Optikprofile, Makrofotografie, mehrere Aufnahmen pro Position, die Dateien des Stapels,
+Kalibrierung (Darks, Flats, Belichtung), Fortschritt auf dem Smartphone</em></li>
+<li><span>8</span>Der Betrachter<em>Zoom, Live-View, Inspektor</em></li>
 <li><span>9</span>Sicherheitsgrenzen</li>
 <li><span>10</span>Mechanik einrichten: die Berechnungen<em>Auflösung in µm pro Schritt, Kontrollmessung, Verfahrweg, Geschwindigkeit, Spiel</em></li>
 <li><span>11</span>Die Schrittweite der Serie wählen<em>Schärfentiefe, Anzahl der Aufnahmen, Dauer</em></li>
@@ -75,8 +76,8 @@ add("""
 # 1
 add(f"""
 <h1><span class="n">1</span>Was ist Focus Stack?</h1>
-<p class="lead">Mit Focus Stack steuert Ihr Mac einen motorisierten Fokussierer am Feintrieb des Mikroskops und eine
-per USB angeschlossene Kamera. Die App führt automatisch Serien nach dem Muster <b>bewegen → warten →
+<p class="lead">Mit Focus Stack steuert Ihr Mac einen motorisierten Fokussierer, montiert am Feintrieb des Mikroskops
+oder an einem Makroschlitten, und eine per USB angeschlossene Kamera. Die App führt automatisch Serien nach dem Muster <b>bewegen → warten →
 auslösen</b> aus: Dutzende Fotos in verschiedenen Fokusebenen, bereit zum Verrechnen zu einem durchgehend
 scharfen Bild mit <b>Helicon Focus</b> (oder einem ähnlichen Programm).</p>
 <h2>Funktionsweise</h2>
@@ -97,7 +98,9 @@ sich in <b>Safari</b> unter <code>http://localhost:8765</code> und ist nur von d
 <li>Einen Fokussierer <b>myFocuserPro2</b> (Version mit DRV8825-Treiber) oder <b>Ardufocus</b> (Platine rev1 mit
   DRV8825), angeschlossen mit seinem USB-Kabel und mit Strom versorgt (12 V).</li>
 <li>Eine Kamera von Nikon, Canon oder Sony mit USB-Kabel. Als Beispiel dient in dieser Anleitung eine <b>Nikon D5600</b>.</li>
-<li>Einen Adapter, der das Mikroskopbild auf den Sensor projiziert (Fototubus, T2-Adapter oder Ähnliches).</li>
+<li>Am Mikroskop einen Adapter, der das Bild auf den Sensor projiziert (Fototubus, T2-Adapter oder Ähnliches). In der
+  <b>Makrofotografie</b> ein Makroobjektiv (gegebenenfalls mit Zwischenringen oder Nahlinsen) und einen Schlitten, den
+  der Fokussierer bewegt.</li>
 </ul>
 <div class="box warn"><span class="t">Unterstützte Fokussierer</span>Focus Stack funktioniert mit den Platinen
 <b>myFocuserPro2</b> und <b>Ardufocus</b> mit der Firmware, die der App beiliegt. Ein myFocuserPro2 mit Original-Firmware
@@ -138,7 +141,9 @@ Leiste mit <span class="ui">{ui("Aggiorna e riavvia")}</span>: Die App lädt die
 sich von selbst wieder. Dieselbe Prüfung können Sie von Hand unter
 <span class="ui">{ui("Configurazione")} › {ui("Aggiornamenti")} › {ui("Controlla ora")}</span> starten.</p>
 <p>Auch die <b>Firmware des Fokussierers</b> wird über die App aktualisiert (Kapitel 12): Ist die Firmware auf der
-Platine älter als die in der App enthaltene, weist dieselbe Leiste darauf hin.</p>
+Platine älter als die in der App enthaltene, weist dieselbe Leiste darauf hin. Die Installation lohnt sich: Build 5
+zum Beispiel macht die Bewegung durchgehend ohne Pausen und hält den Motor selbstständig an, wenn der Mac nicht mehr
+kommuniziert (Kapitel 12).</p>
 <h2>Sprache</h2>
 <p>Die App spricht Italienisch, Englisch, Französisch, Deutsch und Spanisch. Mit <span class="ui">{ui("Automatica (lingua del sistema)")}</span>
 folgt sie der Sprache von macOS und verwendet für andere Sprachen Englisch; unter
@@ -149,26 +154,33 @@ Oberfläche, Meldungen und Protokoll, und diese Anleitung gibt es in denselben S
 # 3
 add(f"""
 <h1><span class="n">3</span>Die Oberfläche im Überblick</h1>
-<p>Die Seite hat vier Bereiche, die Sie oben auswählen:</p>
+<p>Die Seite hat fünf Bereiche, die Sie oben auswählen:</p>
 <ul>
 <li><b>{ui("Sessione")}</b>: die Arbeit am Mikroskop. Fokussierer, Serie, Kamera und letzte Aufnahme.</li>
-<li><b>{ui("Ottica")}</b>: die <b>Profile</b> für Objektiv, Filter und Beleuchtung, die in die Daten jedes Stapels
-  geschrieben werden, und der Schärfentiefe-Rechner (Kapitel 7.2 und 11).</li>
-<li><b>{ui("Configurazione")}</b>: Grenzen, Mechanik, manuelle Steuerung, Motor, Updates und Temperatur. Wird einmal
-  eingestellt und danach nur selten angefasst.</li>
+<li><b>{ui("Ottica")}</b>: die <b>Profile</b> für Objektiv, Filter und Beleuchtung, für das Mikroskop oder für die
+  Makrofotografie, die in die Daten jedes Stapels geschrieben werden, und der Schärfentiefe-Rechner (Kapitel 7.2, 7.3
+  und 11).</li>
+<li><b>{ui("Calibrazione")}</b>: die Belichtung der Lights und die Kalibrierungsbilder (Darks, Flats, Flat-Darks) für
+  die Fusionssoftware (Kapitel 7.6).</li>
+<li><b>{ui("Configurazione")}</b>: Grenzen, Mechanik, manuelle Steuerung, Motor, Fortschritt auf dem Smartphone,
+  Sprache, Updates und Temperatur. Wird einmal eingestellt und danach nur selten angefasst.</li>
 <li><b>{ui("Registro")}</b>: eine Liste mit Uhrzeit von allem, was in der Sitzung passiert ist. Hier sollten Sie als
   Erstes nachsehen, wenn etwas nicht funktioniert.</li>
 </ul>
 {fig("sessione", layout="full", caption=f"Der Bereich {ui('Sessione')}: links der Fokussierer, in der Mitte die Serie, rechts Kamera und letzte Aufnahme.")}
 <h2>Obere Leiste</h2>
 {fig("barra-superiore", [
-    f"<b>Bereiche</b> {ui('Sessione')}, {ui('Ottica')}, {ui('Configurazione')} und {ui('Registro')}.",
+    f"<b>Bereiche</b> {ui('Sessione')}, {ui('Ottica')}, {ui('Calibrazione')}, {ui('Configurazione')} und {ui('Registro')}.",
     f"<b>Verbindungsstatus</b>: {ui('Server')}, {ui('Focheggiatore')} und {ui('Fotocamera')}. Grün = verbunden, grau = getrennt, rot = Fehler.",
     "<b>Temperatur</b>, gemessen vom Fühler des Fokussierers.",
+    "<b>?</b> öffnet diese <b>Anleitung</b> beim Kapitel des geöffneten Bereichs.",
     "<b>Design</b>, dunkel oder hell. Das dunkle Design ermüdet bei langen Sitzungen am Mikroskop weniger.",
-], layout="full below-marks", anchors={1: "b", 2: "b", 3: "b", 4: "b"})}
+], layout="full below-marks", anchors={1: "b", 2: "b", 3: "b", 4: "b", 5: "b"})}
 <p>Unter der Leiste können zwei Streifen erscheinen: ein blauer für <b>Updates</b> und ein roter <b>Alarm</b>, zum
 Beispiel wenn die Hardwaretasten den Fokussierer über eine Grenze hinaus bewegen.</p>
+<div class="box tip"><span class="t">Die Anleitung in der App</span>Neben dem <b>?</b> oben hat fast jede Karte ein kleines
+<b>?</b> neben dem Titel: Es öffnet diese Anleitung direkt an der Stelle, die diese Karte erklärt. Die Anleitung hat ein
+Inhaltsverzeichnis und eine Suche (Taste <kbd>/</kbd>) und öffnet sich immer im selben Fenster.</div>
 """)
 
 # 4
@@ -192,7 +204,7 @@ add(f"""
 {table(["Kamera", "Was einstellen"], [
     ["<b>Nikon D5600</b> und andere Nikon", "Moduswahlrad auf <b>M</b> (manuell). Im Wiedergabemenü die <b>Bildkontrolle</b> ausschalten. SnapBridge/WLAN und Bluetooth ausschalten, sie können die Verbindung belegen. Speicherkarte eingelegt lassen, Akku geladen (oder Netzadapter EH-5/EP-5A)."],
     ["Canon", f"Modus <b>M</b>. Die Aufnahme landet je nach <i>{ui('Destinazione')}</i> im Kameraspeicher oder auf der Karte. Für die Spiegelverzögerung im Menü die <b>Spiegelverriegelung</b> aktivieren."],
-    ["Sony", "USB-Menü › <b>PC Remote</b>; Modus <b>M</b>. Für Live-View muss die Kamera dies im Modus PC Remote erlauben."],
+    ["Sony", "USB-Menü › <b>PC Remote</b>; Modus <b>M</b>. Damit die Fotos auf den Mac geladen werden, stellen Sie das Speicherziel auf <b>Nur PC</b> (MENU › Einstellung › PC-Fernbedienungseinstellungen › Standbild-Speicherziel). Für Live-View muss die Kamera dies im Modus PC Remote erlauben."],
 ])}
 <div class="box warn"><span class="t">Wenn sich die Kamera nicht verbindet</span>macOS versucht, die Kamera zu
 übernehmen, sobald Sie sie anschließen. Die App beendet diesen Dienst selbst; reicht das nicht, beenden Sie
@@ -211,9 +223,9 @@ add(f"""
     "<b>Verfahrbalken</b>: siehe die Abbildung unten.",
     f"<b>Schrittgröße</b> der Tasten {ui('Allontana')}/{ui('Avvicina')}: 1, 10, 100 … Schritte. Die verfügbaren Größen wählen Sie unter {ui('Configurazione')} › {ui('Comandi manuali')}.",
     "Dieselbe Bewegung <b>in Mikrometern</b>.",
-    f"<b>{ui('Allontana')} / {ui('Avvicina')}</b>: Ein Klick bewegt um die gewählte Schrittgröße. Halten Sie die Taste gedrückt, fährt der Motor ohne anzuhalten weiter und bremst beim Loslassen bis zum Stillstand ab.",
+    f"<b>{ui('Allontana')} / {ui('Avvicina')}</b>: Ein Klick bewegt um die gewählte Schrittgröße. Halten Sie die Taste gedrückt, fährt der Motor in Abschnitten weiter (Kapitel 12) und bremst beim Loslassen bis zum Stillstand ab.",
     f"<b>Zu Position fahren</b>: Geben Sie eine Schrittzahl ein und klicken Sie auf {ui('Vai')}.",
-    "<b>STOP</b>: hält den Motor und eine laufende Serie sofort an. Tastatur: <kbd>Esc</kbd>.",
+    "<b>STOP</b>: hält den Motor und eine laufende Serie sofort an. Tastatur: <kbd>Esc</kbd>. Nach STOP bleibt der Motor stehen, bis Sie wieder eine Taste drücken.",
 ])}
 <h2>Der Verfahrbalken</h2>
 {fig("binario", [
@@ -224,13 +236,19 @@ add(f"""
 <p>Unter dem Balken: die untere Grenze, der Pfeil, der anzeigt, <b>auf welcher Seite das Präparat liegt</b>, und die
 obere Grenze. „{ui('Avvicina')}“ bewegt immer in Richtung Präparat, egal in welche Richtung die Zahlen laufen: Das
 stellen Sie unter {ui('Configurazione')} › {ui('Fine corsa')} ein (Kapitel 9).</p>
-<div class="box tip"><span class="t">Tastatur</span><kbd>↑</kbd> fährt weg, <kbd>↓</kbd> fährt näher,
-<kbd>⇧</kbd> zusammen mit einem Pfeil multipliziert den Schritt mit 10, die Zifferntasten <kbd>1</kbd> <kbd>2</kbd>
+<div class="box tip"><span class="t">Tastatur</span><kbd>↑</kbd> fährt weg, <kbd>↓</kbd> fährt näher: Ein kurzer Druck macht einen
+Schritt, eine gedrückt gehaltene Pfeiltaste bewegt durchgehend bis zum Loslassen (wie die Tasten auf der Seite). <kbd>⇧</kbd> zusammen mit einem Pfeil multipliziert den Schritt mit 10, die Zifferntasten <kbd>1</kbd> <kbd>2</kbd>
 <kbd>3</kbd> … wählen die Schrittgröße, <kbd>Esc</kbd> ist STOP. Die Tasten funktionieren im Bereich {ui('Sessione')},
 auch während Sie das Live-View betrachten.</div>
 <div class="box warn"><span class="t">Hardwaretasten</span>Die Tasten am Fokussierer bewegen den Motor an der App
 vorbei. Die App überwacht sie und sendet STOP und einen Alarm, wenn die Position die Grenzen verlässt; für einen
 vollständigen Schutz lesen Sie Kapitel 9. Drücken Sie sie während einer Serie, wird die Serie pausiert.</div>
+<div class="box warn"><span class="t">Wenn der Schlitten bei kleinen Schritten nicht vorrückt</span>Ist
+<span class="ui">{ui('Bobine alimentate a motore fermo')}</span> ausgeschaltet ({ui('Configurazione')} › {ui('Motore (firmware)')}),
+verliert der Motor bei jedem Halt die Kraft, die ihn in Position hält: Die Last (Gewicht der Kamera, eine Feder, der
+Riemen) kann ihn zurückdrehen. Der Schrittzähler läuft weiter, der Schlitten bleibt aber stehen, und ein ganzer Stapel
+entsteht in derselben Ebene. Während der Serie bestromt die App die Spulen selbst (Kapitel 12); für Handbewegungen um
+wenige Schritte schalten Sie sie ein oder prüfen Sie im Live-View, ob sich das Bild tatsächlich bewegt.</div>
 """)
 
 # 6
@@ -257,14 +275,16 @@ add(f"""
 ], layout="stack")}
 {fig("live", [
     f"<b>{ui('■ Ferma live')}</b> schaltet das Live-View aus.",
-    f"Status: <b>{ui('LIVE')}</b>, <b>{ui('SCATTO…')}</b> während einer Testaufnahme, <b>{ui('IN PAUSA')}</b> während der Serie.",
+    f"Status: <b>{ui('LIVE')}</b> oder <b>{ui('SCATTO…')}</b> während einer Testaufnahme.",
     "Kameramodell. Doppelklick auf das Bild: Vollbild.",
 ], layout="stack")}
 </div>
 <p>Das Live-View liefert bis zu 15 Bilder pro Sekunde und ist der bequemste Weg, Anfang und Ende der Serie zu finden,
-während Sie den Fokussierer mit der Tastatur bewegen. Während der Serie wird es ausgeschaltet (der Spiegel muss
-herunterklappen und die Kamera normal auslösen) und startet am Ende von selbst wieder. Bei Spiegelreflexkameras bleibt
-der Spiegel hochgeklappt, solange das Live-View eingeschaltet ist.</p>
+während Sie den Fokussierer mit der Tastatur bewegen. Wenn die Serie startet, wird das Live-View geschlossen (der
+Spiegel muss herunterklappen und die Kamera normal auslösen), und das Feld zeigt wieder die letzte Aufnahme, auch im
+Betrachter; nach dem Stapel schalten Sie es mit <span class="ui">{ui('● Live')}</span> wieder ein. Bei
+Spiegelreflexkameras bleibt der Spiegel hochgeklappt, solange das Live-View eingeschaltet ist. Ein im Hauptfenster
+eingeschaltetes Live-View startet auch im Betrachter, wenn dieser geöffnet ist.</p>
 <div class="box tip"><span class="t">Für präzises Fokussieren</span>Öffnen Sie das Live-View im <b>Betrachter</b>: Dort
 können Sie auf 100 % und mehr vergrößern und zum gewünschten Detail verschieben (Kapitel 8).</div>
 """)
@@ -273,30 +293,38 @@ können Sie auf 100 % und mehr vergrößern und zum gewünschten Detail verschie
 TORNA = ui("Torna all'inizio a fine sequenza")
 ING_OBIETTIVO = ui("Ingrandimento dell'obiettivo")
 CAMBIO_INTERMEDIO = ui("Cambio d'ingrandimento intermedio")
+AVANZ_RETE = ui("Mostra l'avanzamento sulla rete locale")
+MOSTRA_ULTIMO = ui("Mostra l'ultimo scatto")
+AGGIORNA_ULTIMO = ui("Aggiorna l'ultimo scatto")
 add(f"""
 <h1><span class="n">7</span>Die Stacking-Serie</h1>
 <h2 style="margin-top:0">7.1 Die Serie einstellen</h2>
 {fig("sequenza", [
     f"<b>Status</b>: {ui('Pronta')}, {ui('In corso')}, {ui('In pausa')}, {ui('Completata')}, {ui('Errore')}.",
-    f"<b>{ui('Inizio')}</b> und <b>{ui('Fine')}</b> in Schritten. <span class='ui'>{ui('⌖ qui')}</span> übernimmt die aktuelle Position.",
+    f"<b>{ui('Nome della pila')}</b>: Unterordner <code>Name_Datum-Uhrzeit</code>, Dateien <code>Name_0001</code>, <code>Name_0002</code> …",
+    f"<b>{ui('＋ Nuova pila')}</b>: bereitet nach einem Stapel den nächsten vor (der Status wird wieder {ui('Pronta')}). Auch mit demselben Namen kommt jeder Stapel in einen neuen Ordner.",
+    f"<b>{ui('Inizio')}</b> und <b>{ui('Fine')}</b> in Schritten. <span class='ui'>⌖ {ui('qui')}</span> übernimmt die aktuelle Position.",
     "<b>Schrittweite</b> zwischen zwei Aufnahmen, in Motorschritten (Kapitel 11).",
-    f"<b>{ui('Numero di scatti')}</b>: mit der Schrittweite gekoppelt; ändern Sie einen Wert, wird der andere neu berechnet.",
+    f"<b>{ui('Numero di scatti')}</b>. Ändern Sie {ui('Inizio')}, {ui('Fine')} oder die Schrittweite, wird die Anzahl der Aufnahmen neu berechnet; ändern Sie die Anzahl der Aufnahmen, wird die Schrittweite neu berechnet. Das neu berechnete Feld wird orange und zeigt <span class='ui'>↺ war …</span>: Ein Klick macht die Änderung rückgängig.",
+    "<b>Wartezeit nach Bewegung</b>: zum Abklingen der Vibrationen vor der Aufnahme (1–3 s am Mikroskop).",
     f"<b>{ui('Ottica e filtro (profilo)')}</b>: das Profil für Objektiv, Filter und Beleuchtung, das in die Daten des Stapels geschrieben wird (7.2). <span class='ui'>{ui('Modifica')}</span> öffnet es im Bereich {ui('Ottica')}. Ohne Profil wird der Stapel als „{ui('nessun filtro')}“ vermerkt.",
     "<b>Übersicht</b>: Aufnahmen, Bereich in Schritten und µm, Schrittweite in µm, geschätzte Dauer und verwendetes Optikprofil. Liegt die Serie außerhalb der Grenzen, erscheint ein roter Hinweis und sie startet nicht.",
     f"<b>{ui('Salva in')}</b>: der Ordner für die Fotos. <span class='ui'>{ui('Scegli…')}</span> öffnet das Finder-Fenster, <span class='ui'>{ui('Apri')}</span> zeigt ihn im Finder.",
-    f"<b>{ui('Scatti per posizione')}</b>: wie viele Fotos an jeder Position entstehen (Standard 1). Bei mehreren Aufnahmen kann die Fusionssoftware sie mitteln und so das Rauschen verringern (7.3).",
-    "<b>Wartezeit nach Bewegung</b>: zum Abklingen der Vibrationen vor der Aufnahme (1–3 s am Mikroskop). <b>Pause nach Aufnahme</b>: zum Schreiben auf die Karte und Laden des Blitzes.",
+    f"<b>{ui('Scatti per posizione')}</b>: wie viele Fotos an jeder Position entstehen (Standard 1). Bei mehreren Aufnahmen kann die Fusionssoftware sie mitteln und so das Rauschen verringern (7.4).",
+    "<b>Pause nach Aufnahme</b>: zum Schreiben auf die Karte und Laden des Blitzes.",
     "<b>Spielausgleich</b>: Vor der ersten Aufnahme fährt der Motor so viele Schritte zurück und wieder vor, damit jede Aufnahme aus derselben Richtung angefahren wird.",
     f"<b>{ui('Modalità di scatto')}</b>: <i>{ui('Scarica sul Mac')}</i> (empfohlen), <i>{ui('Solo sulla scheda')}</i>, <i>Nur auslösen</i> (schneller: Speicherziel auf Karte).",
-    "<b>Sitzungsname</b>: Unterordner <code>Name_Datum-Uhrzeit</code>, Dateien <code>Name_0001</code>, <code>Name_0002</code> …",
     f"<b>{TORNA}</b>.",
+    f"<b>{ui('Suono sul Mac a fine sequenza')}</b>: ein heller Ton, wenn der Stapel abgeschlossen ist, ein tiefer, wenn er wegen eines Fehlers angehalten wurde oder von selbst pausiert hat.",
     f"<b>{ui('Preset')}</b>: speichert und lädt die Einstellungen der Serie, z. B. eines pro Objektiv.",
     "<b>Fortschritt</b>: erstellte Aufnahmen, verbleibende Zeit, Position.",
     f"<b>{ui('▶ Avvia sequenza')}</b>, <b>{ui('❚❚ Pausa')}</b>/<b>{ui('Riprendi')}</b> und <b>{ui('■ Interrompi')}</b>.",
-    f"<b>{ui('Apri nel Finder')}</b>: öffnet nach der Serie den Ordner des Stapels mit den Fotos, <code>sequence.json</code> und <code>sequence.txt</code> (7.4).",
+    f"<b>{ui('Apri nel Finder')}</b>: öffnet nach der Serie den Ordner des Stapels mit den Fotos, <code>sequence.json</code> und <code>sequence.txt</code> (7.5).",
 ])}
-<p>Aufnahmen pro Position, Zeiten und Spiel befinden sich im einklappbaren Abschnitt
-<span class="ui">{ui('Tempi, gioco, scatti per posizione e nome della sessione')}</span>.</p>
+<p>Aufnahmen pro Position, Pause nach der Aufnahme, Spiel, Modus, Rückkehr zum Anfang und Ton befinden sich im
+einklappbaren Abschnitt <span class="ui">{ui('Tempi, gioco e scatti per posizione')}</span>. Sind die Spulen des Motors
+ausgeschaltet und bestromt die App sie während der Serie nicht, erscheint darunter ein orangefarbener Hinweis
+(Kapitel 12).</p>
 <h2>Während die Serie läuft</h2>
 {fig("sequenza-in-corso", [
     f"Der Status wechselt zu <b>{ui('In corso')}</b> (bernsteinfarben).",
@@ -306,21 +334,34 @@ add(f"""
 <ul>
 <li>Wenn Sie die <b>Hardwaretasten</b> des Fokussierers drücken, wird die Serie pausiert; beim Fortsetzen fährt sie
   zurück an die richtige Position und wiederholt die Aufnahme.</li>
+<li><b>Wenn eine Aufnahme fehlschlägt</b>, versucht es die App nach 3 s erneut; beim zweiten Fehler verbindet sie die
+  Kamera selbstständig neu und versucht es noch einmal. Reicht das nicht, wird die Serie <b>pausiert</b> (nicht
+  abgebrochen), und die Meldung sagt, was zu prüfen ist: Bringen Sie die Kamera in Ordnung (Akku, Kabel, Karte) und
+  klicken Sie auf <span class="ui">{ui('Riprendi')}</span>. Die App verbindet die Kamera neu, fährt an dieselbe Position
+  und wiederholt die Aufnahme; die Fotos landen weiter im selben Ordner.</li>
+<li><b>Der Mac geht nicht in den Ruhezustand</b>, solange die Serie läuft: Der Ruhezustand würde USB anhalten, und die
+  Kamera wäre mitten im Stapel verschwunden. Der Bildschirm darf sich trotzdem ausschalten. Achtung: Wenn Sie den Deckel
+  eines Notebooks ohne externen Monitor schließen, geht der Mac trotzdem in den Ruhezustand.</li>
+<li>Sind die Spulen des Motors im Stillstand ausgeschaltet, bestromt die App sie für den ganzen Stapel und schaltet sie
+  nach der Rückkehr zum Anfang wieder aus (Kapitel 12).</li>
 <li>Die Felder der Serie sind gesperrt, solange die Serie läuft.</li>
-<li>Jedes neue Foto erscheint in „{ui('Ultimo scatto')}“ und im Betrachter.</li>
+<li>Jedes neue Foto erscheint in „{ui('Ultimo scatto')}“ und im Betrachter. Um den Stapel fern vom Mac zu verfolgen,
+  gibt es den Fortschritt auf dem Smartphone (7.7).</li>
 </ul>
 
 <h2>7.2 Optik und Filter: die Profile</h2>
 <p>Die Fusionssoftware arbeitet besser, wenn sie weiß, womit die Fotos aufgenommen wurden: Mit der Vergrößerung und der
 Pixelgröße des Sensors kann sie die Tiefenkarte und die 3D-Ansicht in echten Mikrometern liefern. Diese Daten speichern
 Sie im Bereich <b>{ui('Ottica')}</b> als benannte <b>Profile</b>, eines für jede Kombination aus Objektiv, Filter und
-Beleuchtung (zum Beispiel „10× GFP“, „4× Hellfeld“), und wählen sie in der Serie aus (Nummer 5 in der Abbildung oben). Die
-Abbildung zeigt dasselbe Objektiv mit dem Vergrößerungswechsler Optovar 1,6× und die Kamera an einem T2-Adapter ohne
-Linsen.</p>
+Beleuchtung (zum Beispiel „10× GFP“, „4× Hellfeld“), und wählen sie in der Serie aus (Nummer 8 in der Abbildung oben).
+Jedes Profil ist vom Typ <b>{ui('Microscopio')}</b> oder <b>{ui('Macro fotografica')}</b> (7.3). Die Abbildung zeigt ein
+Profil für das Mikroskop: ein 10×-Objektiv mit dem Vergrößerungswechsler Optovar 1,6× und die Kamera an einem T2-Adapter
+ohne Linsen.</p>
 {fig("ottica", [
     f"<b>{ui('Profilo da modificare')}</b>: Wählen Sie es, um seine Werte zu laden; <i>{ui('— nuovo profilo —')}</i> beginnt mit einem leeren Formular.",
     f"<b>{ui('Salva come nuovo profilo…')}</b>: fragt nach einem Namen und speichert eine Kopie; das Ausgangsprofil bleibt unverändert.",
     f"<b>{ui('Elimina profilo')}</b>, nach einer Rückfrage.",
+    f"<b>{ui('Tipo di ottica')}</b>: <i>{ui('Microscopio')}</i> (Objektiv mit eingravierter Vergrößerung und NA) oder <i>{ui('Macro fotografica')}</i> (Fotoobjektiv, Zwischenringe und Nahlinsen, 7.3).",
     f"<b>{ui('Pixel del sensore (pixel pitch in µm)')}</b>. Nikon D5600: <b>3,9 µm</b> (23,5 mm ÷ 6.000 Pixel). Er steht im Datenblatt der Kamera, auf <b>digicamdb.com</b> (Fotokameras) oder in der Sensordatenbank von <b>AstroBin</b> (dedizierte Kameras, zum Beispiel nach IMX571 suchen).",
     f"<b>{ui('Adattatore / oculare di proiezione')}</b> zwischen Mikroskop und Kamera: Name und Faktor, zum Beispiel ein C-Mount-Adapter 0,5× oder 0,63×, ein Fotookular 2,5×, ein T2-Adapter ohne Linsen 1×. Leer = 1×.",
     f"<b>{CAMBIO_INTERMEDIO}</b>, falls das Stativ einen hat: Name und Faktor, zum Beispiel <i>Optovar</i> 1,25×, 1,6× oder 2×. Leer = 1×.",
@@ -333,7 +374,7 @@ Linsen.</p>
     f"<b>{ui('Filtro')}</b>: <i>{ui('Non indicato')}</i> (unbekannt), <i>{ui('Nessun filtro')}</i> oder <i>{ui('Filtro montato')}</i>.",
     f"<b>{ui('Nome')}</b> und <b>{ui('Tipo')}</b> des Filters: {ui('Passa banda')}, {ui('Long pass')}, {ui('Short pass')}, {ui('Neutro (ND)')}, {ui('Polarizzatore')}, {ui('Altro')}.",
     f"<b>{ui('Centro (nm)')}</b> und <b>{ui('Larghezza di banda (nm)')}</b> bei einem Bandpass; bei Lang- und Kurzpass die Kantenwellenlänge.",
-    f"<b>{ui('Illuminazione')}</b> (freier Text, mit Vorschlägen) und <b>{ui('Intensità (%)')}</b>.",
+    f"<b>{ui('Illuminazione')}</b> (freier Text, mit Vorschlägen), <b>{ui('Intensità (%)')}</b> und <b>{ui('Temperatura di colore (K)')}</b> (zum Beispiel 4000 K für neutrales Licht).",
     f"Freie <b>{ui('Note')}</b>, die in die Daten des Stapels geschrieben werden.",
     f"<b>{ui('Salva profilo')}</b>: überschreibt das gewählte Profil; bei einem neuen Profil fragt die App nach dem Namen.",
     "Das geöffnete <b>Profil</b>; bernsteinfarben, wenn es ungespeicherte Änderungen gibt.",
@@ -343,7 +384,37 @@ Stapel als <b>ohne Filter</b> und ohne optische Daten vermerkt. Dieselben Werte 
 verwendet auch der Schärfentiefe-Rechner (Kapitel 11). Denken Sie daran, das Profil zu wechseln, wenn Sie Objektiv oder
 Filter wechseln: Die Übersicht der Serie zeigt immer an, was geschrieben wird.</p>
 
-<h2>7.3 Mehrere Aufnahmen pro Position</h2>
+<h2>7.3 Makrofotografie</h2>
+<p>Mit dem Typ <span class="ui">{ui('Macro fotografica')}</span> beschreibt das Profil ein Fotoobjektiv statt eines
+Mikroskopobjektivs. Die App berechnet daraus die Vergrößerung auf dem Sensor, die effektive Blende und eine äquivalente NA,
+die genau wie am Mikroskop für den Maßstab in µm und die Schärfentiefe verwendet werden.</p>
+{fig("ottica-macro", [
+    f"<b>{ui('Macro fotografica')}</b>: zeigt die Felder des Fotoobjektivs anstelle derer des Mikroskops.",
+    f"<b>{ui('Cerca nel database')}</b>: Geben Sie einen Teil des Namens ein (zum Beispiel „90 macro“) und wählen Sie das Objektiv. Die Datenbank ist die von <b>Lensfun</b> (1.162 Objektive), ergänzt um einige spezielle Makroobjektive, die Lensfun nicht hat (Canon MP-E 65, Laowa 25/90/100, OM 90), und um Ihre persönliche Liste.",
+    f"<b>{ui('Marca')}</b> und <b>{ui('Modello')}</b>: von der Suche ausgefüllt oder von Hand eingegeben.",
+    "<b>Brennweite</b> und <b>größte Blendenöffnung</b>. Bei einem Zoom geben Sie die verwendete Brennweite an.",
+    f"<b>{ui('＋ Aggiungi al mio elenco')}</b>: speichert ein Objektiv, das die Datenbank nicht kennt, damit die Suche es wiederfindet.",
+    "<b>Abbildungsmaßstab des Objektivs</b>, abgelesen auf seiner Skala bei der verwendeten Entfernung: 1 = 1:1, 0,5 = 1:2, 0 = auf unendlich fokussiert.",
+    "<b>Eingestellte Blende</b> am Objektiv.",
+    "<b>Zwischenringe / Balgen</b>: die gesamte zwischen Objektiv und Kamera hinzugefügte Länge, in mm.",
+    "<b>Nahlinsen</b> vor dem Objektiv (Raynox und ähnliche), bis zu 3, mit ihrer Brechkraft in Dioptrien.",
+    "<b>Ergebnis</b>: Vergrößerung auf dem Sensor, effektive Blende, äquivalente NA und Maßstab am Präparat in µm pro Pixel.",
+], layout="full")}
+<p>Es sind die Formeln der fotografischen Nahoptik, mit <i>f</i> = Brennweite, <i>m₀</i> = Abbildungsmaßstab des
+Objektivs, <i>e</i> = Zwischenringe in mm, <i>D</i> = Dioptrien der Nahlinsen und <i>N</i> = eingestellte Blende:</p>
+<div class="formula">m₁ = m₀ + {frac("e", "f")} &nbsp;&nbsp;&nbsp; Vergrößerung m = m₁ + {frac("ΣD", "1000")} · f · (1 + m₁)
+<span class="lbl">effektive Blende = N · (1 + m₁) &nbsp;·&nbsp; äquivalente NA = {frac("m", "2 · N · (1 + m₁)")}</span></div>
+<div class="calc">Beispiel: Makroobjektiv 90 mm bei 1:2 (m₀ = 0,5), f/8, keine Zwischenringe, Nahlinse mit +8 Dioptrien
+m₁ = 0,5 + 0 = 0,5
+m  = 0,5 + 8 ÷ 1000 × 90 × (1 + 0,5) = 0,5 + 1,08 = <b>1,58×</b>
+effektive Blende = 8 × 1,5 = <b>f/12</b>      äquivalente NA = 1,58 ÷ (2 × 8 × 1,5) = <b>0,066</b>
+mit einem Sensor von 3,9 µm: 3,9 ÷ 1,58 = <b>2,47 µm pro Pixel</b> am Präparat</div>
+<p>Wie am Mikroskop hat ein mit einem Millimeterlineal gemessener Wert (Feld <span class="ui">µm pro Pixel am Präparat,
+gemessen</span>) Vorrang vor der Berechnung, die mit Nahlinsen nur eine Schätzung ist. In der Makrofotografie beträgt die
+Schärfentiefe oft Dutzende oder Hunderte µm: Ist ein Schritt des Schlittens länger als die empfohlene Schrittweite, weist
+der Bereich {ui('Ottica')} darauf hin und schlägt den passenden Mikroschritt vor (Kapitel 10.2).</p>
+
+<h2>7.4 Mehrere Aufnahmen pro Position</h2>
 <p>Ist <span class="ui">{ui('Scatti per posizione')}</span> größer als 1, löst die Kamera an jeder Position mehrmals aus,
 ohne dass sich der Motor zwischen den Aufnahmen bewegt: Die Wartezeit gegen Vibrationen gibt es nur nach der Bewegung,
 zwischen den Aufnahmen nur die Pause nach der Aufnahme. Die Fusionssoftware mittelt die Aufnahmen: Bei 4 Aufnahmen
@@ -351,19 +422,81 @@ halbiert sich das Rauschen. Die Dateien heißen <code>stack_0001_1</code>, <code
 Aufnahme bleibt es bei <code>stack_0001</code>, <code>stack_0002</code> … Die Übersicht zeigt Positionen × Aufnahmen
 und die richtige Dauer.</p>
 
-<h2>7.4 Die Dateien des Stapels</h2>
+<h2>7.5 Die Dateien des Stapels</h2>
 <p>Im Ordner des Stapels schreibt die App neben die Fotos zwei Dateien. Sie werden nach jeder Aufnahme neu geschrieben
 und sind daher auch gültig, wenn die Serie abgebrochen wird. Die Fotos selbst werden nie verändert.</p>
 <ul>
 <li><code>sequence.json</code>: alle Daten für die <b>Fusionssoftware</b>: Position jeder Aufnahme in Schritten und µm,
-  Uhrzeit, Temperatur, Führung, Kamera, Optikprofil, Filter und Beleuchtung. Das Format ist in
-  <code>docs/sequence-json.md</code> auf GitHub beschrieben.</li>
+  Uhrzeit, Temperatur, Führung, Kamera, Optikprofil (Mikroskop oder Makro), Filter, Beleuchtung und die passenden
+  Kalibrierungssätze (7.6). Das Format ist in <code>docs/sequence-json.md</code> auf GitHub beschrieben.</li>
 <li><code>sequence.txt</code>: eine <b>lesbare Übersicht</b> in der Sprache der App. Zum Beispiel:</li>
 </ul>
 <div class="calc long">{SEQ_TXT}</div>
+
+<h2>7.6 Kalibrierung: Belichtung, Darks und Flats</h2>
+<p>Der Bereich <b>{ui('Calibrazione')}</b> bereitet vor, was die Fusionssoftware zum Korrigieren der Fotos braucht: eine
+passende Belichtungszeit für den Stapel und die <b>Kalibrierungsbilder</b>. Die Pegel werden an den <b>echten RAWs</b>
+gemessen, ohne Farbumwandlung, mit <i>fs-rawstat</i>, einem kleinen, in der App enthaltenen Programm auf Basis von
+LibRaw; ausgebrannte Pixel werden Kanal für Kanal erkannt. Mit dem Simulator sind die Pegel nur eine Schätzung.</p>
+<h3>{ui('Esposizione dei light')}</h3>
+{fig("calibrazione-esposizione", [
+    f"<b>{ui('Misura su')}</b>: <i>{ui('Luci (99,5° percentile)')}</i> (die hellsten Bildteile) oder <i>{ui('Media (livello medio)')}</i>.",
+    "<b>Zielpegel</b> in % der Sensorsättigung, zum Beispiel 85 % auf den Lichtern.",
+    f"<b>{ui('Calcola e imposta il tempo')}</b>: Die App macht einige Testaufnahmen, misst die RAWs und stellt die Belichtungszeit ein, wobei sie Zeiten ohne ausgebrannte Pixel bevorzugt. ISO und Blende bleiben wie eingestellt.",
+    "<b>Ergebnis</b>: gewählte Zeit, gemessener Pegel und ausgebrannte Pixel.",
+], layout="side")}
+<p>Fahren Sie den Fokussierer in die Mitte des Stapels und schalten Sie die Beleuchtung wie für die Serie ein. Die
+Belichtung wird <b>einmal vor dem Stapel</b> berechnet: Sie zwischen den Ebenen zu ändern, würde die Helligkeit der
+Bilder unterschiedlich machen.</p>
+<h3>{ui('Frame di calibrazione')}</h3>
+{fig("calibrazione-frame", [
+    f"<b>{ui('Tipo di frame')}</b>: <i>{ui('Dark')}</i> (Objektivdeckel drauf, gleiche ISO und Zeit wie die Lights: thermisches Rauschen und Hotpixel), <i>{ui('Flat')}</i> (gleichmäßig beleuchtetes Feld, gleiche Optik und Blende: Vignettierung und Staub) oder <i>{ui('Dark dei flat')}</i> (Objektivdeckel, gleiche ISO und Zeit wie die Flats).",
+    f"<b>{ui('Fotogrammi')}</b>, die aufgenommen werden, zum Beispiel 16.",
+    "<b>Flat-Pegel</b> in % der Sättigung, zum Beispiel 50 %: Die Belichtungszeit findet die App selbst.",
+    "<b>Fortschritt</b>: aufgenommene Bilder und gemessener Pegel.",
+    f"<b>{ui('▶ Scatta i frame')}</b> und <b>{ui('■ Interrompi')}</b>.",
+], layout="side")}
+<ul>
+<li><b>{ui('Dark')}</b>: Objektivdeckel drauf und Sucherokular abgedeckt, gleiche ISO und Belichtungszeit (oder Bulb) wie
+  die Lights, möglichst bei derselben Temperatur.</li>
+<li><b>{ui('Flat')}</b>: gleichmäßig beleuchtetes Feld (ein leerer Objektträger, ein Diffusor), mit demselben Optikprofil
+  und derselben Blende wie der Stapel: Sie korrigieren Vignettierung und Staub nur, wenn die Optik dieselbe ist.</li>
+<li><b>{ui('Dark dei flat')}</b>: direkt nach den Flats, mit Objektivdeckel: Die App übernimmt selbst ISO und Zeit der
+  neuesten Flats.</li>
+</ul>
+<h3>Die {ui('Libreria di calibrazione')}</h3>
+{fig("calibrazione-libreria", [
+    f"<b>Ordner</b> der Bibliothek: <code>_calibrazione</code> im Ordner der Stapel. <span class='ui'>{ui('Apri nel Finder')}</span> zeigt ihn an.",
+    "<b>Passende Sätze</b> für einen Stapel, der jetzt gestartet würde, mit der aktuellen Kamera und den aktuellen Einstellungen.",
+    "<b>Tabelle der Sätze</b>: Typ, Datum, Kamera, ISO, Zeit, Optikprofil, Bilder, mittlerer Pegel und Temperatur. <span class='ui'>Löschen</span> verschiebt den Satz in den Papierkorb des Mac (im Finder wiederherstellbar).",
+], layout="full")}
+<p>Jeder Satz hat seinen eigenen Ordner mit den Bildern und einer <code>calibration.json</code> (Format in
+<code>docs/calibration-json.md</code>). Beim Start eines Stapels verweist <code>sequence.json</code> auf die neuesten
+passenden Sätze: für Darks gleiche Kamera, ISO und Zeit; für Flats zusätzlich dasselbe Optikprofil. Die Bilder werden
+nicht kopiert. Es ist dieselbe Bibliothek, die <b>Focus Fusion</b> verwendet und in der es seine „Master“ ablegt.</p>
+
+<h2>7.7 {ui('Avanzamento da smartphone')}</h2>
+<p>Um einen langen Stapel fern vom Mac zu verfolgen, schalten Sie unter
+<span class="ui">{ui('Configurazione')} › {ui('Avanzamento da smartphone')}</span> eine <b>schreibgeschützte</b> Seite im
+lokalen Netzwerk ein.</p>
+{fig("smartphone", [
+    f"<b>{AVANZ_RETE}</b>: schaltet die Seite ein (sie ist aus, bis Sie sie aktivieren).",
+    "<b>QR-Code</b>: Scannen Sie ihn mit der Kamera des Smartphones, das im selben WLAN wie der Mac sein muss.",
+    f"<b>{ui('Nuovo link')}</b>: ändert den Code des Links; der alte funktioniert nicht mehr.",
+], layout="side")}
+{fig("smartphone-pagina", [
+    "Name des Stapels, Status, erstellte Aufnahmen, verbleibende Zeit und voraussichtliche Endzeit.",
+    f"<b>{ui('Avvisami con un suono a fine sequenza')}</b>: Das Smartphone gibt einen Ton aus (und vibriert unter Android), wenn der Stapel fertig ist, wegen eines Fehlers anhält oder von selbst pausiert; solange der Ton aktiv ist, bleibt der Bildschirm an.",
+    f"<b>{MOSTRA_ULTIMO} / {AGGIORNA_ULTIMO}</b>: das letzte Foto in voller Breite.",
+    f"Die letzte Aufnahme: mit zwei Fingern aufziehen, ziehen oder doppelt tippen zum Vergrößern. Beim Vergrößern wird ein hochaufgelöster Ausschnitt geladen; der Zoom bleibt beim Wechsel zur nächsten Aufnahme erhalten, um dieselbe Stelle zu vergleichen. <span class='ui'>{ui('Adatta')}</span> kehrt zum ganzen Bild zurück.",
+], layout="side narrow", width="70%")}
+<p>Über die Seite <b>lässt sich nichts steuern</b>, und ohne den Code im Link wird nichts angezeigt. Beim ersten Mal fragt
+macOS, ob eingehende Verbindungen erlaubt werden sollen: Antworten Sie <b>Erlauben</b>. Für den Ton lassen Sie die Seite
+im Vordergrund geöffnet: Ein gesperrtes Telefon hält Webseiten an.</p>
 """)
 
 # 8
+EVIDENZIA = ui("Evidenzia sull'immagine")
 add(f"""
 <h1><span class="n">8</span>Der Betrachter</h1>
 <p>Sie öffnen ihn mit <span class="ui">{ui('Apri visualizzatore ↗')}</span> oder mit einem Klick auf die letzte
@@ -378,15 +511,29 @@ Auflösung (auch RAW-Dateien, die direkt umgewandelt werden) mit Zoom und Versch
     f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>): zeigt jede neue Aufnahme automatisch an.",
     f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>): behält Zoom und Position beim Wechsel der Aufnahme bei, um die Schärfe an derselben Stelle zu vergleichen.",
     f"<b>{ui('Finder')}</b>: zeigt die Datei im Finder.",
+    f"<b>{ui('Svuota')}</b>: neu beginnen. Die Aufnahmen verschwinden aus dem Betrachter und die Serie ist wieder {ui('Pronta')}; die Dateien bleiben im Ordner.",
+    f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>): Histogramme, ausgebrannte und schwarze Pixel, Werte unter dem Zeiger (siehe unten).",
     "<b>Vollbild</b> (<kbd>F</kbd>).",
-    f"<b>Miniaturen</b>: Ein Klick öffnet die Aufnahme. <i>{ui('P')}</i> = Testaufnahme, die Zahlen sind die Aufnahmen der Serie.",
-], layout="full", anchors={n: "b" for n in range(1, 10)})}
+    "<b>?</b>: diese Anleitung, beim Kapitel über den Betrachter.",
+    f"<b>Miniaturen</b>: Ein Klick öffnet die Aufnahme. <i>{ui('P')}</i> = Testaufnahme, <i>{ui('C')}</i> = Kalibrierungsbild, <i>{ui('E')}</i> = Foto für die Belichtung, die Zahlen sind die Aufnahmen der Serie.",
+], layout="full", anchors={n: "b" for n in range(1, 12)})}
 <p>Mit der Maus: Ziehen verschiebt das Bild, das Scrollrad (oder Aufziehen auf dem Trackpad) zoomt um den Zeiger herum,
 ein Doppelklick wechselt zwischen „Einpassen“ und 100 %. Über 150 % bleiben die Pixel scharf, ohne Weichzeichnung.</p>
 {fig("visualizzatore-live", [
     f"<b>{ui('■ Ferma live')}</b> kehrt zu den Fotos zurück; auch ◀ ▶ oder ein Klick auf eine Miniatur verlassen das Live-View.",
     f"Live-Status: {ui('LIVE')}, {ui('SCATTO…')}, {ui('IN PAUSA')} während der Serie.",
 ], layout="full", anchors={1: "b"}, caption="Das Live-View im Betrachter, hier mit dem Simulator im Fokus (das Schachbrett ist scharf). Bei 100 % hat das Live-View die Auflösung der Kameravorschau, also weniger als die Fotos.")}
+<h2>{ui('Ispettore')}</h2>
+<p>Das Feld <span class="ui">{ui('Ispettore')}</span> (Taste <kbd>I</kbd>) prüft die Belichtung eines Fotos nach denselben
+Regeln wie Focus Fusion. Es ist schreibgeschützt: Die Fotos werden nicht verändert. Es funktioniert auch mit dem
+Live-View, das jede halbe Sekunde aktualisiert wird.</p>
+{fig("ispettore", [
+    f"<b>{ui('Bruciati e neri')}</b>: Anteil in Prozent und verwendete Regeln. <span class='ui'>{EVIDENZIA}</span> markiert ausgebrannte Pixel rot und schwarze blau; die beiden Tasten blenden sie getrennt ein oder aus.",
+    "<b>Histogramme</b> für Rot, Grün, Blau und Luminanz. Mit dem Zeiger auf einer Stufe lesen Sie ab, wie viele Pixel es dort gibt.",
+    "<b>Unter dem Zeiger</b>: die Werte R, G, B und die Luminanz des Pixels unter der Maus.",
+], layout="full")}
+<p>Bei RAW-Fotos arbeitet der Inspektor mit der umgewandelten Vorschau; für den genauen Pegel des Sensors verwenden Sie
+<span class="ui">{ui('Esposizione dei light')}</span> (7.6), das die echten RAWs misst.</p>
 """)
 
 # 9
@@ -395,7 +542,7 @@ add(f"""
 <p class="lead">Die Grenzen verhindern, dass das Objektiv den Objektträger berührt oder die Mechanik auf Anschlag
 fährt. Richten Sie sie als Erstes ein, in aller Ruhe.</p>
 {fig("fine-corsa", [
-    f"<b>{ui('Fine corsa inferiore')}</b> in Schritten; <span class='ui'>{ui('⌖ Usa posizione attuale')}</span> übernimmt sie aus der Position des Fokussierers.",
+    f"<b>{ui('Fine corsa inferiore')}</b> in Schritten; <span class='ui'>⌖ {ui('Usa posizione attuale')}</span> übernimmt sie aus der Position des Fokussierers.",
     f"<b>{ui('Fine corsa superiore')}</b>. Leer = das Firmware-Maximum.",
     f"<b>{ui('Verso il campione (si avvicina) con')}</b>: ob die Schrittzahl bei Annäherung an das Präparat sinkt oder steigt. Damit werden {ui('Avvicina')}/{ui('Allontana')} richtig beschriftet.",
     f"<b>{ui('Salva fine corsa')}</b>.",
@@ -417,7 +564,7 @@ Maximum.</p>
 <li>Bringen Sie den Objekttisch mit einem Trockenobjektiv und ohne Objektträger, oder mit großer Vorsicht, in die
   Position, die dem <b>Präparat am nächsten und noch sicher</b> ist, und klicken Sie auf <span class="ui">{ui('Imposta qui lo zero')}</span>.</li>
 <li>Bringen Sie den Objekttisch in die entfernteste sinnvolle Position, klicken Sie bei der oberen Grenze auf
-  <span class="ui">{ui('⌖ Usa posizione attuale')}</span>, dann auf <span class="ui">{ui('Salva fine corsa')}</span> und
+  <span class="ui">⌖ {ui('Usa posizione attuale')}</span>, dann auf <span class="ui">{ui('Salva fine corsa')}</span> und
   <span class="ui">{ui('Scrivi il massimo nel firmware')}</span>.</li>
 <li>Prüfen Sie einmal von Hand und langsam mit den Hardwaretasten, ob der Fokussierer wirklich bei 0 und beim
   Maximum anhält.</li>
@@ -619,8 +766,8 @@ Faktoren sind Nennwerte.</div>
 <h2>11.2 Anfang, Ende und Anzahl der Aufnahmen</h2>
 <ol class="steps">
 <li>Schalten Sie das Live-View ein (am besten im Betrachter, vergrößert) und stellen Sie den Fokus <b>knapp über</b> den
-  höchsten Teil des Objekts, der scharf werden soll: Klicken Sie neben <b>{ui('Inizio')}</b> auf <span class="ui">{ui('⌖ qui')}</span>.</li>
-<li>Fahren Sie bis <b>knapp unter</b> den tiefsten Teil und klicken Sie neben <b>{ui('Fine')}</b> auf <span class="ui">{ui('⌖ qui')}</span>.</li>
+  höchsten Teil des Objekts, der scharf werden soll: Klicken Sie neben <b>{ui('Inizio')}</b> auf <span class="ui">⌖ {ui('qui')}</span>.</li>
+<li>Fahren Sie bis <b>knapp unter</b> den tiefsten Teil und klicken Sie neben <b>{ui('Fine')}</b> auf <span class="ui">⌖ {ui('qui')}</span>.</li>
 <li>Geben Sie die Schrittweite ein (oder verwenden Sie <span class="ui">{ui('Usa come passo della sequenza')}</span>): Die App
   berechnet die Anzahl der Aufnahmen.</li>
 </ol>
@@ -651,26 +798,44 @@ add(f"""
     f"<b>{ui('Microstep')}</b>: {ui('Passo intero')}, 1/2 … 1/32 (siehe 10.2). Eine Änderung ändert den Maßstab der Positionen: Prüfen Sie danach die Grenzen erneut.",
     f"<b>{ui('Velocità')}</b> der Firmware: {ui('Lenta')}, {ui('Media')}, {ui('Veloce')}.",
     f"<b>{ui('Bobine alimentate a motore fermo')}</b>: Der Motor hält seine Position, wird aber warm.",
+    f"<b>{ui('Alimentale comunque durante la sequenza')}</b> (erscheint bei ausgeschalteten Spulen; standardmäßig aktiv): Die Spulen werden beim Start des Stapels eingeschaltet und nach der Rückkehr zum Anfang wieder ausgeschaltet.",
     f"<b>{ui('Inverti verso di rotazione')}</b>.",
     f"<b>{ui('Compensa il gioco IN')} / OUT</b>: Bei jeder Umkehr zu niedrigeren (IN) oder höheren (OUT) Positionen fährt die Firmware zusätzliche Schritte, ohne sie zu zählen, auch bei den Hardwaretasten.",
     "<b>Spiel IN / OUT</b> in Schritten, 0 bis 255 (siehe 10.5).",
     f"<b>{ui('Rileggi')}</b>: liest die Werte aus der Firmware.",
 ])}
+<div class="box warn"><span class="t">Spulen aus: Der Schlitten rückt womöglich nicht vor</span>Ohne Strom im Stillstand
+kann die Last den Schlitten bei jedem Halt zurückschieben, und beim Mikroschritt springt der Motor außerdem auf den
+nächsten Vollschritt zurück: Der Zähler läuft weiter, der Schlitten aber nicht. Deshalb schaltet die App die Spulen bei
+ausgeschalteten Spulen während der Serie ein (Nummer 4), und ein orangefarbener Hinweis erinnert daran, wenn Sie die
+Option abwählen. Wird der Motor zu heiß, senken Sie lieber den Strom am Treiber, statt die Spulen auszuschalten.</div>
 <h2>{ui('Comandi manuali')}</h2>
 {fig("comandi-manuali", [
     f"<b>Schrittgrößen</b> der Tasten {ui('Allontana')}/{ui('Avvicina')}: in Zehnerpotenzen bis 1.000, 10.000 oder 100.000 Schritte. Ein Getriebe braucht große Schrittgrößen.",
     f"<b>{ui('Tieni premuto per muovere senza fermarti')}</b>: Beim Loslassen bremst der Motor ab und hält an; er hält in jedem Fall an der Grenze an und, falls die Seite nicht mehr reagiert, nach etwa einer Sekunde.",
+    f"<b>{ui('Tratto massimo per comando (passi)')}</b>: Bei gedrückter Taste fährt der Motor nie mehr als einen Abschnitt (standardmäßig 500 Schritte) über die letzte Bestätigung der Seite hinaus, dass die Taste noch gedrückt ist.",
 ], layout="side")}
+<p>Die Dauerbewegung funktioniert aus Sicherheitsgründen so: Bricht die Kommunikation ab (Netzwerk, hängende App, Kabel),
+fährt der Motor höchstens einen Abschnitt. Mit <b>Firmware-Build 5</b> verschiebt jede Bestätigung das Ziel um einen
+Abschnitt weiter, und der Motor hält nie an; mit älterer Firmware fährt er Abschnitt für Abschnitt, mit einer kurzen Pause
+zwischen den Abschnitten (kurze Abschnitte sind sicherer, aber ruckartiger). Ab <b>Build 4</b> gibt es einen zusätzlichen
+Schutz: Während der Dauerbewegung hält der Fokussierer selbstständig an, wenn er 1,5 s lang keine Befehle mehr vom Mac
+erhält. <span class="ui">{ui('Vai')}</span>, die
+Tasten mit einem einzelnen Klick und die Serie fahren dagegen immer bis zum Ziel, auch wenn die Bewegung viele Sekunden
+dauert.</p>
 <h2>{ui('Aggiornamenti')}</h2>
 {fig("aggiornamenti", [
     "Version der <b>App</b> und Ergebnis der letzten Prüfung.",
     "Version der <b>Firmware</b> auf dem Fokussierer.",
-    f"<b>{ui('Aggiorna firmware')}</b>: etwa 20 Sekunden; die Einstellungen des Fokussierers bleiben erhalten. Ziehen Sie das Kabel nicht ab; falls etwas schiefgeht, wiederholen Sie den Vorgang einfach.",
+    f"<b>{ui('Aggiorna firmware')}</b>: etwa 20 Sekunden; die Einstellungen des Fokussierers bleiben erhalten. Ziehen Sie das Kabel nicht ab; falls etwas schiefgeht, wiederholen Sie den Vorgang einfach. Build 5 macht die Bewegung bei gedrückter Taste durchgehend; ab Build 4 gibt es das automatische Anhalten, wenn der Mac nicht mehr kommuniziert.",
     f"<b>{ui('Controlla ora')}</b>: sucht nach Updates der App.",
 ], layout="side")}
 <p>Die App wählt selbst die passende Firmware für die Platine (myFocuserPro2 oder Ardufocus). Der <b>Ardufocus</b> startet
 über das USB-Kabel nicht neu: Während der Aktualisierung fordert die App Sie auf, die <b>Reset-Taste</b> der Platine zu
 drücken.</p>
+<p>Die Platine speichert Position und Einstellungen erst etwa zehn Sekunden nach der letzten Bewegung in ihrem
+dauerhaften Speicher. Damit die Position nicht verloren geht, lässt die App sie jedes Mal sofort speichern, wenn sie die
+Verbindung schließt ({ui('Disconnetti')}, Beenden der App, Aktualisierung).</p>
 <h2>{ui('Temperatura')}</h2>
 {fig("temperatura", [
     "Aktuelle Temperatur des Fühlers.",
@@ -686,8 +851,9 @@ add(f"""
 <li><b>Mechanik</b>: Geben Sie die Daten ein und prüfen Sie die Auflösung mit einer Messung (Kapitel 10).</li>
 <li><b>Richtung des Präparats</b> und <b>Grenzen</b>, mit den in die Firmware geschriebenen Grenzen (Kapitel 9).</li>
 <li><b>Spiel</b>: Messen Sie es mit dem Live-View und entscheiden Sie, wo es ausgeglichen wird (Serie oder Firmware).</li>
+<li><b>Motor</b>: Prüfen Sie die Spulen (Kapitel 12) und aktualisieren Sie die Firmware, wenn die App es anbietet.</li>
 <li><b>Optikprofile</b>: Speichern Sie im Bereich {ui('Ottica')} ein Profil für jede Kombination aus Objektiv, Filter und
-  Beleuchtung (Kapitel 7.2).</li>
+  Beleuchtung, am Mikroskop oder in der Makrofotografie (Kapitel 7.2 und 7.3).</li>
 <li><b>Presets</b>: Berechnen Sie für jedes Objektiv die Schrittweite aus der Schärfentiefe und speichern Sie ein Preset;
   das Preset merkt sich auch das Optikprofil.</li>
 </ol>
@@ -697,9 +863,11 @@ add(f"""
 <li>Verbinden Sie Fokussierer und Kamera im Bereich {ui('Sessione')}.</li>
 <li>Stellen Sie Belichtungszeit, ISO und Format ein; machen Sie eine <b>Testaufnahme</b> und prüfen Sie sie im Betrachter bei 100 %.</li>
 <li>Wählen Sie das <b>Preset</b> des Objektivs (oder die Schrittweite) und prüfen Sie das <b>Optikprofil</b> in der Serie.</li>
-<li>Suchen Sie mit dem <b>Live-View</b> und der Tastatur <b>Ende</b> und <b>Anfang</b> der Serie und klicken Sie jeweils auf {ui('⌖ qui')}.</li>
+<li>Suchen Sie mit dem <b>Live-View</b> und der Tastatur <b>Ende</b> und <b>Anfang</b> der Serie und klicken Sie jeweils auf ⌖ {ui('qui')}.</li>
+<li>Falls nötig, bereiten Sie die <b>Darks</b> und <b>Flats</b> vor und berechnen Sie die Belichtung der Lights (Kapitel 7.6).</li>
 <li>Prüfen Sie die Übersicht: Anzahl der Aufnahmen, Bereich, Dauer, kein roter Hinweis.</li>
-<li><b>{ui('▶ Avvia sequenza')}</b>. Berühren Sie das Mikroskop nicht: Vibrationen verderben die Aufnahmen.</li>
+<li><b>{ui('▶ Avvia sequenza')}</b>. Berühren Sie das Mikroskop nicht: Vibrationen verderben die Aufnahmen. Um die Serie
+  aus der Ferne zu verfolgen, verwenden Sie den Fortschritt auf dem Smartphone (Kapitel 7.7).</li>
 <li>Klicken Sie nach Ende der Serie auf <b>{ui('Apri nel Finder')}</b> und öffnen Sie den Ordner in der Fusionssoftware.</li>
 </ol>
 """)
@@ -720,6 +888,10 @@ add(table(["Problem", "Was tun"], [
     ["Die Serie startet nicht", "Lesen Sie den roten Hinweis in der Übersicht: Meist überschreitet die Serie, einschließlich Spielausgleich, die Grenzen."],
     ["Verwackelte oder doppelte Fotos", "Erhöhen Sie die Wartezeit nach der Bewegung und die Spiegelverzögerung; verwenden Sie Bulb oder den lautlosen Verschluss, wenn die Kamera das erlaubt."],
     [f"„{ui('Focus Stack è chiuso')}“ auf der Seite", "Die App wurde beendet: Öffnen Sie sie wieder, dann lädt sich die Seite von selbst neu."],
+    ["Der ganze Stapel liegt in derselben Ebene: Der Schlitten rückt nicht vor", f"Die Spulen des Motors sind ausgeschaltet, und die Last schiebt den Schlitten bei jedem Halt zurück (Kapitel 12): Lassen Sie <i>{ui('Alimentale comunque durante la sequenza')}</i> aktiviert. Probieren Sie eine kleine Bewegung und beobachten Sie dabei das Live-View."],
+    ["Die Serie hat von selbst pausiert", f"Die Aufnahme ist auch nach dem Neuverbinden der Kamera nicht gelungen. Lesen Sie die Meldung, prüfen Sie Akku, Kabel und Karte und klicken Sie dann auf <i>{ui('Riprendi')}</i>: Die Aufnahme wird an derselben Position wiederholt."],
+    ["Die Kamera verschwindet mitten im Stapel", "Meist ist der Mac in den Ruhezustand gegangen und hat USB angehalten. Während der Serie verhindert die App das, aber nicht, wenn Sie den Deckel eines Notebooks ohne externen Monitor schließen. Prüfen Sie auch den Akku der Kamera."],
+    ["Das Smartphone öffnet die Fortschrittsseite nicht", f"Das Telefon muss im selben WLAN wie der Mac sein; beim ersten Start fragt macOS, ob eingehende Verbindungen erlaubt werden sollen (antworten Sie Erlauben). Nach <i>{ui('Nuovo link')}</i> gilt der alte Code nicht mehr."],
 ]))
 
 # 15
@@ -729,6 +901,7 @@ add(f"""<h1><span class="n">15</span>Tastaturkurzbefehle</h1>
 <table><tbody>
 <tr><td><kbd>↑</kbd></td><td>Objektiv vom Präparat wegfahren</td></tr>
 <tr><td><kbd>↓</kbd></td><td>Objektiv näher an das Präparat fahren</td></tr>
+<tr><td><kbd>↑</kbd>/<kbd>↓</kbd> gedrückt gehalten</td><td>durchgehende Bewegung bis zum Loslassen</td></tr>
 <tr><td><kbd>⇧</kbd> + <kbd>↑</kbd>/<kbd>↓</kbd></td><td>Schritt × 10</td></tr>
 <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> …</td><td>Schrittgröße: 1, 10, 100 …</td></tr>
 <tr><td><kbd>Esc</kbd></td><td>STOP</td></tr>
@@ -742,6 +915,7 @@ add(f"""<h1><span class="n">15</span>Tastaturkurzbefehle</h1>
 <tr><td><kbd>1</kbd></td><td>100 %</td></tr>
 <tr><td><kbd>U</kbd></td><td>neueste folgen</td></tr>
 <tr><td><kbd>K</kbd></td><td>Ansicht sperren</td></tr>
+<tr><td><kbd>I</kbd></td><td>{ui('Ispettore')}</td></tr>
 <tr><td><kbd>F</kbd></td><td>Vollbild</td></tr>
 </tbody></table></div>
 </div>

@@ -673,6 +673,7 @@ void loop() {
   {
     ser_comms();
   }
+  fs_supervise();  // Focus Stack: movimento sorvegliato senza più comandi dal Mac -> fermo
 
   switch (MainStateMachine) {
     case State_Idle:
@@ -942,6 +943,7 @@ void loop() {
         timestampendmove = millis();
       }
       isMoving = 0;
+      fs_supervised = false;
       writenow = 1;
       previousMillis = millis();
       MainStateMachine = State_Idle;

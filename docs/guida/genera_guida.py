@@ -9,7 +9,6 @@ import sys
 from html import escape as html_escape
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright
 
 HERE = Path(__file__).parent
 ROOT = HERE.parent.parent
@@ -229,8 +228,9 @@ UB = um_step(100, 200, 1, GEAR17)
 OBJ = [(4, .10), (10, .25), (20, .40), (40, .65), (60, .85), (100, 1.25)]   # ingrandimento, NA
 
 
-def build(lang):
-    """Esegue testo_<lang>.py con gli helper comuni e restituisce (META, html)."""
+def parts(lang):
+    """Esegue testo_<lang>.py con gli helper comuni: restituisce (META, sezioni HTML, cartella delle schermate).
+    Lo usa anche genera_guida_web.py (guida HTML dentro l'app)."""
     img_dir = f"img/{lang}"
     if not (HERE / img_dir / "annotazioni.json").exists():
         print(f"ATTENZIONE: mancano le schermate in {img_dir}/, uso quelle italiane")
@@ -244,9 +244,14 @@ def build(lang):
           "um_step": um_step, "dof": dof, "OBJ": OBJ, "SEQ_TXT": seq_txt}
     path = HERE / f"testo_{lang}.py"
     exec(compile(path.read_text(encoding="utf-8"), str(path), "exec"), ns)
-    meta = ns["META"]
+    return ns["META"], ns["H"], img_dir
+
+
+def build(lang):
+    """Guida per il PDF: restituisce (META, html)."""
+    meta, sections, _img = parts(lang)
     html = (f'<!doctype html><html lang="{meta["lang"]}"><head><meta charset="utf-8"><title>{meta["title"]}</title>'
-            f'<style>{CSS}</style></head><body>{"".join(ns["H"])}</body></html>')
+            f'<style>{CSS}</style></head><body>{"".join(sections)}</body></html>')
     return meta, html
 
 
@@ -303,6 +308,7 @@ if __name__ == "__main__":
     langs = LANGS if which == "all" else (which,)
     if any(lang not in LANGS for lang in langs):
         sys.exit(f"Lingua non valida: {which} (it, en o all)")
+    from playwright.sync_api import sync_playwright   # solo per il PDF: la guida HTML non ne ha bisogno
     with sync_playwright() as p:
         b = p.chromium.launch(channel="chrome")
         problems = sum(render(lang, b) for lang in langs)

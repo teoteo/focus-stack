@@ -53,7 +53,10 @@ class GPhotoCamera:
     simulated = False
 
     def __init__(self, model: str = "", port: str = ""):
-        self.model = model
+        self.model = model    # nome mostrato (dopo il collegamento quello che dichiara la fotocamera, es. "ILCE-6400")
+        # nome del driver libgphoto2 (es. "Sony ILCE-6400 (PC Control)"): serve per riaprire la stessa fotocamera.
+        # Va tenuto a parte: con il nome breve lookup_model falliva e il ricollegamento dava "[-105] Unknown model".
+        self.driver = model
         self.port = port
         self._cam = None
         self._ctx = None
@@ -73,6 +76,11 @@ class GPhotoCamera:
     @property
     def connected(self) -> bool:
         return self._cam is not None
+
+    @property
+    def is_sony(self) -> bool:
+        # il nome dichiarato dalla fotocamera può non contenere la marca ("ILCE-6400"); quello del driver sì
+        return "sony" in f"{self.driver or ''} {self.model or ''}".lower()
 
     async def _run(self, fn, *args):
         return await asyncio.get_running_loop().run_in_executor(self._exec, fn, *args)
@@ -101,16 +109,26 @@ class GPhotoCamera:
             time.sleep(0.4 + attempt * 0.4)
             cam = gp.Camera()
             try:
-                if self.port:
+                port = self.port
+                if self.driver and not port:
+                    # ricollegamento dopo che la fotocamera è sparita dall'USB: la porta può avere un numero nuovo e
+                    # la si ritrova dal nome del driver (con il driver impostato e senza porta init() fallisce: [-5])
+                    found = [addr for name, addr in gp.check_result(gp.gp_camera_autodetect()) if name == self.driver]
+                    port = found[0] if found else ""
+                if port:
                     port_list = gp.PortInfoList()
                     port_list.load()
-                    cam.set_port_info(port_list[port_list.lookup_path(self.port)])
-                if self.model:
+                    cam.set_port_info(port_list[port_list.lookup_path(port)])
+                if self.driver and port:
                     abilities = gp.CameraAbilitiesList()
                     abilities.load()
-                    cam.set_abilities(abilities[abilities.lookup_model(self.model)])
+                    try:
+                        cam.set_abilities(abilities[abilities.lookup_model(self.driver)])
+                    except gp.GPhoto2Error:
+                        pass   # nome sconosciuto: libgphoto2 riconosce la fotocamera da sé
                 cam.init()
                 self._cam = cam
+                self.port = port or self.port
                 break
             except gp.GPhoto2Error as exc:
                 last_err = exc
@@ -118,6 +136,10 @@ class GPhotoCamera:
             raise CameraError(tr(
                 "Impossibile aprire la fotocamera ({err}). Chiudi Foto, Anteprima, Acquisizione Immagine "
                 "e i software del produttore; per Sony imposta USB 'PC Remote'.", err=last_err))
+        try:
+            self.driver = str(self._cam.get_abilities().model or "").strip() or self.driver
+        except gp.GPhoto2Error:
+            pass
         try:
             summary = str(self._cam.get_summary())
             for line in summary.splitlines():
@@ -205,6 +227,24 @@ class GPhotoCamera:
 
     async def disconnect(self) -> None:
         await self._run(self._disconnect_blocking)
+
+    async def reconnect(self) -> None:
+        """Nuova sessione PTP con la stessa fotocamera, dopo che è sparita dall'USB (stop del Mac, batteria,
+        cavo). La vecchia sessione si chiude senza badare agli errori: il dispositivo può non esserci più.
+        Se la porta era fissata e dopo il ricollegamento ha un numero nuovo, si ritenta in automatico."""
+        try:
+            await self.disconnect()
+        except Exception:  # noqa: BLE001  (sessione già morta)
+            pass
+        self._cam = None
+        self.live = False
+        try:
+            await self.connect()
+        except CameraError:
+            if not self.port:
+                raise
+            self.port = ""
+            await self.connect()
 
     async def read_settings(self) -> dict:
         self._require()
@@ -347,7 +387,7 @@ class GPhotoCamera:
                           mirror_s: float = 0) -> list[str]:
         self._require()
         deadline = time.monotonic() + timeout_s
-        if "sony" in (self.model or "").lower():
+        if self.is_sony:
             # Sony: senza una lettura delle proprietà dopo lo scatto precedente, la fotocamera (via libgphoto2)
             # crede di avere ancora un'immagine in memoria e lo scatto successivo va in timeout ([-1] dopo ~30 s).
             # Rileggere le impostazioni aggiorna lo stato; costa una frazione di secondo.
@@ -396,7 +436,7 @@ class GPhotoCamera:
                 saved.append(target)
             if saved:
                 self.last_file = saved[0]
-        if "sony" in (self.model or "").lower():
+        if self.is_sony:
             # Sony (provato su ILCE-6400 in PC Remote): dopo lo scatto la fotocamera manda ancora eventi per ~2 s
             # (oggetto rimosso dalla memoria, stati). Se lo scatto successivo parte prima che siano stati letti,
             # la fotocamera non scatta e libgphoto2 va in timeout dopo 35 s ([-1]). Leggerli qui per 2,5 s lo evita.
@@ -518,6 +558,9 @@ class SimulatedCamera(GPhotoCamera):
         self._n = 0
         self.focus_position = lambda: None   # impostata dal server: posizione del focheggiatore
         self.scene: str | None = None         # calibrazione: "dark" (tappo) o "flat" (campo uniforme)
+        # prove della fotocamera persa: "session" = sessione morta, torna ricollegandosi (come dopo uno stop
+        # del Mac); "unplugged" = sparita finché non la si rimette (batteria scarica, cavo staccato)
+        self.lost: str = ""
         self.settings = {
             "shutterspeed": {"key": "shutterspeed", "current": "1/60",
                              "choices": ["bulb", "30", "15", "8", "4", "2", "1", "1/2", "1/4", "1/8", "1/15",
@@ -534,6 +577,11 @@ class SimulatedCamera(GPhotoCamera):
 
     async def connect(self) -> None:
         await asyncio.sleep(0.3)
+        if self.lost == "unplugged":
+            raise CameraError(tr("Impossibile aprire la fotocamera ({err}). Chiudi Foto, Anteprima, Acquisizione Immagine "
+                                 "e i software del produttore; per Sony imposta USB 'PC Remote'.",
+                                 err="[-52] Could not find the requested device on the USB port"))
+        self.lost = ""
         self._open = True
 
     async def disconnect(self) -> None:
@@ -579,6 +627,8 @@ class SimulatedCamera(GPhotoCamera):
         self.busy = True
         try:
             await asyncio.sleep(0.5 + bulb_s + mirror_s)
+            if self.lost:
+                raise CameraError("[-52] Could not find the requested device on the USB port")
             self._n += 1
             if mode == "download" and dest_base:
                 target = f"{dest_base}.png"

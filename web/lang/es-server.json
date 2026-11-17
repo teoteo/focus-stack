@@ -272,5 +272,21 @@
   "Preparo l'anteprima…": "Preparando la vista previa…",
   "Scatto {i} · {t}": "Toma {i} · {t}",
   "Avanzamento": "Progreso",
-  "Solo lettura: i comandi restano sul Mac.": "Solo lectura: los controles siguen en el Mac."
+  "Solo lettura: i comandi restano sul Mac.": "Solo lectura: los controles siguen en el Mac.",
+  "Avvisami con un suono a fine sequenza": "Avisarme con un sonido al terminar la secuencia",
+  "Suono a fine sequenza attivo (tocca per spegnere)": "Sonido de fin de secuencia activado (toque para apagar)",
+  "Tieni questa pagina aperta: lo schermo resta acceso finché il suono è attivo.": "Mantenga esta página abierta: la pantalla sigue encendida mientras el sonido esté activado.",
+  "Ricollego la fotocamera…": "Reconectando la cámara…",
+  "Fotocamera ricollegata: {model}": "Cámara reconectada: {model}",
+  "Fotocamera non ricollegata: {exc}": "Cámara no reconectada: {exc}",
+  "la fotocamera non ha scattato dopo {n} tentativi ({exc}). Controlla che sia accesa e collegata, batteria, scheda e messa a fuoco manuale (MF), poi premi Riprendi: lo scatto si ripete dalla stessa posizione": "la cámara no disparó tras {n} intentos ({exc}). Comprueba que esté encendida y conectada, la batería, la tarjeta y el enfoque manual (MF), y pulsa Reanudar: la foto se repite desde la misma posición",
+  "Impossibile impedire lo stop del Mac ({exc}): disattiva lo stop automatico nelle Impostazioni di Sistema (Batteria o Risparmio energia)": "No se puede impedir que el Mac entre en reposo ({exc}): desactiva el reposo automático en Ajustes del Sistema (Batería o Ahorro de energía)",
+  "Allarga con due dita o tocca due volte per ingrandire": "Separa dos dedos o toca dos veces para ampliar",
+  "Carico il dettaglio…": "Cargando el detalle…",
+  "Adatta": "Ajustar",
+  "Bobine alimentate durante la sequenza": "Bobinas alimentadas durante la secuencia",
+  "Impossibile alimentare le bobine: {exc}": "No se pueden alimentar las bobinas: {exc}",
+  "Bobine di nuovo spente a motore fermo": "Bobinas apagadas de nuevo en reposo",
+  "Impossibile rispegnere le bobine: {exc}": "No se pueden apagar las bobinas: {exc}",
+  "Tratto del movimento continuo: da {lo} a {hi} passi": "Tramo del movimiento continuo: de {lo} a {hi} pasos"
 }

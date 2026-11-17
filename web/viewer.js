@@ -217,7 +217,14 @@ function connectWS() {
     bootSignature = st.boot_signature;
     if (st.language && st.language !== LANG) { location.reload(); return; }   // lingua cambiata in Configurazione
     camState = st.camera;
+    const wasRunning = seqRunning;
     seqRunning = ["running", "paused", "stopping"].includes(st.sequence.state);
+    // sequenza appena partita con il live view acceso: si chiude il live e si seguono gli scatti nuovi
+    if (seqRunning && !wasRunning && liveOn) {
+      setFollow(true);
+      setLiveView(false);
+      notice(t("Sequenza avviata: live view chiuso, ora segue l'ultimo scatto"));
+    }
     if (wantLive && camState.connected) setLiveView(true);
     wantLive = false;
     renderLiveView();
@@ -356,6 +363,13 @@ $("follow").onclick = () => {
   if (follow && shots.length) show(shots[shots.length - 1].id, { keepView: false });
 };
 $("liveview").onclick = () => setLiveView(!liveOn);
+$("guide-btn").href = `/guide/${["it", "en", "fr", "de", "es"].includes(LANG) ? LANG : "en"}.html#visualizzatore`;
+// live avviato dalla finestra principale: parte anche qui (non durante la sequenza)
+if ("BroadcastChannel" in window) {
+  new BroadcastChannel("focus-stack").onmessage = (ev) => {
+    if (ev.data && ev.data.live && !liveOn && !seqRunning && camState.connected) setLiveView(true);
+  };
+}
 $("lock").onclick = () => setLock(!lockView);
 $("reveal").onclick = () => !liveOn && current != null && fetch(`/api/shots/${current}/reveal`, { method: "POST", headers: { "X-FocusStack": "1" } });
 $("clear").onclick = async () => {

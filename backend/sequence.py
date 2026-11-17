@@ -4,13 +4,15 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import subprocess
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
-from . import summary
+from . import power, summary
 from .i18n import tr
 
 
@@ -29,6 +31,7 @@ class SequenceParams:
     output_root: str = ""
     bulb_s: float = 0            # >0 = posa B controllata dal computer
     shots_per_position: int = 1  # più scatti per posizione: la media la fa il software di fusione
+    sound_on_end: bool = True    # suono sul Mac a fine sequenza (completata o errore)
 
     def positions(self) -> list[int]:
         step = abs(int(self.step)) or 1
@@ -67,8 +70,31 @@ class SequenceStatus:
     repeat: int = 0              # scatto in corso nella posizione (0 = primo)
 
 
-CAPTURE_RETRIES = 2     # nuovi tentativi dopo uno scatto fallito
+# suoni di sistema di macOS: uno chiaro se la sequenza è completata, uno grave se si è fermata per un errore
+END_SOUND_OK = "/System/Library/Sounds/Glass.aiff"
+END_SOUND_ERROR = "/System/Library/Sounds/Basso.aiff"
+
+
+def play_end_sound(ok: bool, times: int = 3) -> None:
+    """Suona a fine sequenza senza bloccare: afplay in un thread, ripetuto per farsi sentire anche da lontano."""
+    sound = END_SOUND_OK if ok else END_SOUND_ERROR
+
+    def run() -> None:
+        for _ in range(times):
+            try:
+                subprocess.run(["afplay", sound], timeout=10, check=False,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except (OSError, subprocess.TimeoutExpired):
+                return
+    threading.Thread(target=run, daemon=True).start()
+
+
+CAPTURE_RETRIES = 2     # nuovi tentativi dopo uno scatto fallito (prima dell'ultimo si ricollega la fotocamera)
 RETRY_WAIT_S = 3        # attesa prima del primo nuovo tentativo (poi 6 s)
+
+
+class _RepeatShot(Exception):
+    """La sequenza è stata in pausa per la fotocamera e poi ripresa: si torna alla posizione e si ripete lo scatto."""
 
 
 class SequenceRunner:
@@ -83,6 +109,7 @@ class SequenceRunner:
         self._resume = asyncio.Event()
         self._resume.set()
         self._stop = False
+        self._hold_coils = False
 
     @property
     def busy(self) -> bool:
@@ -96,8 +123,9 @@ class SequenceRunner:
         self.status = SequenceStatus()
         return True
 
-    def start(self, params: SequenceParams, context: dict | None = None) -> None:
-        """context: dati per il manifesto (software, µm/passo, verso di z, ottica, filtro…)."""
+    def start(self, params: SequenceParams, context: dict | None = None, hold_coils: bool = False) -> None:
+        """context: dati per il manifesto (software, µm/passo, verso di z, ottica, filtro…).
+        hold_coils: se il firmware spegne le bobine a motore fermo, le accende per la durata della sequenza."""
         if self.busy:
             raise RuntimeError(tr("Sequenza già in corso"))
         focuser = self._focuser()
@@ -116,6 +144,7 @@ class SequenceRunner:
                 raise RuntimeError(tr("La compensazione del gioco porterebbe fuori dai limiti: {exc}. "
                                       "Riduci il gioco o sposta l'inizio.", exc=exc)) from exc
         self._stop = False
+        self._hold_coils = hold_coils
         self._resume.set()
         ctx = {"um_per_step": 0.0, "z_sign": 1, **(context or {})}
         self._task = asyncio.create_task(self._run(params, ctx))
@@ -149,10 +178,22 @@ class SequenceRunner:
         if self._stop:
             raise asyncio.CancelledError
 
+    async def _reconnect(self, camera) -> bool:
+        self._log(tr("Ricollego la fotocamera…"))
+        try:
+            await camera.reconnect()
+            self._log(tr("Fotocamera ricollegata: {model}", model=camera.model))
+            return True
+        except Exception as exc:  # noqa: BLE001
+            self._log(tr("Fotocamera non ricollegata: {exc}", exc=exc))
+            return False
+
     async def _capture(self, camera, p: SequenceParams, base: Path | None) -> list[str]:
-        """Scatto con nuovi tentativi: se la fotocamera non risponde (per esempio sta ancora scrivendo il RAW
-        precedente sulla scheda, o in autofocus non trova il fuoco) aspetta 3 s, poi 6 s, e riprova; dopo
-        CAPTURE_RETRIES tentativi falliti ferma la sequenza con un messaggio che dice cosa controllare."""
+        """Scatto con nuovi tentativi: se la fotocamera non risponde (sta ancora scrivendo il RAW precedente,
+        in autofocus non trova il fuoco, oppure è sparita dall'USB) aspetta 3 s e riprova; al secondo errore
+        ricollega la fotocamera e riprova dopo 6 s. Se non scatta ancora la sequenza va in PAUSA (non si
+        ferma): si sistema la fotocamera, si preme Riprendi e lo scatto si ripete dalla stessa posizione."""
+        last_exc: Exception | None = None
         for attempt in range(CAPTURE_RETRIES + 1):
             try:
                 return await camera.capture(mode=p.capture_mode, dest_base=base, bulb_s=p.bulb_s,
@@ -162,20 +203,27 @@ class SequenceRunner:
             except Exception as exc:  # noqa: BLE001  (errori di gphoto2 e della fotocamera)
                 if self._stop:
                     raise
+                last_exc = exc
                 if attempt == CAPTURE_RETRIES:
-                    raise RuntimeError(tr(
-                        "La fotocamera non ha scattato dopo {n} tentativi ({exc}). Controlla: obiettivo in messa a "
-                        "fuoco manuale (MF), «Pausa dopo lo scatto» abbastanza lunga perché la fotocamera finisca di "
-                        "scrivere sulla scheda (con i RAW almeno 1–2 s), batteria e scheda.", n=attempt + 1, exc=exc)) from exc
+                    break
                 wait = RETRY_WAIT_S * (attempt + 1)
                 msg = tr("Scatto non riuscito ({exc}): nuovo tentativo fra {s} s ({a} di {n})",
                          exc=exc, s=wait, a=attempt + 1, n=CAPTURE_RETRIES)
                 self._log(msg)
                 self.status.message = msg
+                if attempt == CAPTURE_RETRIES - 1:   # forse la sessione USB non c'è più (stop del Mac, cavo)
+                    await self._reconnect(camera)
                 await asyncio.sleep(wait)
                 await self._checkpoint()
                 self.status.message = ""
-        return []
+        if p.sound_on_end:
+            play_end_sound(False, times=1)
+        self.pause(tr("la fotocamera non ha scattato dopo {n} tentativi ({exc}). Controlla che sia accesa e "
+                      "collegata, batteria, scheda e messa a fuoco manuale (MF), poi premi Riprendi: lo scatto "
+                      "si ripete dalla stessa posizione", n=CAPTURE_RETRIES + 1, exc=last_exc))
+        await self._checkpoint()
+        await self._reconnect(camera)
+        raise _RepeatShot
 
     async def _run(self, p: SequenceParams, ctx: dict) -> None:
         focuser, camera = self._focuser(), self._camera()
@@ -239,6 +287,20 @@ class SequenceRunner:
                      n=len(positions), start=p.start, end=p.end, step=p.step)
                   + (" · " + tr("{k} scatti per posizione", k=repeats) if repeats > 1 else ""))
         shot_times: list[float] = []
+        awake_error = power.hold()   # niente stop del Mac durante la pila: sospenderebbe l'USB
+        if awake_error:
+            self._log(tr("Impossibile impedire lo stop del Mac ({exc}): disattiva lo stop automatico nelle "
+                         "Impostazioni di Sistema (Batteria o Risparmio energia)", exc=awake_error))
+        # bobine accese per tutta la pila (anche in pausa) se il firmware le spegne a motore fermo:
+        # altrimenti il carico può riportare indietro la slitta a ogni fermata e la pila resta sullo stesso piano
+        coils_on_here = False
+        if self._hold_coils and focuser.motor.get("coil_power") is False:
+            try:
+                await focuser.set_motor("coil_power", True)
+                coils_on_here = True
+                self._log(tr("Bobine alimentate durante la sequenza"))
+            except Exception as exc:  # noqa: BLE001
+                self._log(tr("Impossibile alimentare le bobine: {exc}", exc=exc))
         try:
             approach = p.approach_position()
             if approach is not None:
@@ -274,7 +336,11 @@ class SequenceRunner:
                     else:
                         base = folder / f"{safe_name}_{i + 1:04d}" if download else None
                     shot_time = now_iso()
-                    files = await self._capture(camera, p, base)
+                    try:
+                        files = await self._capture(camera, p, base)
+                    except _RepeatShot:
+                        need_move = True   # dopo la pausa: ricontrolla la posizione e ripete lo scatto
+                        continue
                     if frame["temperature_c"] is None and focuser.temperature is not None:
                         frame["temperature_c"] = round(focuser.temperature, 2)
                     exposure = {"repeat": k, "time": shot_time, "files": [Path(f).name for f in files]}
@@ -316,17 +382,27 @@ class SequenceRunner:
                 self.status.message = str(exc)
                 self._log(tr("ERRORE sequenza: {exc}", exc=exc))
         finally:
+            power.release()
             self.status.eta_s = None
+            if p.sound_on_end and self.status.state in ("done", "error"):
+                play_end_sound(self.status.state == "done")
             try:
                 save_meta({"done": "completed", "idle": "interrupted"}.get(self.status.state, self.status.state))
             except OSError:
                 pass
             if p.return_to_start and not self._stop and focuser.connected:
                 try:
-                    await focuser.move_to(p.start, wait=False)
+                    # con le bobine da rispegnere si aspetta l'arrivo: spente durante il movimento, la slitta scivolerebbe
+                    await focuser.move_to(p.start, wait=coils_on_here)
                     self._log(tr("Ritorno alla posizione iniziale {pos}", pos=p.start))
                 except Exception as exc:  # noqa: BLE001
                     self._log(tr("Ritorno all'inizio fallito: {exc}", exc=exc))
+            if coils_on_here and focuser.connected:
+                try:
+                    await focuser.set_motor("coil_power", False)
+                    self._log(tr("Bobine di nuovo spente a motore fermo"))
+                except Exception as exc:  # noqa: BLE001
+                    self._log(tr("Impossibile rispegnere le bobine: {exc}", exc=exc))
 
 
 # ---------------- manifesto della pila (sequence.json) ----------------

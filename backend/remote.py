@@ -31,8 +31,11 @@ from .i18n import tr
 DEFAULT_PORT = 8766
 # solo per le prove: "127.0.0.1" evita di aprire la porta alla rete (e la richiesta del firewall di macOS)
 BIND_HOST = os.environ.get("FOCUS_STACK_REMOTE_HOST", "0.0.0.0")
-MOBILE_PX = 640          # lato lungo dell'anteprima per il telefono
-MOBILE_QUALITY = 70
+BIND_ATTEMPTS = 8         # tentativi (uno al secondo) se la porta è ancora occupata
+MOBILE_PX = 1200         # lato lungo dell'anteprima per il telefono (riempie in larghezza uno schermo retina)
+MOBILE_QUALITY = 75
+ZOOM_PX = 3000           # versione per lo zoom, ricavata dall'originale a piena risoluzione
+ZOOM_QUALITY = 82
 
 
 def new_token() -> str:
@@ -81,7 +84,7 @@ class _QuietServer(uvicorn.Server):
 
 
 class RemoteServer:
-    def __init__(self, status: Callable[[], dict], preview: Callable[[], Awaitable[Path | None]],
+    def __init__(self, status: Callable[[], dict], preview: Callable[[str], Awaitable[Path | None]],
                  cache_dir: Path) -> None:
         self._status = status
         self._preview = preview
@@ -100,14 +103,20 @@ class RemoteServer:
     async def start(self, port: int, token: str) -> None:
         await self.stop()
         self.port, self.token, self.error = port, token, ""
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        try:
-            sock.bind((BIND_HOST, port))
-        except OSError as exc:
-            sock.close()
-            self.error = tr("Porta {port} occupata: {exc}", port=port, exc=exc.strerror or exc)
-            raise RuntimeError(self.error) from exc
+        # al riavvio dell'app il server vecchio può tenere la porta ancora per qualche secondo: si riprova
+        for attempt in range(BIND_ATTEMPTS):
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                sock.bind((BIND_HOST, port))
+                break
+            except OSError as exc:
+                sock.close()
+                if attempt < BIND_ATTEMPTS - 1:
+                    await asyncio.sleep(1)
+                    continue
+                self.error = tr("Porta {port} occupata: {exc}", port=port, exc=exc.strerror or exc)
+                raise RuntimeError(self.error) from exc
         sock.listen(16)
         sock.setblocking(False)
         config = uvicorn.Config(self._build_app(), log_level="warning", lifespan="off", access_log=False)
@@ -166,10 +175,11 @@ class RemoteServer:
         async def preview(request: Request):
             if not self._ok(request):
                 return denied()
-            src = await self._preview()
+            zoom = request.query_params.get("z") == "1"   # zoom: dettaglio dall'originale a piena risoluzione
+            src = await self._preview("full" if zoom else "preview")
             if src is None:
                 return Response(status_code=404)
-            out = await self._small(src)
+            out = await self._small(src, ZOOM_PX if zoom else MOBILE_PX, ZOOM_QUALITY if zoom else MOBILE_QUALITY)
             if out is None:
                 return Response(status_code=415)
             # l'URL contiene la chiave dello scatto (?v=): la stessa immagine può restare in cache
@@ -178,15 +188,15 @@ class RemoteServer:
 
         return app
 
-    async def _small(self, src: Path) -> Path | None:
-        """JPEG piccolo per il telefono, ricavato dall'anteprima già pronta; tenuto in cache."""
-        out = self._cache / f"m-{src.stem}-{src.stat().st_mtime_ns}.jpg"
+    async def _small(self, src: Path, px: int = MOBILE_PX, quality: int = MOBILE_QUALITY) -> Path | None:
+        """JPEG per il telefono (anteprima o versione per lo zoom), ridotto con sips; tenuto in cache."""
+        out = self._cache / f"m{px}-{src.stem}-{src.stat().st_mtime_ns}.jpg"
         if out.exists():
             return out
         self._cache.mkdir(parents=True, exist_ok=True)
         tmp = out.with_suffix(".part.jpg")
         proc = await asyncio.create_subprocess_exec(
-            "sips", "-s", "format", "jpeg", "-s", "formatOptions", str(MOBILE_QUALITY), "-Z", str(MOBILE_PX),
+            "sips", "-s", "format", "jpeg", "-s", "formatOptions", str(quality), "-Z", str(px),
             str(src), "--out", str(tmp), stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
         await proc.wait()
         if proc.returncode != 0 or not tmp.exists():
@@ -204,6 +214,11 @@ def render_page() -> str:
         "offline": tr("Mac non raggiungibile: riprovo…"), "show": tr("Mostra l'ultimo scatto"),
         "refresh": tr("Aggiorna l'ultimo scatto"), "no_shot": tr("Ancora nessuno scatto"),
         "loading": tr("Preparo l'anteprima…"), "shot": tr("Scatto {i} · {t}"),
+        "snd_off": tr("Avvisami con un suono a fine sequenza"),
+        "snd_on": tr("Suono a fine sequenza attivo (tocca per spegnere)"),
+        "snd_hint": tr("Tieni questa pagina aperta: lo schermo resta acceso finché il suono è attivo."),
+        "zoom_hint": tr("Allarga con due dita o tocca due volte per ingrandire"),
+        "hires": tr("Carico il dettaglio…"), "fit": tr("Adatta"),
     }
     title = tr("Avanzamento")
     return PAGE.replace("__LANG__", i18n.current()).replace("__TITLE__", title).replace("__L__", json.dumps(labels, ensure_ascii=False)) \
@@ -220,7 +235,7 @@ PAGE = """<!doctype html>
 :root { --bg:#14171c; --card:#1d2128; --line:#2c323c; --fg:#e8ebf0; --muted:#97a0ad; --accent:#5aa9ff; --ok:#4cc38a; --warn:#f0b44c; --bad:#ef6464; }
 @media (prefers-color-scheme: light) { :root { --bg:#f3f5f8; --card:#fff; --line:#dde2e8; --fg:#1b2027; --muted:#5f6977; --accent:#1f74d6; } }
 * { box-sizing: border-box; }
-body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.4 -apple-system, BlinkMacSystemFont, sans-serif;
+body { margin:0; overflow-x:hidden; background:var(--bg); color:var(--fg); font:16px/1.4 -apple-system, BlinkMacSystemFont, sans-serif;
   padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); }
 main { max-width: 560px; margin: 0 auto; display: grid; gap: 14px; }
 .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
@@ -236,9 +251,17 @@ h1 { font-size:15px; font-weight:600; margin:0 0 2px; color:var(--muted); }
 .chip.paused, .chip.stopping { color:var(--warn); border-color:var(--warn); } .chip.error { color:var(--bad); border-color:var(--bad); }
 button { width:100%; font:inherit; font-weight:600; padding:12px; border-radius:10px; border:1px solid var(--line);
   background:var(--bg); color:var(--fg); }
-#img { display:block; width:100%; border-radius:8px; margin-top:12px; background:#000; }
-#cap { color:var(--muted); font-size:14px; margin-top:6px; }
+/* anteprima a tutta larghezza dello schermo, senza bordi né angoli: più spazio per controllare il fuoco */
+#view { position:relative; overflow:hidden; background:#000; touch-action:none; user-select:none; -webkit-user-select:none;
+  width:100vw; margin-left:calc(50% - 50vw); }
+#img { display:block; width:100%; transform-origin:0 0; will-change:transform; -webkit-user-drag:none; }
+#fit { position:absolute; top:8px; right:8px; width:auto; padding:6px 12px; font-size:14px; border:0; border-radius:8px;
+  background:rgba(0,0,0,.6); color:#fff; }
+#cap { color:var(--muted); font-size:14px; margin-top:-6px; }
 #off { color:var(--warn); display:none; }
+.snd { margin-top:14px; }
+.snd.on { border-color:var(--ok); color:var(--ok); }
+#sndhint { color:var(--muted); font-size:13px; margin-top:6px; }
 footer { color:var(--muted); font-size:13px; text-align:center; }
 </style></head>
 <body><main>
@@ -252,12 +275,12 @@ footer { color:var(--muted); font-size:13px; text-align:center; }
   <div id="end"></div>
   <div id="msg"></div>
   <div id="off"></div>
+  <button id="snd" class="snd"></button>
+  <div id="sndhint" hidden></div>
 </div>
-<div class="card">
-  <button id="btn"></button>
-  <img id="img" alt="" hidden>
-  <div id="cap"></div>
-</div>
+<div class="card"><button id="btn"></button></div>
+<div id="view" hidden><img id="img" alt="" draggable="false"><button id="fit" hidden></button></div>
+<div id="cap"></div>
 <footer>__READONLY__</footer>
 </main>
 <script>
@@ -269,12 +292,65 @@ const fmt = (s) => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 36
 const tr = (k, v) => L[k].replace(/\\{(\\w+)\\}/g, (_, n) => v[n]);
 let last = null, shown = null;
 $("btn").textContent = L.show;
+
+// ---- suono a fine sequenza: Web Audio (nessun file), sbloccato dal tocco sul pulsante come chiede iOS
+let audio = null, armed = false, prevState = null, wake = null;
+function tone(seq, delay = 0) {
+  if (!audio) return;
+  let t = audio.currentTime + 0.05 + delay;
+  for (const [f, d] of seq) {
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = "sine"; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.5, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g).connect(audio.destination); o.start(t); o.stop(t + d + 0.05);
+    t += d + 0.08;
+  }
+}
+const CHIME_OK = [[880, 0.18], [1175, 0.18], [1568, 0.4]], CHIME_ERR = [[440, 0.35], [330, 0.6]];
+function finished(ok) {
+  for (let i = 0; i < 3; i++) tone(ok ? CHIME_OK : CHIME_ERR, i * 1.4);
+  if (navigator.vibrate) navigator.vibrate(ok ? [300, 150, 300] : [800]);
+}
+async function keepAwake() {   // lo schermo spento sospenderebbe la pagina (e il suono)
+  try {
+    if (armed && !wake && "wakeLock" in navigator) {
+      wake = await navigator.wakeLock.request("screen");
+      wake.addEventListener("release", () => { wake = null; });
+    }
+  } catch (e) { /* non disponibile */ }
+}
+function renderSnd() {
+  $("snd").textContent = "🔔 " + (armed ? L.snd_on : L.snd_off);
+  $("snd").classList.toggle("on", armed);
+  $("sndhint").hidden = !armed; $("sndhint").textContent = L.snd_hint;
+}
+$("snd").onclick = async () => {
+  armed = !armed;
+  if (armed) {
+    // Safari 17+: suona anche con l'interruttore silenzioso dell'iPhone
+    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) { /* vecchio Safari */ }
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    try { await audio.resume(); } catch (e) { /* riprova al prossimo tocco */ }
+    tone([[1175, 0.12]]);   // conferma: se si sente, il suono funziona
+    keepAwake();
+  } else if (wake) { wake.release(); wake = null; }
+  renderSnd();
+};
+renderSnd();
 async function poll() {
   try {
     const r = await fetch(`status?k=${encodeURIComponent(K)}`, { cache: "no-store" });
     if (!r.ok) throw new Error(r.status);
     const s = await r.json();
     $("off").style.display = "none";
+    if (armed && ["running", "paused", "stopping"].includes(prevState) && (s.state === "done" || s.state === "error")) {
+      finished(s.state === "done");
+    } else if (armed && prevState === "running" && s.state === "paused" && s.message) {
+      finished(false);   // in pausa da sola (fotocamera che non scatta, movimento manuale): serve qualcuno
+    }
+    prevState = s.state;
     const run = ["running", "paused", "stopping"].includes(s.state);
     $("chip").textContent = L[s.state] || s.state; $("chip").className = "chip " + s.state;
     $("name").textContent = s.name || "—";
@@ -291,18 +367,94 @@ async function poll() {
     $("off").textContent = L.offline; $("off").style.display = "block";
   }
 }
+// ---- anteprima con zoom: due dita, trascinamento, doppio tocco (sul Mac: rotella e doppio clic)
+const view = $("view"), img = $("img");
+let z = { s: 1, x: 0, y: 0 }, caption = "", hiKey = null;
+const ZMAX = 10, pts = new Map();
+let pinch = null, lastTap = { t: 0, x: 0, y: 0 };
+const src = (key, hi) => `preview?k=${encodeURIComponent(K)}&v=${encodeURIComponent(key)}${hi ? "&z=1" : ""}`;
+function applyZ() {
+  const w = view.clientWidth, h = view.clientHeight;
+  z.s = Math.min(ZMAX, Math.max(1, z.s));
+  z.x = Math.min(0, Math.max(w - w * z.s, z.x));
+  z.y = Math.min(0, Math.max(h - h * z.s, z.y));
+  img.style.transform = `translate(${z.x}px, ${z.y}px) scale(${z.s})`;
+  $("fit").hidden = z.s <= 1.01;
+  if (z.s > 1.3) loadHi();
+}
+function zoomAt(px, py, s) {   // ingrandisce tenendo fermo il punto (px, py) della vista
+  s = Math.min(ZMAX, Math.max(1, s));
+  const k = s / z.s;
+  z.x = px - (px - z.x) * k; z.y = py - (py - z.y) * k; z.s = s;
+  applyZ();
+}
+function loadHi() {             // dettaglio a 3000 px, una volta per scatto, solo quando serve
+  if (!shown || hiKey === shown) return;
+  const key = hiKey = shown, hi = new Image();
+  $("cap").textContent = L.hires;
+  hi.onload = () => { if (shown === key) { img.src = hi.src; $("cap").textContent = caption; } };
+  hi.onerror = () => { if (shown === key) { hiKey = null; $("cap").textContent = caption; } };
+  hi.src = src(key, true);
+}
+const rel = (e) => { const r = view.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+const mid = () => { const [a, b] = [...pts.values()]; return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, Math.hypot(a[0] - b[0], a[1] - b[1])]; };
+view.addEventListener("pointerdown", (e) => {
+  if (e.target.id === "fit") return;
+  try { view.setPointerCapture(e.pointerId); } catch (err) { /* puntatore già rilasciato */ }
+  pts.set(e.pointerId, rel(e));
+  if (pts.size === 2) { const [mx, my, d] = mid(); pinch = { d, s: z.s, mx, my }; return; }
+  const [px, py] = rel(e), now = Date.now();
+  if (now - lastTap.t < 320 && Math.hypot(px - lastTap.x, py - lastTap.y) < 40) {
+    zoomAt(px, py, z.s > 1.01 ? 1 : 3);
+    lastTap.t = 0;
+  } else lastTap = { t: now, x: px, y: py };
+});
+view.addEventListener("pointermove", (e) => {
+  if (!pts.has(e.pointerId)) return;
+  const prev = pts.get(e.pointerId), cur = rel(e);
+  pts.set(e.pointerId, cur);
+  if (pts.size >= 2 && pinch) {
+    const [mx, my, d] = mid();
+    z.x += mx - pinch.mx; z.y += my - pinch.my;      // le due dita spostano anche l'immagine
+    pinch.mx = mx; pinch.my = my;
+    zoomAt(mx, my, pinch.s * d / (pinch.d || 1));
+  } else if (pts.size === 1 && z.s > 1) {
+    z.x += cur[0] - prev[0]; z.y += cur[1] - prev[1];
+    applyZ();
+  }
+});
+const lift = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; };
+view.addEventListener("pointerup", lift);
+view.addEventListener("pointercancel", lift);
+view.addEventListener("wheel", (e) => { e.preventDefault(); const [px, py] = rel(e); zoomAt(px, py, z.s * Math.exp(-e.deltaY / 300)); }, { passive: false });
+$("fit").textContent = L.fit;
+$("fit").onclick = () => { z = { s: 1, x: 0, y: 0 }; applyZ(); };
+window.addEventListener("resize", () => applyZ());
+
 $("btn").onclick = () => {
   if (!last) { $("cap").textContent = L.no_shot; return; }
-  const img = $("img");
   $("cap").textContent = L.loading;
-  img.onload = () => { img.hidden = false; $("cap").textContent = tr("shot", { i: last.label, t: last.time }); };
+  const key = last.key, label = tr("shot", { i: last.label, t: last.time });
+  // lo zoom resta com'è: si confronta la stessa zona fra uno scatto e l'altro
+  const hi = z.s > 1.3;
+  img.onload = () => {
+    if (shown !== key) return;
+    view.hidden = false;
+    caption = label + (z.s > 1.01 ? "" : " · " + L.zoom_hint);
+    $("cap").textContent = caption;
+    applyZ();
+  };
   img.onerror = () => { $("cap").textContent = L.offline; };
-  shown = last.key;
-  img.src = `preview?k=${encodeURIComponent(K)}&v=${encodeURIComponent(last.key)}`;
+  shown = key; hiKey = hi ? key : null;
+  img.src = src(key, hi);
   $("btn").textContent = L.refresh;
 };
 poll(); setInterval(poll, 3000);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  if (armed) { if (audio) audio.resume().catch(() => {}); keepAwake(); }
+  poll();
+});
 </script>
 </body></html>
 """

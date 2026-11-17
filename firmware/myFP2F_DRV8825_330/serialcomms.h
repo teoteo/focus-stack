@@ -72,6 +72,16 @@ void SendPacket(const char token, const unsigned long val) {
   SendMessage(buff);
 }
 
+// Focus Stack: movimento sorvegliato (:96<posizione>#), usato dal "tieni premuto" dell'app.
+// Se durante questo movimento dal Mac non arriva più nessun comando per FS_SUPERVISE_MS (app chiusa o
+// bloccata, cavo USB staccato con la scheda alimentata dai 12 V) il motore rallenta e si ferma da solo.
+// Durante un movimento l'app chiede la posizione ogni 0,2 s, quindi in uso normale non scatta mai.
+// I movimenti normali (:05#: "Vai", pulsanti a scatto singolo, sequenza) NON sono sorvegliati e
+// arrivano sempre a destinazione anche se durano molti secondi.
+#define FS_SUPERVISE_MS 1500
+bool fs_supervised = false;
+unsigned long fs_lastcmd = 0;
+
 // Serial Commands
 void ser_comms() {
   int cmdval;
@@ -273,10 +283,19 @@ void ser_comms() {
     case 98:  // Focus Stack: scheda per cui è compilato il firmware (0 = myFocuserPro2, 1 = Ardufocus)
       SendPacket('H', (long)FSBOARD);
       break;
-    case 5:  // set new target position to xxxxxx (and focuser initiates immediate move to xxxxxx)
+    case 5:   // set new target position to xxxxxx (and focuser initiates immediate move to xxxxxx)
+    case 96:  // Focus Stack: come :05#, ma sorvegliato (vedi fs_supervise)
       // only if not already moving
       if (stepperpower == 1) {
-        if (isMoving == 0) {
+        if (isMoving == 1 && cmdval == 96 && fs_supervised) {
+          // Focus Stack build 5: :96# durante un movimento sorvegliato sposta la meta più avanti (stesso verso)
+          WorkString = receiveString.substring(2, receiveString.length());
+          tmppos = (long)WorkString.toInt();
+          tmppos = (tmppos < 0) ? 0 : tmppos;
+          tmppos = (tmppos > myfocuser.maxstep) ? myfocuser.maxstep : tmppos;
+          driverboard->extend_target(tmppos);
+        } else if (isMoving == 0) {
+          fs_supervised = (cmdval == 96);
           WorkString = receiveString.substring(2, receiveString.length());
           tmppos = (long)WorkString.toInt();
           tmppos = (tmppos < 0) ? 0 : tmppos;
@@ -377,6 +396,7 @@ void ser_comms() {
       }
       break;
     case 27:  // stop a move - like a Halt
+      fs_supervised = false;  // Focus Stack: dopo uno stop un :96# non deve più allungare il movimento
       if (driverboard->ramp_stop()) {
         // decelera fino a fermarsi; isMoving torna a 0 a fine movimento
         writenow = 1;
@@ -605,11 +625,25 @@ void serialEvent() {
         break;
       case EOFSTR:  // eoc
         queue.push(line);
+        fs_lastcmd = millis();  // Focus Stack: il Mac è ancora collegato (vedi fs_supervise)
         break;
       default:  // anything else
         line = line + inChar;
         break;
     }
+  }
+}
+
+// Focus Stack: ferma con la rampa un movimento sorvegliato se il Mac tace da più di FS_SUPERVISE_MS
+// (stesso effetto del comando :27#)
+void fs_supervise() {
+  if (fs_supervised && isMoving == 1 && (millis() - fs_lastcmd) > FS_SUPERVISE_MS) {
+    fs_supervised = false;
+    if (!driverboard->ramp_stop()) {
+      ftargetposition = fcurrentposition;
+      isMoving = 0;
+    }
+    writenow = 1;
   }
 }
 

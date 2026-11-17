@@ -104,16 +104,22 @@ lingua fissa. Vale per l'interfaccia, i messaggi, il Registro e i dialoghi dell'
   `web/i18n.js`, la voce nel menu Lingua di `web/index.html` e i testi del programma di avvio.
 - `python3 tools/i18n_check.py --lang <lingua>` elenca i testi senza traduzione (esce con 1 se ne mancano).
 
-## Guida all'uso (PDF)
+## Guida all'uso (PDF e nell'app)
 
-Una guida per lingua, allegata a ogni release: interfaccia con schermate annotate, calcoli della
-configurazione meccanica e del passo della sequenza.
-Si rigenera con un'istanza di prova sulla porta 8799 (vedi `docs/guida/cattura_schermate.py`):
+Una guida per lingua, allegata a ogni release in PDF: interfaccia con schermate annotate, calcoli della
+configurazione meccanica e del passo della sequenza. Lo stesso testo è anche **dentro l'app**, come pagina
+HTML con indice e ricerca: si apre dal **?** in alto a destra (sul capitolo della scheda aperta) e dai **?** nel
+titolo delle card. Si rigenera con un'istanza di prova sulla porta 8799, con una home separata (vedi
+`docs/guida/cattura_schermate.py`):
 
 ```
-python3.11 docs/guida/cattura_schermate.py --lang it    # schermate (una volta per lingua)
+python3.11 docs/guida/cattura_schermate.py --lang it    # schermate (una volta per lingua, server di prova riavviato)
 python3.11 docs/guida/genera_guida.py all               # PDF in docs/
+python3.11 docs/guida/genera_guida_web.py               # guida HTML in web/guide/ (la rifà anche build_release.sh)
 ```
+
+I link dell'app puntano a nomi fissi dei capitoli (`ALIASES` in `genera_guida_web.py`): se i capitoli cambiano
+numero si aggiorna solo quella tabella.
 
 ## Interfaccia
 
@@ -337,6 +343,10 @@ l'hardware, e non ha comandi; ogni richiesta deve avere il codice del link (*Nuo
 si apre inquadrando il codice QR (generato da CoreImage di macOS). La prima volta il firewall di macOS chiede
 se consentire le connessioni in entrata.
 
+Con *Avvisami con un suono a fine sequenza* la pagina suona (Web Audio, sbloccato dal tocco come chiede iOS;
+su Android vibra anche) quando la pila finisce o si ferma per un errore, e tiene lo schermo acceso (Wake Lock).
+Anche il Mac suona a fine sequenza (suoni di sistema Glass / Basso), salvo che si tolga *Suono sul Mac a fine sequenza*.
+
 ## Pubblicare una nuova versione
 
 Sul Mac di sviluppo servono `gh` autenticato (`gh auth login`), `arduino-cli` con il core
@@ -394,7 +404,7 @@ tools/rawstat/       sorgente e compilazione di fs-rawstat (LibRaw)
 third_party/LibRaw   LibRaw 0.22.3 (sottomodulo git)
 web/i18n.js, web/lang/ traduzioni dell'interfaccia e dei messaggi
 backend/i18n.py      lingua corrente e traduzioni lato server
-docs/guida/          generatore della guida in PDF (testo_<lingua>.py)
+docs/guida/          generatore della guida in PDF e HTML (testo_<lingua>.py)
 tools/i18n_check.py  controllo delle traduzioni
 ```
 

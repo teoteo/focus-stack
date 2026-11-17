@@ -69,13 +69,38 @@ function applyTheme(t) {
 try { applyTheme(localStorage.getItem("fs-theme") || "dark"); } catch { applyTheme("dark"); }
 
 // ---------------- WebSocket di stato ----------------
-let serverStopped = false;
+let serverStopped = false, wsConn = null, wsSeq = 0;
+const wsWaiting = new Map();
 function connectWS() {
   const ws = new WebSocket(`ws://${location.host}/ws`);
-  ws.onmessage = (ev) => { S = JSON.parse(ev.data); render(); };
-  ws.onopen = () => setDot("st-link", "on");
-  ws.onclose = () => { setDot("st-link", ""); setTimeout(checkServer, 1500); };
+  ws.onmessage = (ev) => {
+    const data = JSON.parse(ev.data);
+    if (data && "reply" in data) { const done = wsWaiting.get(data.reply); if (done) done(data); return; }
+    S = data; render();
+  };
+  ws.onopen = () => { wsConn = ws; setDot("st-link", "on"); };
+  ws.onclose = () => {
+    if (wsConn === ws) wsConn = null;
+    for (const done of wsWaiting.values()) done({ error: t("Connessione con il server interrotta") });
+    setDot("st-link", ""); setTimeout(checkServer, 1500);
+  };
 }
+
+// Comando sulla WebSocket di stato (risposta con lo stesso id); null se non è aperta. Il tieni premuto passa da
+// qui: le richieste fetch possono restare in coda dietro i flussi del live view (Safari: 6 connessioni per host).
+function wsCall(msg) {
+  if (!wsConn || wsConn.readyState !== WebSocket.OPEN) return null;
+  const id = ++wsSeq;
+  wsConn.send(JSON.stringify({ ...msg, id }));
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => wsWaiting.get(id)({ error: t("Il server non risponde") }), 5000);
+    wsWaiting.set(id, (r) => {
+      clearTimeout(timer); wsWaiting.delete(id);
+      if (r.error) reject(new Error(r.error)); else resolve(r);
+    });
+  });
+}
+const holdCall = (body) => wsCall({ type: "hold", ...body }) || api("/api/focuser/hold", body);
 
 // Se il server non risponde più (app Focus Stack chiusa) mostra la schermata "server spento";
 // quando torna disponibile (app riaperta) ricarica la pagina.
@@ -265,8 +290,11 @@ function renderFocuser(f, run) {
 
   renderJogSizes();
   const away = towardSign() < 0 ? "+" : "−", toward = towardSign() < 0 ? "−" : "+";
-  $("jog-away-label").textContent = `${t("Allontana")}  ${away}${fmtInt(jogSize)}`;
-  $("jog-toward-label").textContent = `${t("Avvicina")}  ${toward}${fmtInt(jogSize)}`;
+  // riscritte solo se cambiano: in WebKit cambiare il testo di un pulsante mentre è premuto può far perdere
+  // il rilascio (e il movimento continuo non si fermava più)
+  const awayTxt = `${t("Allontana")}  ${away}${fmtInt(jogSize)}`, towardTxt = `${t("Avvicina")}  ${toward}${fmtInt(jogSize)}`;
+  if ($("jog-away-label").textContent !== awayTxt) $("jog-away-label").textContent = awayTxt;
+  if ($("jog-toward-label").textContent !== towardTxt) $("jog-toward-label").textContent = towardTxt;
   $("jog-um").innerHTML = umPerStep() ? t("{n} passi = {um}", { n: fmtInt(jogSize), um: fmtUm(jogSize) }) : "&nbsp;";
 
   const dis = !f.connected || run;
@@ -364,8 +392,14 @@ function renderSequence(f, c, q, run) {
   $("s-start-btn").disabled = run || !bothOk || !!(S.calibration && S.calibration.busy);
   $("s-start-btn").title = bothOk ? "" : t("Connetti focheggiatore e fotocamera");
   $("s-pause-btn").disabled = !run || q.state === "stopping";
-  $("s-pause-btn").innerHTML = q.state === "paused" ? `▶&nbsp; ${t("Riprendi")}` : `❚❚&nbsp; ${t("Pausa")}`;
+  // solo se cambia: Safari annulla il clic se il testo del pulsante viene sostituito fra pressione e rilascio
+  // (render ogni 250 ms: «Riprendi» a volte non arrivava al server)
+  const pauseTxt = q.state === "paused" ? `▶\u00a0 ${t("Riprendi")}` : `❚❚\u00a0 ${t("Pausa")}`;
+  if ($("s-pause-btn").textContent !== pauseTxt) $("s-pause-btn").textContent = pauseTxt;
   $("s-stop-btn").disabled = !run;
+  // bobine spente: il carico può riportare indietro la slitta a ogni fermata (pila tutta sullo stesso piano)
+  $("s-coil-warn").classList.toggle("hidden",
+    !(f.connected && f.motor && f.motor.coil_power === false && S.settings.coil_during_sequence === false));
   $$("[data-mark]").forEach((b) => (b.disabled = !f.connected || run));
   $("s-finder").disabled = !q.folder || run;
   $$("#card-seq input, #card-seq select").forEach((el) => (el.disabled = run));
@@ -424,6 +458,9 @@ function renderLastShot() {
 // ---------------- live view (stream MJPEG del server in un <img>) ----------------
 let liveOn = false, liveStartedAt = 0;
 
+// canale fra la finestra principale e il visualizzatore (Safari 15.4+; senza, semplicemente non si parlano)
+const windowLink = "BroadcastChannel" in window ? new BroadcastChannel("focus-stack") : null;
+
 function setLive(on) {
   liveOn = on;
   liveStartedAt = Date.now();
@@ -442,8 +479,13 @@ function setLive(on) {
   if (S) renderLive(S.camera, running());
 }
 
+let liveRunPrev = false;
 function renderLive(c, run) {
   $("live-btn").disabled = !c.connected;
+  // sequenza appena partita: il live view si chiude e il riquadro torna a mostrare l'ultimo scatto
+  const started = run && !liveRunPrev && !!(S.sequence && S.sequence.state === "running");
+  liveRunPrev = run;
+  if (started && liveOn) { setLive(false); toast(t("Sequenza avviata: live view chiuso, ora segue l'ultimo scatto")); return; }
   if (!liveOn) return;
   if (!c.connected) { setLive(false); return; }
   // l'errore di uno stream precedente può arrivare ancora per un attimo dopo il riavvio
@@ -478,7 +520,8 @@ function renderConfig(f) {
 
   // motore
   const motor = (f.connected && f.motor) || {};
-  const sig = JSON.stringify(motor) + f.connected;
+  // l'opzione "bobine durante la sequenza" cambia gli avvisi: fa parte della firma
+  const sig = JSON.stringify(motor) + f.connected + (S.settings.coil_during_sequence !== false);
   if (sig !== motorSig) {
     motorSig = sig;
     for (const name of ["step_mode", "speed"]) {
@@ -496,6 +539,10 @@ function renderConfig(f) {
       el.disabled = !(name in motor);
       el.value = name in motor ? motor[name] : "";
     }
+    const coilSeq = S.settings.coil_during_sequence !== false;
+    $("opt-coil-seq-row").classList.toggle("hidden", motor.coil_power !== false);
+    $("opt-coil-seq").checked = coilSeq;
+    $("mo-coil-warn").classList.toggle("hidden", !(motor.coil_power === false && !coilSeq));
     $("m-micro").value = motor.step_mode ? (motor.step_mode === 1 ? t("passo intero") : `1/${motor.step_mode}`) : t("1 (non letto)");
     updateMechResult();
   }
@@ -536,6 +583,7 @@ function loadForms(cfg) {
   $("s-start").value = q.start; $("s-end").value = q.end; $("s-step").value = q.step;
   $("s-settle").value = q.settle_ms; $("s-post").value = q.post_shot_ms; $("s-backlash").value = q.backlash;
   $("s-mode").value = q.capture_mode; $("s-name").value = q.session_name; $("s-return").checked = q.return_to_start;
+  $("s-sound").checked = q.sound_on_end !== false;
   $("s-repeats").value = q.shots_per_position || 1;
   const cal = cfg.calibration || {};
   $("x-stat").value = cal.light_stat || "highlights";
@@ -554,7 +602,7 @@ function loadForms(cfg) {
   $("m-spr").value = m.motor_steps_per_rev; $("m-gear").value = m.gear_ratio; $("m-umrev").value = m.um_per_knob_rev;
   $("m-umstep").value = cfg.um_per_step;
   setMechMode(m.mode);
-  syncCount();
+  syncCount(); linkClear();
   formLoaded = true;
   updateSummary();
   dof();
@@ -570,7 +618,7 @@ function formParams() {
   return {
     start: num("s-start"), end: num("s-end"), step: num("s-step"),
     settle_ms: num("s-settle"), post_shot_ms: num("s-post"), backlash: num("s-backlash"),
-    return_to_start: $("s-return").checked, capture_mode: $("s-mode").value,
+    return_to_start: $("s-return").checked, sound_on_end: $("s-sound").checked, capture_mode: $("s-mode").value,
     session_name: $("s-name").value.trim() || "stack", output_root: (S && S.settings.output_root) || "",
     bulb_s: num("c-bulb"), mirror_delay_ms: num("c-mirror"),
     shots_per_position: Math.max(1, Math.round(num("s-repeats") || 1)),
@@ -583,6 +631,49 @@ function shotCount(p = formParams()) {
   return Math.floor(span / step) + 1 + (span % step ? 1 : 0);
 }
 const syncCount = () => ($("s-count").value = shotCount());
+
+// ---- campi collegati della pila: Inizio, Fine e Passo ricalcolano il Numero di scatti; il Numero di scatti
+// ricalcola il Passo. Il campo cambiato da solo si evidenzia con «↺ era X»: il pulsante annulla l'ultima modifica.
+const LINKED = ["s-start", "s-end", "s-step", "s-count"];
+const linkValues = () => Object.fromEntries(LINKED.map((id) => [id, $(id).value]));
+let linkEdit = null;   // modifica in corso: { field, before: {id: valore}, closed }
+let linkPrev = null;   // valori dei quattro campi dopo l'ultimo aggiornamento (l'evento input arriva a valore già cambiato)
+function linkBegin(field) {
+  if (linkEdit && linkEdit.field === field && !linkEdit.closed) return;
+  linkEdit = { field, before: linkPrev || linkValues(), closed: false };
+}
+const linkDone = () => { linkPrev = linkValues(); };
+function linkMark() {
+  for (const id of LINKED) {
+    const input = $(id), label = input.closest("label");
+    const before = linkEdit && id !== linkEdit.field ? linkEdit.before[id] : "";
+    const changed = before !== "" && before !== input.value;
+    input.classList.toggle("auto-upd", changed);
+    let chip = label.querySelector(".revert");
+    if (!changed) { if (chip) chip.remove(); continue; }
+    if (!chip) {
+      // in fondo all'etichetta (posizionato in alto a destra): il primo controllo dell'etichetta resta il campo
+      chip = document.createElement("button");
+      chip.type = "button"; chip.className = "revert";
+      chip.onclick = (e) => { e.preventDefault(); linkRestore(); };
+      label.append(chip);
+    }
+    const txt = t("↺ era {v}", { v: before });
+    if (chip.textContent !== txt) chip.textContent = txt;   // solo se cambia (Safari perde il clic)
+    const field = $(linkEdit.field).closest("label").firstChild.nodeValue.trim();
+    chip.title = t("Ricalcolato dopo la modifica di «{f}»: clic per tornare ai valori di prima", { f: field });
+  }
+}
+function linkRestore() {
+  if (!linkEdit) return;
+  for (const id of LINKED) $(id).value = linkEdit.before[id];
+  linkEdit = null;
+  linkMark(); linkDone(); updateSummary();
+}
+function linkClear() {
+  linkEdit = null;
+  linkMark(); linkDone();
+}
 
 function shutterSeconds() {
   const v = $("c-shutter").value || "";
@@ -711,6 +802,7 @@ function microstepAdvice(step, um) {
   let tip = t("Imposta il microstep a 1/{m} (Configurazione › Motore): {u} µm/passo, passo consigliato {n} passi.",
     { m: pick, u: fmtNum(u2, 3), n: stepsFor(step, u2) });
   if (mechMode === "manual") tip += " " + t("Poi scrivi {u} µm/passo in Configurazione meccanica: il valore inserito a mano non segue il microstep.", { u: fmtNum(u2, 3) });
+  tip += " " + t("Con il microstep tieni attive le bobine alimentate a motore fermo.");
   return html + `<span class="muted">${tip}</span>`;
 }
 
@@ -1329,6 +1421,12 @@ function jogSizes() {
 
 function renderJogSizes() {
   const sizes = jogSizes(), hold = !!(S && S.settings.jog_hold);
+  // tratto del movimento continuo: aggiornato sempre (non dipende dalle ampiezze)
+  const chunk = (S && S.settings.hold_chunk_steps) || 500;
+  $("jog-chunk-row").classList.toggle("hidden", !hold);
+  if (document.activeElement !== $("jog-chunk") && $("jog-chunk").value !== String(chunk)) $("jog-chunk").value = chunk;
+  const chunkUm = umPerStep() ? t("{n} passi = {um}", { n: fmtInt(chunk), um: fmtUm(chunk) }) : "&nbsp;";
+  if ($("jog-chunk-um").innerHTML !== chunkUm) $("jog-chunk-um").innerHTML = chunkUm;
   const sig = sizes.join(",") + (hold ? "h" : "");
   if (sig === jogSizesSig) return;
   jogSizesSig = sig;
@@ -1348,39 +1446,54 @@ function renderJogSizes() {
 // Pulsante Allontana/Avvicina: un tocco sposta di jogSize passi; tenuto premuto oltre HOLD_DELAY
 // muove senza fermarsi fino al rilascio (se l'opzione è attiva). Durante il movimento la pagina
 // conferma al server ogni 250 ms che il pulsante è ancora premuto.
-function bindJogButton(btn, signFn) {
-  let pressed = false, holding = false, timer = null, beat = null;
+// Pressione di Avvicina/Allontana, con il pulsante o con i tasti ↑/↓: breve = un colpo (tap), tenuta oltre
+// HOLD_DELAY = movimento continuo (conferme ogni 250 ms) finché non si rilascia.
+function jogPress(signFn, onHolding = () => {}) {
+  let pressed = false, holding = false, timer = null, beat = null, tap = null;
   const stopHold = () => {
     clearInterval(beat); beat = null;
-    btn.classList.remove("holding");
-    if (holding) { holding = false; api("/api/focuser/hold", { direction: 0 }).catch(() => {}); }
+    onHolding(false);
+    if (holding) { holding = false; holdCall({ direction: 0 }).catch(() => {}); }
   };
-  const sendHold = () => api("/api/focuser/hold", { direction: signFn() }).catch((e) => {
+  // start = pulsante appena premuto; le conferme successive vengono rifiutate dal server dopo uno STOP
+  const sendHold = (start) => holdCall({ direction: signFn(), start }).then((r) => {
+    if (r && r.stopped) { pressed = false; stopHold(); }
+  }).catch((e) => {
     pressed = false; stopHold(); toast(e.message, true);
   });
-  btn.addEventListener("pointerdown", (e) => {
-    if (btn.disabled || e.button !== 0) return;
-    e.preventDefault();
-    try { btn.setPointerCapture(e.pointerId); } catch { /* opzionale */ }
-    pressed = true;
+  const press = (tapFn) => {
+    if (pressed) return;
+    pressed = true; tap = tapFn;
     timer = setTimeout(() => {
       timer = null;
       if (!pressed || !(S && S.settings.jog_hold) || !S.focuser.connected || running()) return;
       holding = true;
-      btn.classList.add("holding");
-      sendHold();
-      beat = setInterval(sendHold, 250);
+      onHolding(true);
+      sendHold(true);
+      beat = setInterval(() => sendHold(false), 250);
     }, HOLD_DELAY);
-  });
+  };
   const release = () => {
     if (!pressed) return;
     pressed = false;
     if (timer) { clearTimeout(timer); timer = null; }
     if (holding || beat) stopHold();
-    else jog(signFn());
+    else tap();
   };
-  ["pointerup", "pointercancel", "lostpointercapture"].forEach((ev) => btn.addEventListener(ev, release));
   window.addEventListener("blur", release);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) release(); });
+  return { press, release };
+}
+
+function bindJogButton(btn, signFn) {
+  const p = jogPress(signFn, (on) => btn.classList.toggle("holding", on));
+  btn.addEventListener("pointerdown", (e) => {
+    if (btn.disabled || e.button !== 0) return;
+    e.preventDefault();
+    try { btn.setPointerCapture(e.pointerId); } catch { /* opzionale */ }
+    p.press(() => jog(signFn()));
+  });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach((ev) => btn.addEventListener(ev, p.release));
   btn.addEventListener("click", (e) => { if (e.detail === 0) jog(signFn()); });  // Invio/spazio da tastiera
 }
 
@@ -1410,11 +1523,36 @@ function setJogSize(size) {
   if (S) render();
 }
 
+// ---- guida HTML (web/guide/<lingua>.html, da docs/guida/genera_guida_web.py). «?» in alto apre il capitolo
+// della scheda aperta, il «?» nel titolo delle card la sezione giusta. Le chiavi sono i nomi fissi di ALIASES nel
+// generatore: se i capitoli cambiano numero si aggiorna solo lì.
+const GUIDE_TABS = { session: "interfaccia", optics: "profili-ottici", calib: "calibrazione", config: "fine-corsa", log: "problemi" };
+const GUIDE_CARDS = {
+  "card-focuser": "focheggiatore", "card-seq": "sequenza", "card-camera": "fotocamera", "card-last": "live-view",
+  "card-optics": "profili-ottici", "card-limits": "fine-corsa", "card-mech": "meccanica", "card-jog": "comandi-manuali",
+  "card-motor": "motore", "card-lang": "lingua", "card-updates": "aggiornamenti", "card-temp": "temperatura",
+  "card-expo": "calibrazione-esposizione", "card-calib": "calibrazione-frame", "card-library": "calibrazione-libreria",
+  "card-remote": "smartphone",
+};
+const guideUrl = (key) => `/guide/${["it", "en", "fr", "de", "es"].includes(LANG) ? LANG : "en"}.html${key ? "#" + key : ""}`;
+function setupGuideLinks() {
+  for (const [id, key] of Object.entries(GUIDE_CARDS)) {
+    const h2 = document.querySelector(`#${id} .card-head h2`);
+    if (!h2 || h2.querySelector(".help")) continue;
+    const a = document.createElement("a");
+    a.className = "help"; a.href = guideUrl(key); a.target = "fs-guide"; a.textContent = "?";
+    a.title = t("Apri la guida a questa parte"); a.setAttribute("aria-label", a.title);
+    a.setAttribute("data-i18n-skip", "");
+    h2.append(" ", a);   // dentro il titolo: chip e pulsanti della testata restano dove sono
+  }
+}
+
 function switchTab(name) {
   $$(".tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === name));
   $$(".view").forEach((v) => v.classList.toggle("hidden", v.id !== `view-${name}`));
   if (name === "log" && S) { renderLog(); $("log").scrollTop = $("log").scrollHeight; }
   if (name === "calib" || name === "session") refreshCalibration(true);
+  $("guide-btn").href = guideUrl(GUIDE_TABS[name] || "");
   try { localStorage.setItem("fs-tab", name); } catch { /* opzionale */ }
 }
 
@@ -1440,6 +1578,14 @@ function bind() {
   }, t("Ampiezze aggiornate"))));
   $("jog-hold").onchange = (e) => act(null, async () => {
     S.settings = await api("/api/settings", { jog_hold: e.target.checked });
+    render();
+  });
+  $("jog-chunk").onchange = (e) => act(null, async () => {
+    S.settings = await api("/api/settings", { hold_chunk_steps: Math.round(Number(e.target.value)) });
+    render();
+  }, t("Tratto aggiornato"));
+  $("opt-coil-seq").onchange = (e) => act(null, async () => {
+    S.settings = await api("/api/settings", { coil_during_sequence: e.target.checked });
     render();
   });
   // "Vai" senza un numero valido resta disattivato: un campo vuoto vale 0 e mandava il motore a zero
@@ -1473,23 +1619,36 @@ function bind() {
   $("last-thumb").onclick = () => S && S.last_shot && openViewer(S.last_shot.id);
   // con il live view acceso il visualizzatore si apre sul live view (zoom e pan)
   $("v-open").onclick = () => openViewer(liveOn ? "live" : S && S.last_shot ? S.last_shot.id : null);
-  $("live-btn").onclick = () => setLive(!liveOn);
+  $("live-btn").onclick = () => {
+    setLive(!liveOn);
+    // avviato a mano: parte anche nel visualizzatore, se è aperto (stessa origine, canale fra le finestre)
+    if (liveOn && windowLink) windowLink.postMessage({ live: true });
+  };
   $("live-box").ondblclick = toggleLiveFullscreen;
 
   // sequenza
   $$("[data-mark]").forEach((b) => (b.onclick = () => {
-    $(b.dataset.mark === "start" ? "s-start" : "s-end").value = S.focuser.position;
-    syncCount(); updateSummary();
+    const id = b.dataset.mark === "start" ? "s-start" : "s-end";
+    linkBegin(id); linkEdit.closed = true;
+    $(id).value = S.focuser.position;
+    syncCount(); linkMark(); linkDone(); updateSummary();
   }));
-  ["s-start", "s-end", "s-step"].forEach((id) => $(id).addEventListener("input", () => { syncCount(); updateSummary(); }));
+  ["s-start", "s-end", "s-step"].forEach((id) => $(id).addEventListener("input", () => {
+    linkBegin(id); syncCount(); linkMark(); linkDone(); updateSummary();
+  }));
   $("s-count").addEventListener("change", () => {
+    linkBegin("s-count");
+    // per eccesso: con n-1 passi si copre tutta la corsa e gli scatti restano quelli scritti (per difetto ne
+    // aggiungeva uno, per il resto della divisione)
     const n = Math.max(2, num("s-count")), span = Math.abs(num("s-end") - num("s-start"));
-    $("s-step").value = Math.max(1, Math.round(span / (n - 1)));
-    syncCount(); updateSummary();
+    $("s-step").value = Math.max(1, Math.ceil(span / (n - 1)));
+    syncCount(); linkMark(); linkDone(); updateSummary();
   });
+  // una nuova modifica dello stesso campo, dopo esserne usciti, riparte dai valori di quel momento
+  LINKED.forEach((id) => $(id).addEventListener("blur", () => { if (linkEdit && linkEdit.field === id) linkEdit.closed = true; }));
   ["s-settle", "s-post", "s-backlash", "s-mode", "s-repeats", "c-bulb", "c-shutter"].forEach((id) => $(id).addEventListener("input", updateSummary));
   $("c-mirror").addEventListener("change", () => { updateSummary(); renderMirrorHint(); });
-  $("s-start-btn").onclick = (e) => act(e.target, () => api("/api/sequence/start", formParams()), t("Sequenza avviata"));
+  $("s-start-btn").onclick = (e) => { linkClear(); act(e.target, () => api("/api/sequence/start", formParams()), t("Sequenza avviata")); };
   $("s-pause-btn").onclick = (e) => act(e.target, () => api(S.sequence.state === "paused" ? "/api/sequence/resume" : "/api/sequence/pause"));
   $("s-stop-btn").onclick = (e) => act(e.target, () => api("/api/sequence/stop"));
   $("s-open").onclick = () => act(null, () => api("/api/open-folder"));
@@ -1517,7 +1676,8 @@ function bind() {
       shots_per_position: "s-repeats", optics_profile: "s-optics" };
     for (const [k, id] of Object.entries(map)) if (p[k] !== undefined) $(id).value = p[k];
     if (p.return_to_start !== undefined) $("s-return").checked = p.return_to_start;
-    syncCount(); updateSummary();
+    if (p.sound_on_end !== undefined) $("s-sound").checked = p.sound_on_end;
+    linkClear(); syncCount(); updateSummary();
   };
   $("s-preset-save").onclick = () => {
     const name = window.prompt(t("Nome del preset (es. obiettivo 10×)"), $("s-preset").value || "");
@@ -1546,6 +1706,7 @@ function bind() {
       const st = await api("/api/state", undefined, "GET");
       loadLimitForm(st.settings);
       $("s-start").value = st.settings.sequence.start; $("s-end").value = st.settings.sequence.end;
+      linkClear(); syncCount();
     }, t("Zero impostato"));
   };
   $("lim-fw").onclick = (e) => {
@@ -1603,13 +1764,18 @@ function bind() {
   bindRemote();
   $("d-apply").onclick = () => {
     if (!umPerStep()) return toast(t("Configura prima la meccanica (µm per passo)"), true);
+    linkBegin("s-step"); linkEdit.closed = true;
     $("s-step").value = stepsFor(dof(), umPerStep());
-    syncCount(); updateSummary();
+    syncCount(); linkMark(); linkDone(); updateSummary();
     switchTab("session");
     toast(t("Passo della sequenza aggiornato"));
   };
 
   // tastiera
+  const keyJog = {
+    ArrowUp: jogPress(() => -towardSign(), (on) => $("jog-away").classList.toggle("holding", on)),
+    ArrowDown: jogPress(() => towardSign(), (on) => $("jog-toward").classList.toggle("holding", on)),
+  };
   document.addEventListener("keydown", (e) => {
     if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName) || e.metaKey || e.ctrlKey) return;
     if (e.key === "Escape") { api("/api/focuser/halt").catch(() => {}); toast(t("Stop")); return; }
@@ -1619,12 +1785,19 @@ function bind() {
       e.preventDefault();
       const away = e.key === "ArrowUp";
       const sign = away ? -towardSign() : towardSign();
-      const prev = jogSize;
-      if (e.shiftKey) jogSize = Math.min(prev * 10, sizes[sizes.length - 1] * 10);
-      jog(sign);
-      jogSize = prev;
+      const tap = () => {
+        const prev = jogSize;
+        if (e.shiftKey) jogSize = Math.min(prev * 10, sizes[sizes.length - 1] * 10);
+        jog(sign);
+        jogSize = prev;
+      };
+      // con "Tieni premuto per muovere" il tasto tenuto giù fa il movimento continuo, come i pulsanti (prima ogni
+      // ripetizione del tasto mandava un colpo, ignorato dal firmware mentre il motore era ancora in moto: singhiozzo)
+      if (S && S.settings.jog_hold) { if (!e.repeat) keyJog[e.key].press(tap); }
+      else tap();
     }
   });
+  document.addEventListener("keyup", (e) => { if (keyJog[e.key]) keyJog[e.key].release(); });
 }
 
 function renderPresets() {
@@ -1638,6 +1811,7 @@ function renderPresets() {
 }
 
 bind();
+setupGuideLinks();
 try {
   setJogSize(Number(localStorage.getItem("fs-jog")) || 100);
   const hashTab = location.hash.slice(1);

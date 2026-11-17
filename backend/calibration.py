@@ -26,7 +26,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
-from . import rawstat
+from . import power, rawstat
 from .i18n import tr
 from .sequence import now_iso, write_atomic
 from .summary import num
@@ -305,6 +305,7 @@ class CalibrationRunner:
             n += 1
         meta: dict = {"format": FORMAT, "version": VERSION, "software": software, "type": kind, "state": "running",
                       "created": now_iso(), "updated": None, "frames": []}
+        power.hold()   # niente stop del Mac durante la serie: sospenderebbe l'USB
         try:
             self._scene(cam, "flat" if kind == "flat" else "dark")
             if kind == "flat_dark":
@@ -383,6 +384,7 @@ class CalibrationRunner:
             self.status.message = str(exc)
             self._log(tr("ERRORE calibrazione: {exc}", exc=exc))
         finally:
+            power.release()
             self._scene(cam, None)
             if folder.exists():
                 meta["finished"] = meta["updated"] = now_iso()
