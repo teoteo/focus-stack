@@ -11,6 +11,10 @@ CONFIG_FILE = CONFIG_DIR / "settings.json"
 DEFAULTS: dict = {
     "focuser_port": "",
     "focuser_baud": 9600,
+    # per ricollegarsi da soli all'apertura: identità USB della porta del focheggiatore (un altro adattatore con lo
+    # stesso nome non va toccato) e nome del driver gphoto della fotocamera usata l'ultima volta
+    "focuser_hwid": "",
+    "camera_driver": "",
     "um_per_step": 1.0,
     # Fine corsa software (passi). None = usa il max del firmware.
     "limit_min": 0,

@@ -433,7 +433,9 @@ async def lifespan(_: FastAPI):
             app_state.log(tr("Errore: {exc}", exc=exc))
 
     remote_task = asyncio.create_task(remote_on_boot()) if app_state.cfg["remote"].get("enabled") else None
+    connect_task = asyncio.create_task(connect_on_boot())
     yield
+    connect_task.cancel()
     if remote_task:
         remote_task.cancel()
     await app_state.remote.stop()
@@ -443,6 +445,37 @@ async def lifespan(_: FastAPI):
         await app_state.focuser.disconnect()
     if app_state.camera:
         await app_state.camera.disconnect()
+
+
+async def connect_on_boot() -> None:
+    """All'apertura ricollega il focheggiatore e la fotocamera usati l'ultima volta, se sono collegati al Mac.
+
+    Collegarsi non muove il motore: aprire la porta riavvia la scheda, che riprende posizione e impostazioni dalla
+    EEPROM (come con «Connetti»). La porta seriale si apre solo se è lo stesso adattatore USB dell'ultima volta
+    (hwid): un altro dispositivo con lo stesso nome di porta non riceve niente. La fotocamera si riconosce dal
+    nome del driver; se non c'è o è spenta non succede nulla. Una richiesta della pagina nel frattempo (Connetti)
+    passa dagli stessi lock e la seconda diventa un no-op.
+    """
+    cfg = app_state.cfg
+    await asyncio.sleep(1.5)   # dopo un riavvio il processo vecchio libera porte seriali e USB
+    port, hwid = cfg.get("focuser_port"), cfg.get("focuser_hwid")
+    if port and not (app_state.focuser and app_state.focuser.connected):
+        found = next((p for p in list_serial_ports() if p["device"] == port), None)
+        if found and (not hwid or not found["hwid"] or found["hwid"] == hwid):
+            try:
+                async with app_state.focuser_lock:
+                    await _focuser_connect(FocuserConnect(port=port, baud=cfg.get("focuser_baud", 9600)))
+            except Exception as exc:  # noqa: BLE001
+                app_state.log(tr("Collegamento automatico del focheggiatore non riuscito: {exc}", exc=exc))
+    driver = cfg.get("camera_driver")
+    if driver and GPHOTO_AVAILABLE and not (app_state.camera and app_state.camera.connected):
+        try:
+            cam = next((c for c in await GPhotoCamera.detect() if c["model"] == driver), None)
+            if cam:
+                async with app_state.camera_lock:
+                    await _camera_connect(CameraConnect(model=cam["model"], port=cam["port"]))
+        except Exception as exc:  # noqa: BLE001
+            app_state.log(tr("Collegamento automatico della fotocamera non riuscito: {exc}", exc=exc))
 
 
 api = FastAPI(title="Focus Stack", lifespan=lifespan)
@@ -642,6 +675,7 @@ async def _focuser_connect(body: FocuserConnect):
     if not body.simulate:
         app_state.cfg["focuser_port"] = body.port
         app_state.cfg["focuser_baud"] = body.baud
+        app_state.cfg["focuser_hwid"] = next((p["hwid"] for p in list_serial_ports() if p["device"] == body.port), "")
         store.save(app_state.cfg)
     probe = f"{f.temperature:.1f} °C" if f.temperature is not None else tr("sonda assente")
     app_state.log(tr("Focheggiatore connesso (firmware {firmware}, max {max} passi, {probe})",
@@ -1023,7 +1057,7 @@ async def camera_connect(body: CameraConnect):
 async def _camera_connect(body: CameraConnect):
     old = app_state.camera
     if (old and old.connected and not body.simulate and not old.simulated
-            and body.model in ("", old.model) and body.port in ("", old.port)):
+            and body.model in ("", old.model, old.driver) and body.port in ("", old.port)):
         return old.describe()   # già collegata (richiesta doppia): niente seconda sessione PTP
     if app_state.camera:
         await app_state.camera.disconnect()
@@ -1037,6 +1071,9 @@ async def _camera_connect(body: CameraConnect):
         cam.focus_position = lambda: (app_state.focuser.position
                                       if app_state.focuser and app_state.focuser.connected else None)
     app_state.camera = cam
+    if not cam.simulated and cam.driver:
+        app_state.cfg["camera_driver"] = cam.driver   # per ricollegarla da sola alla prossima apertura
+        store.save(app_state.cfg)
     app_state.log(tr("Fotocamera connessa: {model}", model=cam.model))
     return cam.describe()
 

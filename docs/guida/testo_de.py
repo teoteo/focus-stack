@@ -200,6 +200,11 @@ add(f"""
     f"<b>{ui('Simulatore')}</b>: simulierte Kamera, die Testbilder erzeugt.",
     f"<b>{ui('Connetti')}</b>. Vorher beendet die App die macOS-Dienste, die die Kamera belegen.",
 ], layout="side narrow")}
+<p>Beim Öffnen <b>verbindet sich die App von selbst wieder</b> mit dem zuletzt verwendeten Fokussierer und der zuletzt
+verwendeten Kamera, sofern sie am Mac angeschlossen sind: Es genügt, sie einmal mit <b>{ui('Connetti')}</b> verbunden zu
+haben. Der Fokussierer wird nur dann wieder verbunden, wenn es derselbe USB-Adapter ist (ein anderes Gerät mit demselben
+Portnamen bleibt unberührt), und das Verbinden bewegt den Motor nicht. Schlägt eine Verbindung fehl, bleibt eine Zeile
+im Protokoll, und <b>{ui('Connetti')}</b> funktioniert wie immer.</p>
 <h3>Einstellungen an der Kamera</h3>
 {table(["Kamera", "Was einstellen"], [
     ["<b>Nikon D5600</b> und andere Nikon", "Moduswahlrad auf <b>M</b> (manuell). Im Wiedergabemenü die <b>Bildkontrolle</b> ausschalten. SnapBridge/WLAN und Bluetooth ausschalten, sie können die Verbindung belegen. Speicherkarte eingelegt lassen, Akku geladen (oder Netzadapter EH-5/EP-5A)."],
@@ -492,7 +497,9 @@ lokalen Netzwerk ein.</p>
 ], layout="side narrow", width="70%")}
 <p>Über die Seite <b>lässt sich nichts steuern</b>, und ohne den Code im Link wird nichts angezeigt. Beim ersten Mal fragt
 macOS, ob eingehende Verbindungen erlaubt werden sollen: Antworten Sie <b>Erlauben</b>. Für den Ton lassen Sie die Seite
-im Vordergrund geöffnet: Ein gesperrtes Telefon hält Webseiten an.</p>
+im Vordergrund geöffnet: Solange der Ton aktiv ist, lässt die Seite den Bildschirm eingeschaltet. Sperrt sich das Telefon trotzdem,
+stellen Sie die automatische Sperre während des Wartens auf <b>Nie</b> (iPhone: Einstellungen › Anzeige &amp; Helligkeit ›
+Automatische Sperre): Ein gesperrtes Telefon hält Webseiten an, und der Ton kommt nicht an.</p>
 """)
 
 # 8
@@ -860,7 +867,7 @@ add(f"""
 <h2>Bei jeder Sitzung</h2>
 <ol class="steps">
 <li>Schalten Sie Fokussierer und Kamera ein (Modus M), schließen Sie die Kabel an und öffnen Sie Focus Stack.</li>
-<li>Verbinden Sie Fokussierer und Kamera im Bereich {ui('Sessione')}.</li>
+<li>Fokussierer und Kamera verbinden sich von selbst; falls nicht, drücken Sie <b>{ui('Connetti')}</b> im Bereich {ui('Sessione')}.</li>
 <li>Stellen Sie Belichtungszeit, ISO und Format ein; machen Sie eine <b>Testaufnahme</b> und prüfen Sie sie im Betrachter bei 100 %.</li>
 <li>Wählen Sie das <b>Preset</b> des Objektivs (oder die Schrittweite) und prüfen Sie das <b>Optikprofil</b> in der Serie.</li>
 <li>Suchen Sie mit dem <b>Live-View</b> und der Tastatur <b>Ende</b> und <b>Anfang</b> der Serie und klicken Sie jeweils auf ⌖ {ui('qui')}.</li>

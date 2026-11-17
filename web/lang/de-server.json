@@ -275,7 +275,6 @@
   "Solo lettura: i comandi restano sul Mac.": "Nur lesen: die Steuerung bleibt auf dem Mac.",
   "Avvisami con un suono a fine sequenza": "Mit einem Ton am Ende der Serie benachrichtigen",
   "Suono a fine sequenza attivo (tocca per spegnere)": "Ton am Serienende aktiv (zum Ausschalten tippen)",
-  "Tieni questa pagina aperta: lo schermo resta acceso finché il suono è attivo.": "Lassen Sie diese Seite geöffnet: Der Bildschirm bleibt an, solange der Ton aktiv ist.",
   "Ricollego la fotocamera…": "Kamera wird neu verbunden…",
   "Fotocamera ricollegata: {model}": "Kamera neu verbunden: {model}",
   "Fotocamera non ricollegata: {exc}": "Kamera nicht neu verbunden: {exc}",
@@ -288,5 +287,8 @@
   "Impossibile alimentare le bobine: {exc}": "Spulen können nicht bestromt werden: {exc}",
   "Bobine di nuovo spente a motore fermo": "Spulen im Stillstand wieder aus",
   "Impossibile rispegnere le bobine: {exc}": "Spulen können nicht ausgeschaltet werden: {exc}",
-  "Tratto del movimento continuo: da {lo} a {hi} passi": "Abschnitt der Dauerbewegung: {lo} bis {hi} Schritte"
+  "Tratto del movimento continuo: da {lo} a {hi} passi": "Abschnitt der Dauerbewegung: {lo} bis {hi} Schritte",
+  "Collegamento automatico del focheggiatore non riuscito: {exc}": "Automatische Verbindung zum Fokussierer fehlgeschlagen: {exc}",
+  "Collegamento automatico della fotocamera non riuscito: {exc}": "Automatische Verbindung zur Kamera fehlgeschlagen: {exc}",
+  "Tieni questa pagina aperta: lo schermo resta acceso finché il suono è attivo.": "Lassen Sie diese Seite geöffnet: Der Bildschirm bleibt an, solange der Ton aktiv ist."
 }

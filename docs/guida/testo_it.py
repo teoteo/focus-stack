@@ -194,6 +194,10 @@ add(f"""
     "<b>Simulatore</b>: una fotocamera finta che genera immagini di prova.",
     "<b>Connetti</b>. Prima di collegarsi l'app chiude i servizi di macOS che si appropriano della fotocamera.",
 ], layout="side narrow")}
+<p>All'apertura l'app <b>si ricollega da sola</b> al focheggiatore e alla fotocamera usati l'ultima volta, se sono
+collegati al Mac: basta averli collegati una volta con <b>Connetti</b>. Il focheggiatore si ricollega solo se è lo stesso
+adattatore USB (un altro dispositivo con lo stesso nome di porta non viene toccato) e collegarsi non muove il motore. Se
+un collegamento non riesce resta una riga nel registro, e <b>Connetti</b> funziona come sempre.</p>
 <h3>Impostazioni sulla fotocamera</h3>
 {table(["Fotocamera", "Cosa impostare"], [
     ["<b>Nikon D5600</b> e altre Nikon", "Ghiera dei modi su <b>M</b> (manuale). Nel menu di riproduzione disattiva la <b>revisione immagine</b>. Spegni SnapBridge/Wi-Fi e Bluetooth, che possono occupare il collegamento. Tieni una scheda di memoria inserita e la batteria carica (o l'alimentatore EH-5/EP-5A)."],
@@ -475,8 +479,10 @@ attiva una pagina <b>di sola lettura</b> sulla rete locale.</p>
     "L'ultimo scatto: allarga con due dita, trascina o tocca due volte per ingrandire. Ingrandendo si carica un dettaglio ad alta risoluzione; lo zoom resta passando allo scatto successivo, per confrontare la stessa zona. <span class='ui'>Adatta</span> torna all'immagine intera.",
 ], layout="side narrow", width="70%")}
 <p>Dalla pagina <b>non si comanda nulla</b> e senza il codice del link non si vede niente. La prima volta macOS chiede se
-consentire le connessioni in entrata: rispondi <b>Consenti</b>. Per il suono, tieni la pagina aperta in primo piano: un
-telefono bloccato sospende le pagine web.</p>
+consentire le connessioni in entrata: rispondi <b>Consenti</b>. Per il suono, tieni la pagina aperta in primo piano:
+finché il suono è attivo la pagina tiene acceso lo schermo. Se il telefono si blocca lo stesso, imposta il blocco
+automatico su <b>Mai</b> mentre aspetti (iPhone: Impostazioni › Schermo e luminosità › Blocco automatico): un telefono
+bloccato sospende le pagine web e il suono non arriva.</p>
 """)
 
 # 8
@@ -837,7 +843,7 @@ add("""
 <h2>A ogni sessione</h2>
 <ol class="steps">
 <li>Accendi il focheggiatore e la fotocamera (modo M), collega i cavi e apri Focus Stack.</li>
-<li>Connetti il focheggiatore e la fotocamera dalla scheda Sessione.</li>
+<li>Il focheggiatore e la fotocamera si collegano da soli; se non succede, premi <b>Connetti</b> nella scheda Sessione.</li>
 <li>Imposta tempo di posa, ISO e formato; fai uno <b>scatto di prova</b> e controllalo nel visualizzatore al 100%.</li>
 <li>Scegli il <b>preset</b> dell'obiettivo (oppure il passo) e controlla il <b>profilo ottico</b> nella sequenza.</li>
 <li>Con il <b>live</b> e la tastiera trova la <b>fine</b> e l'<b>inizio</b> della sequenza e premi ⌖ qui.</li>

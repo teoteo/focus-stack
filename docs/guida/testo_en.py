@@ -373,6 +373,10 @@ add(f"""
     f"<b>{ui('Simulatore')}</b>: a fake camera that generates test images.",
     f"<b>{ui('Connetti')}</b>. Before connecting, the app closes the macOS services that grab the camera.",
 ], layout="side narrow")}
+<p>When it opens, the app <b>reconnects by itself</b> to the focuser and the camera used last time, if they are
+connected to the Mac: you only need to have connected them once with <b>{ui('Connetti')}</b>. The focuser reconnects only if
+it is the same USB adapter (another device with the same port name is left alone), and connecting does not move the
+motor. If a connection fails a line is left in the log, and <b>{ui('Connetti')}</b> works as always.</p>
 <h3>Settings on the camera</h3>
 {table(["Camera", "What to set"], [
     ["<b>Nikon D5600</b> and other Nikons", "Mode dial on <b>M</b> (manual). In the playback menu turn <b>image review</b> off. Turn off SnapBridge/Wi-Fi and Bluetooth, which can tie up the connection. Keep a memory card inserted and the battery charged (or use the EH-5/EP-5A power adapter)."],
@@ -652,7 +656,9 @@ copied. It is the same library used by <b>Focus Fusion</b>, which saves its “m
 ], layout="side narrow", width="70%")}
 <p>Nothing <b>can be controlled</b> from the page, and without the link's code nothing can be seen. The first time,
 macOS asks whether to allow incoming connections: answer <b>Allow</b>. For the sound, keep the page open in the
-foreground: a locked phone suspends web pages.</p>
+foreground: while the sound is on, the page keeps the screen on. If the phone locks anyway, set auto-lock to
+<b>Never</b> while you wait (iPhone: Settings › Display &amp; Brightness › Auto-Lock): a locked phone suspends web pages
+and the sound does not arrive.</p>
 """)
 
 # 8
@@ -1009,7 +1015,7 @@ add(f"""
 <h2>Every session</h2>
 <ol class="steps">
 <li>Switch on the focuser and the camera (mode M), plug in the cables and open Focus Stack.</li>
-<li>Connect the focuser and the camera from the {ui('Sessione')} tab.</li>
+<li>The focuser and the camera connect by themselves; if they don't, press <b>{ui('Connetti')}</b> in the {ui('Sessione')} tab.</li>
 <li>Set shutter speed, ISO and format; take a <b>test shot</b> and check it in the viewer at 100%.</li>
 <li>Choose the objective's <b>preset</b> (or the step) and check the <b>optics profile</b> in the sequence.</li>
 <li>Using <b>live view</b> and the keyboard, find the <b>end</b> and the <b>start</b> of the sequence and click ⌖ {ui('qui')}.</li>

@@ -275,7 +275,6 @@
   "Solo lettura: i comandi restano sul Mac.": "Read only: the controls stay on the Mac.",
   "Avvisami con un suono a fine sequenza": "Alert me with a sound when the sequence ends",
   "Suono a fine sequenza attivo (tocca per spegnere)": "End-of-sequence sound on (tap to turn off)",
-  "Tieni questa pagina aperta: lo schermo resta acceso finché il suono è attivo.": "Keep this page open: the screen stays on while the sound is on.",
   "Ricollego la fotocamera…": "Reconnecting the camera…",
   "Fotocamera ricollegata: {model}": "Camera reconnected: {model}",
   "Fotocamera non ricollegata: {exc}": "Camera not reconnected: {exc}",
@@ -288,5 +287,8 @@
   "Impossibile alimentare le bobine: {exc}": "Cannot power the coils: {exc}",
   "Bobine di nuovo spente a motore fermo": "Coils off again when idle",
   "Impossibile rispegnere le bobine: {exc}": "Cannot switch the coils off: {exc}",
-  "Tratto del movimento continuo: da {lo} a {hi} passi": "Continuous move segment: {lo} to {hi} steps"
+  "Tratto del movimento continuo: da {lo} a {hi} passi": "Continuous move segment: {lo} to {hi} steps",
+  "Collegamento automatico del focheggiatore non riuscito: {exc}": "Automatic focuser connection failed: {exc}",
+  "Collegamento automatico della fotocamera non riuscito: {exc}": "Automatic camera connection failed: {exc}",
+  "Tieni questa pagina aperta: lo schermo resta acceso finché il suono è attivo.": "Keep this page open: the screen stays on while the sound is on."
 }

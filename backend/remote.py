@@ -222,8 +222,14 @@ def render_page() -> str:
     }
     title = tr("Avanzamento")
     return PAGE.replace("__LANG__", i18n.current()).replace("__TITLE__", title).replace("__L__", json.dumps(labels, ensure_ascii=False)) \
-        .replace("__READONLY__", tr("Solo lettura: i comandi restano sul Mac."))
+        .replace("__READONLY__", tr("Solo lettura: i comandi restano sul Mac.")).replace("__NOSLEEP__", NOSLEEP_MP4)
 
+
+# Video muto di 2 s (32×32, 2,3 kB) che la pagina riproduce in loop per tenere acceso lo schermo del telefono: la
+# Wake Lock API c'è solo nelle pagine https e questa è servita in http sulla rete locale (stessa tecnica di NoSleep.js).
+# Generato con: ffmpeg -f lavfi -i color=c=black:s=32x32:r=2 -f lavfi -i anullsrc=r=8000:cl=mono -t 2 -c:v libx264
+#   -profile:v baseline -pix_fmt yuv420p -tune stillimage -c:a aac -b:a 8k -ac 1 -movflags +faststart -shortest
+NOSLEEP_MP4 = "data:video/mp4;base64,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"
 
 PAGE = """<!doctype html>
 <html lang="__LANG__"><head><meta charset="utf-8">
@@ -313,13 +319,29 @@ function finished(ok) {
   for (let i = 0; i < 3; i++) tone(ok ? CHIME_OK : CHIME_ERR, i * 1.4);
   if (navigator.vibrate) navigator.vibrate(ok ? [300, 150, 300] : [800]);
 }
-async function keepAwake() {   // lo schermo spento sospenderebbe la pagina (e il suono)
+// Lo schermo spento sospenderebbe la pagina (e il suono). La Wake Lock API c'è solo in https: qui la pagina è in
+// http sulla rete locale, quindi di solito si usa il video muto in loop (avviato dal tocco sul pulsante, come chiede iOS).
+let sleepVideo = null;
+async function keepAwake() {
+  if (!armed) return;
   try {
-    if (armed && !wake && "wakeLock" in navigator) {
+    if (!wake && window.isSecureContext && "wakeLock" in navigator) {
       wake = await navigator.wakeLock.request("screen");
       wake.addEventListener("release", () => { wake = null; });
     }
-  } catch (e) { /* non disponibile */ }
+  } catch (e) { /* non concessa: si passa al video */ }
+  if (wake) return;
+  if (!sleepVideo) {
+    sleepVideo = document.createElement("video");
+    sleepVideo.setAttribute("playsinline", ""); sleepVideo.setAttribute("muted", "");
+    sleepVideo.muted = true; sleepVideo.loop = true;
+    sleepVideo.src = "__NOSLEEP__";
+  }
+  try { await sleepVideo.play(); } catch (e) { /* riprova al prossimo tocco o al ritorno sulla pagina */ }
+}
+function letSleep() {
+  if (wake) { wake.release(); wake = null; }
+  if (sleepVideo) sleepVideo.pause();
 }
 function renderSnd() {
   $("snd").textContent = "🔔 " + (armed ? L.snd_on : L.snd_off);
@@ -335,7 +357,7 @@ $("snd").onclick = async () => {
     try { await audio.resume(); } catch (e) { /* riprova al prossimo tocco */ }
     tone([[1175, 0.12]]);   // conferma: se si sente, il suono funziona
     keepAwake();
-  } else if (wake) { wake.release(); wake = null; }
+  } else letSleep();
   renderSnd();
 };
 renderSnd();

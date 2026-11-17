@@ -373,3 +373,5 @@ input.auto-upd { border-color: var(--warn); box-shadow: 0 0 0 3px color-mix(in s
   color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); border-radius: 999px; padding: 0 8px; cursor: pointer; }
 .revert:hover, .revert:focus-visible { background: color-mix(in srgb, var(--warn) 24%, transparent); outline: none; }
+/* icona «riscansiona» (porte, fotocamere): disegnata, della stessa grandezza del ⌖ */
+.btn .ico-svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }

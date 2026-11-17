@@ -199,6 +199,11 @@ add(f"""
     f"<b>{ui('Simulatore')}</b> : un faux appareil photo qui génère des images de test.",
     f"<b>{ui('Connetti')}</b>. Avant de se connecter, l'app ferme les services de macOS qui s'approprient l'appareil photo.",
 ], layout="side narrow")}
+<p>À l'ouverture, l'app <b>se reconnecte toute seule</b> au focuser et à l'appareil photo utilisés la dernière fois,
+s'ils sont branchés au Mac : il suffit de les avoir connectés une fois avec <b>{ui('Connetti')}</b>. Le focuser ne se
+reconnecte que s'il s'agit du même adaptateur USB (un autre appareil ayant le même nom de port n'est pas touché), et la
+connexion ne fait pas bouger le moteur. Si une connexion échoue, une ligne reste dans le journal, et
+<b>{ui('Connetti')}</b> fonctionne comme d'habitude.</p>
 <h3>Réglages sur l'appareil photo</h3>
 {table(["Appareil photo", "Que régler"], [
     ["<b>Nikon D5600</b> et autres Nikon", "Molette de sélection du mode sur <b>M</b> (manuel). Dans le menu Visualisation, désactivez l'<b>affichage des images</b>. Désactivez SnapBridge/Wi-Fi et Bluetooth, qui peuvent occuper la connexion. Gardez une carte mémoire insérée et la batterie chargée (ou l'adaptateur secteur EH-5/EP-5A)."],
@@ -497,7 +502,9 @@ active une page <b>en lecture seule</b> sur le réseau local.</p>
 ], layout="side narrow", width="70%")}
 <p>Depuis la page, <b>on ne commande rien</b>, et sans le code du lien on ne voit rien. La première fois, macOS demande
 s'il faut autoriser les connexions entrantes : répondez <b>Autoriser</b>. Pour le son, gardez la page ouverte au premier
-plan : un téléphone verrouillé suspend les pages web.</p>
+plan : tant que le son est activé, la page garde l'écran allumé. Si le téléphone se verrouille quand même, réglez le
+verrouillage automatique sur <b>Jamais</b> pendant l'attente (iPhone : Réglages › Luminosité et affichage › Verrouillage
+automatique) : un téléphone verrouillé suspend les pages web et le son n'arrive pas.</p>
 """)
 
 # 8
@@ -871,7 +878,7 @@ add(f"""
 <h2>À chaque session</h2>
 <ol class="steps">
 <li>Allumez le focuser et l'appareil photo (mode M), branchez les câbles et ouvrez Focus Stack.</li>
-<li>Connectez le focuser et l'appareil photo depuis l'onglet {ui('Sessione')}.</li>
+<li>Le focuser et l'appareil photo se connectent tout seuls ; sinon, appuyez sur <b>{ui('Connetti')}</b> dans l'onglet {ui('Sessione')}.</li>
 <li>Réglez le temps de pose, l'ISO et le format ; faites une <b>photo test</b> et contrôlez-la dans la visionneuse à 100 %.</li>
 <li>Choisissez le <b>préréglage</b> de l'objectif (ou le pas) et vérifiez le <b>profil optique</b> dans la séquence.</li>
 <li>Avec la <b>visée en direct</b> et le clavier, trouvez la <b>fin</b> et le <b>début</b> de la séquence et cliquez sur ⌖ {ui('qui')}.</li>

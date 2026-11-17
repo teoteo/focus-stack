@@ -198,6 +198,10 @@ add(f"""
     f"<b>{ui('Simulatore')}</b>: una cámara ficticia que genera imágenes de prueba.",
     f"<b>{ui('Connetti')}</b>. Antes de conectarse, la app cierra los servicios de macOS que se apropian de la cámara.",
 ], layout="side narrow")}
+<p>Al abrirse, la app <b>se vuelve a conectar sola</b> al enfocador y a la cámara usados la última vez, si están
+conectados al Mac: basta con haberlos conectado una vez con <b>{ui('Connetti')}</b>. El enfocador solo se vuelve a
+conectar si es el mismo adaptador USB (otro dispositivo con el mismo nombre de puerto no se toca) y conectarse no mueve
+el motor. Si una conexión falla, queda una línea en el registro, y <b>{ui('Connetti')}</b> funciona como siempre.</p>
 <h3>Ajustes en la cámara</h3>
 {table(["Cámara", "Qué ajustar"], [
     ["<b>Nikon D5600</b> y otras Nikon", "Dial de modo en <b>M</b> (manual). En el menú de reproducción desactiva la <b>revisión de imagen</b>. Apaga SnapBridge/Wi-Fi y Bluetooth, que pueden ocupar la conexión. Mantén una tarjeta de memoria insertada y la batería cargada (o usa el adaptador de corriente EH-5/EP-5A)."],
@@ -479,7 +483,9 @@ se activa una página <b>de solo lectura</b> en la red local.</p>
 ], layout="side narrow", width="70%")}
 <p>Desde la página <b>no se controla nada</b> y sin el código del enlace no se ve nada. La primera vez, macOS pregunta si
 se permiten las conexiones entrantes: responde <b>Permitir</b>. Para el sonido, mantén la página abierta en primer plano:
-un teléfono bloqueado suspende las páginas web.</p>
+mientras el sonido está activado, la página mantiene la pantalla encendida. Si el teléfono se bloquea de todos modos,
+ajusta el bloqueo automático en <b>Nunca</b> mientras esperas (iPhone: Ajustes › Pantalla y brillo › Bloqueo
+automático): un teléfono bloqueado suspende las páginas web y el sonido no llega.</p>
 """)
 
 # 8
@@ -843,7 +849,7 @@ add(f"""
 <h2>En cada sesión</h2>
 <ol class="steps">
 <li>Enciende el enfocador y la cámara (modo M), conecta los cables y abre Focus Stack.</li>
-<li>Conecta el enfocador y la cámara desde la pestaña {ui('Sessione')}.</li>
+<li>El enfocador y la cámara se conectan solos; si no ocurre, pulsa <b>{ui('Connetti')}</b> en la pestaña {ui('Sessione')}.</li>
 <li>Ajusta el tiempo de exposición, el ISO y el formato; haz una <b>foto de prueba</b> y revísala en el visor al 100%.</li>
 <li>Elige el <b>preajuste</b> del objetivo (o el paso) y comprueba el <b>perfil óptico</b> en la secuencia.</li>
 <li>Con la <b>vista en vivo</b> y el teclado, busca el <b>fin</b> y el <b>inicio</b> de la secuencia y pulsa ⌖ {ui('qui')}.</li>

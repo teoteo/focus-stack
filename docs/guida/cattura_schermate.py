@@ -294,7 +294,7 @@ with sync_playwright() as p:
     shot(page, "calibrazione-frame", "#card-calib", m(
         (1, "#k-kind", "l"), (2, "#k-count", "l"), (3, "#k-target", "l"), (4, "#card-calib .progress-box", "l"),
         (5, "#card-calib .seq-actions", "l")))
-    shot(page, "calibrazione-libreria", "#card-library", m((1, "#k-root", "l"), (2, "#k-match", "l"), (3, "#k-table", "l")))
+    shot(page, "calibrazione-libreria", "#card-library", m((1, "#k-open", "l"), (2, "#k-match", "l"), (3, "#k-table", "l")))
 
     # ---- configurazione ----
     page.click(".tabs button[data-tab=config]")
