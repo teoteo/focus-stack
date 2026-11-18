@@ -131,7 +131,6 @@
  "Fermo": "Idle",
  "Filtro": "Filter",
  "Filtro montato": "Filter fitted",
- "Finder": "Finder",
  "Fine": "End",
  "Fine corsa": "Limits",
  "Fine corsa di sicurezza": "Safety limits",
@@ -276,7 +275,6 @@
  "Modifica per ricalcolare il passo": "Change it to recalculate the step",
  "Modifiche non salvate": "Unsaved changes",
  "Mostra automaticamente ogni nuovo scatto (U)": "Show every new shot automatically (U)",
- "Mostra il file nel Finder": "Show the file in the Finder",
  "Mostra il live view della fotocamera": "Show the camera live view",
  "Mostra l'avanzamento sulla rete locale": "Show progress on the local network",
  "Mostra o nasconde i segni blu dei pixel neri": "Shows or hides the blue marks of black pixels",
@@ -630,5 +628,11 @@
  "qui": "here",
  "Usa posizione attuale": "Use current position",
  "↺ era {v}": "↺ was {v}",
- "Ricalcolato dopo la modifica di «{f}»: clic per tornare ai valori di prima": "Recalculated after you changed “{f}”: click to go back to the previous values"
+ "Ricalcolato dopo la modifica di «{f}»: clic per tornare ai valori di prima": "Recalculated after you changed “{f}”: click to go back to the previous values",
+ "Profilo ottico e calibrazione": "Optics profile and calibration",
+ "Guide di composizione": "Composition guides",
+ "Guide di composizione: nessuna. Clic: terzi (G)": "Composition guides: none. Click: thirds (G)",
+ "Guide di composizione: terzi. Clic: centro (G)": "Composition guides: thirds. Click: centre (G)",
+ "Guide di composizione: centro. Clic: terzi e centro (G)": "Composition guides: centre. Click: thirds and centre (G)",
+ "Guide di composizione: terzi e centro. Clic: nessuna (G)": "Composition guides: thirds and centre. Click: none (G)"
 }

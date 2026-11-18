@@ -131,7 +131,6 @@
  "Fermo": "Stillstand",
  "Filtro": "Filter",
  "Filtro montato": "Filter eingesetzt",
- "Finder": "Finder",
  "Fine": "Ende",
  "Fine corsa": "Grenzen",
  "Fine corsa di sicurezza": "Sicherheitsgrenzen",
@@ -276,7 +275,6 @@
  "Modifica per ricalcolare il passo": "Ändern, um die Schrittweite neu zu berechnen",
  "Modifiche non salvate": "Nicht gespeicherte Änderungen",
  "Mostra automaticamente ogni nuovo scatto (U)": "Jede neue Aufnahme automatisch anzeigen (U)",
- "Mostra il file nel Finder": "Datei im Finder zeigen",
  "Mostra il live view della fotocamera": "Live-View der Kamera zeigen",
  "Mostra l'avanzamento sulla rete locale": "Fortschritt im lokalen Netzwerk anzeigen",
  "Mostra o nasconde i segni blu dei pixel neri": "Blendet die blauen Markierungen schwarzer Pixel ein oder aus",
@@ -630,5 +628,11 @@
  "qui": "hier",
  "Usa posizione attuale": "Aktuelle Position",
  "↺ era {v}": "↺ war {v}",
- "Ricalcolato dopo la modifica di «{f}»: clic per tornare ai valori di prima": "Neu berechnet nach der Änderung von „{f}“: Klicken, um zu den vorherigen Werten zurückzukehren"
+ "Ricalcolato dopo la modifica di «{f}»: clic per tornare ai valori di prima": "Neu berechnet nach der Änderung von „{f}“: Klicken, um zu den vorherigen Werten zurückzukehren",
+ "Profilo ottico e calibrazione": "Optikprofil und Kalibrierung",
+ "Guide di composizione": "Kompositionshilfen",
+ "Guide di composizione: nessuna. Clic: terzi (G)": "Kompositionshilfen: keine. Klick: Drittel (G)",
+ "Guide di composizione: terzi. Clic: centro (G)": "Kompositionshilfen: Drittel. Klick: Mitte (G)",
+ "Guide di composizione: centro. Clic: terzi e centro (G)": "Kompositionshilfen: Mitte. Klick: Drittel und Mitte (G)",
+ "Guide di composizione: terzi e centro. Clic: nessuna (G)": "Kompositionshilfen: Drittel und Mitte. Klick: keine (G)"
 }

@@ -131,7 +131,6 @@
  "Fermo": "À l'arrêt",
  "Filtro": "Filtre",
  "Filtro montato": "Filtre monté",
- "Finder": "Finder",
  "Fine": "Fin",
  "Fine corsa": "Limites",
  "Fine corsa di sicurezza": "Limites de sécurité",
@@ -276,7 +275,6 @@
  "Modifica per ricalcolare il passo": "Modifiez-le pour recalculer le pas",
  "Modifiche non salvate": "Modifications non enregistrées",
  "Mostra automaticamente ogni nuovo scatto (U)": "Afficher automatiquement chaque nouvelle photo (U)",
- "Mostra il file nel Finder": "Afficher le fichier dans le Finder",
  "Mostra il live view della fotocamera": "Afficher la visée en direct de l'appareil photo",
  "Mostra l'avanzamento sulla rete locale": "Afficher l'avancement sur le réseau local",
  "Mostra o nasconde i segni blu dei pixel neri": "Affiche ou masque les marques bleues des pixels noirs",
@@ -630,5 +628,11 @@
  "qui": "ici",
  "Usa posizione attuale": "Utiliser la position actuelle",
  "↺ era {v}": "↺ était {v}",
- "Ricalcolato dopo la modifica di «{f}»: clic per tornare ai valori di prima": "Recalculé après la modification de « {f} » : cliquez pour revenir aux valeurs précédentes"
+ "Ricalcolato dopo la modifica di «{f}»: clic per tornare ai valori di prima": "Recalculé après la modification de « {f} » : cliquez pour revenir aux valeurs précédentes",
+ "Profilo ottico e calibrazione": "Profil optique et calibration",
+ "Guide di composizione": "Guides de composition",
+ "Guide di composizione: nessuna. Clic: terzi (G)": "Guides de composition : aucun. Clic : tiers (G)",
+ "Guide di composizione: terzi. Clic: centro (G)": "Guides de composition : tiers. Clic : centre (G)",
+ "Guide di composizione: centro. Clic: terzi e centro (G)": "Guides de composition : centre. Clic : tiers et centre (G)",
+ "Guide di composizione: terzi e centro. Clic: nessuna (G)": "Guides de composition : tiers et centre. Clic : aucun (G)"
 }

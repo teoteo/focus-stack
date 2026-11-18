@@ -46,7 +46,7 @@ add(f"""
   <div class="icon">{ICON}</div>
   <h1 class="title">Focus Stack</h1>
   <div class="sub">Guide d'utilisation<br>focuser motorisé et appareil photo pour le focus stacking au microscope</div>
-  <div class="shot-c"><img src="{IMG}/sessione.png" alt=""></div>
+  <div class="shot-c"><img src="{IMG}/sessione.jpg" alt=""></div>
   <div class="meta"><span>Version de l'app {VERSION}</span><span>Novembre 2026</span></div>
 </section>
 """)
@@ -316,10 +316,10 @@ add(f"""
     f"<b>{ui('＋ Nuova pila')}</b> : une fois une pile terminée, prépare la suivante (l'état redevient {ui('Pronta')}). Même avec le même nom, chaque pile va dans un nouveau dossier.",
     f"<b>{ui('Inizio')}</b> et <b>{ui('Fine')}</b> en pas. <span class='ui'>⌖ {ui('qui')}</span> copie la position actuelle.",
     "<b>Pas</b> entre deux photos, en pas moteur (chapitre 11).",
-    f"<b>{ui('Numero di scatti')}</b>. Si vous modifiez {ui('Inizio')}, {ui('Fine')} ou Pas, le nombre de photos est recalculé ; si vous modifiez le nombre de photos, c'est le pas qui est recalculé. Le champ recalculé devient orange et affiche <span class='ui'>↺ était …</span> : un clic annule la modification.",
+    f"<b>{ui('Numero di scatti')}</b>. Si vous modifiez {ui('Inizio')}, {ui('Fine')} ou Pas, le nombre de photos est recalculé ; si vous modifiez le nombre de photos, c'est le pas qui est recalculé. Quand le pas change tout seul, il devient orange et affiche <span class='ui'>↺ était …</span> : un clic annule la modification.",
     "<b>Attente après le mouvement</b> : laisse les vibrations s'amortir avant la photo (1 à 3 s au microscope).",
     f"<b>{ui('Ottica e filtro (profilo)')}</b> : le profil d'objectif, de filtre et d'éclairage à écrire dans les données de la pile (7.2). <span class='ui'>{ui('Modifica')}</span> l'ouvre dans l'onglet {ui('Ottica')}. Sans profil, la pile est notée « aucun filtre ».",
-    "<b>Récapitulatif</b> : photos, course en pas et en µm, pas en µm, durée estimée et profil optique utilisé. Si la séquence sort des limites, un avertissement rouge apparaît et elle ne démarre pas.",
+    "<b>Récapitulatif</b> : photos, course en pas et en µm, pas en µm et durée estimée. Un clic sur le récapitulatif (▶ à droite) affiche aussi le profil optique utilisé et la calibration qui sera associée à la pile. Si la séquence sort des limites, un avertissement rouge apparaît et elle ne démarre pas.",
     f"<b>{ui('Salva in')}</b> : le dossier des photos. <span class='ui'>{ui('Scegli…')}</span> ouvre le Finder, <span class='ui'>{ui('Apri')}</span> y affiche le dossier.",
     f"<b>{ui('Scatti per posizione')}</b> : combien de photos prendre à chaque position (1 par défaut). Avec plusieurs prises, le logiciel de fusion peut en faire la moyenne et réduire le bruit (7.4).",
     "<b>Pause après la photo</b> : écriture sur la carte, recharge du flash.",
@@ -522,7 +522,7 @@ les RAW, convertis à la volée) avec zoom et déplacement, ainsi que la visée 
     f"<b>{ui('Adatta')}</b> (<kbd>0</kbd>), <b>100%</b> (<kbd>1</kbd> : un pixel du capteur = un pixel de l'écran), <b>{ui('Reset')}</b> (<kbd>R</kbd>).",
     f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>) : affiche automatiquement chaque nouvelle photo.",
     f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>) : conserve le zoom et la position quand vous changez de photo, pour comparer la mise au point au même endroit.",
-    f"<b>{ui('Finder')}</b> : affiche le fichier dans le Finder.",
+    "<b>Guides de composition</b> (<kbd>G</kbd>) : à chaque clic, tiers, croix au centre, tiers et centre, aucun. Lignes de 1 pixel qui suivent le zoom et le déplacement ; elles fonctionnent aussi en visée en direct.",
     f"<b>{ui('Svuota')}</b> : repart de zéro. Les photos quittent la visionneuse et la séquence redevient {ui('Pronta')} ; les fichiers restent dans le dossier.",
     f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>) : histogrammes, pixels brûlés et noirs, valeurs sous le pointeur (voir ci-dessous).",
     "<b>Plein écran</b> (<kbd>F</kbd>).",
@@ -934,6 +934,7 @@ add(f"""<h1><span class="n">15</span>Raccourcis clavier</h1>
 <tr><td><kbd>U</kbd></td><td>suivre la dernière photo</td></tr>
 <tr><td><kbd>K</kbd></td><td>figer la vue</td></tr>
 <tr><td><kbd>I</kbd></td><td>{ui('Ispettore')}</td></tr>
+<tr><td><kbd>G</kbd></td><td>guides de composition</td></tr>
 <tr><td><kbd>F</kbd></td><td>plein écran</td></tr>
 </tbody></table></div>
 </div>

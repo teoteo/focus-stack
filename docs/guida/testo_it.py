@@ -45,7 +45,7 @@ add(f"""
   <div class="icon">{ICON}</div>
   <h1 class="title">Focus Stack</h1>
   <div class="sub">Guida all'uso<br>focheggiatore motorizzato e fotocamera per il focus stacking al microscopio</div>
-  <div class="shot-c"><img src="{IMG}/sessione.png" alt=""></div>
+  <div class="shot-c"><img src="{IMG}/sessione.jpg" alt=""></div>
   <div class="meta"><span>Versione dell'app {VERSION}</span><span>Novembre 2026</span></div>
 </section>
 """)
@@ -299,10 +299,10 @@ add(f"""
     "<b>＋ Nuova pila</b>: finita una pila, prepara la successiva (lo stato torna Pronta). Anche con lo stesso nome, ogni pila va in una cartella nuova.",
     "<b>Inizio</b> e <b>Fine</b> in passi. <span class='ui'>⌖ qui</span> copia la posizione attuale.",
     "<b>Passo</b> fra uno scatto e il successivo, in passi del motore (capitolo 11).",
-    "<b>Numero di scatti</b>. Se cambi Inizio, Fine o Passo si ricalcola il numero di scatti; se cambi il numero di scatti si ricalcola il passo. Il campo ricalcolato diventa arancione e mostra <span class='ui'>↺ era …</span>: un clic annulla la modifica.",
+    "<b>Numero di scatti</b>. Se cambi Inizio, Fine o Passo si ricalcola il numero di scatti; se cambi il numero di scatti si ricalcola il passo. Quando il passo cambia da solo diventa arancione e mostra <span class='ui'>↺ era …</span>: un clic annulla la modifica.",
     "<b>Attesa dopo il movimento</b>: tempo per far smorzare le vibrazioni prima dello scatto (1–3 s al microscopio).",
     "<b>Ottica e filtro (profilo)</b>: il profilo di obiettivo, filtro e illuminazione da scrivere nei dati della pila (7.2). <span class='ui'>Modifica</span> lo apre nella scheda Ottica. Senza profilo la pila risulta «nessun filtro».",
-    "<b>Riepilogo</b>: scatti, escursione in passi e in µm, passo in µm, durata stimata e profilo ottico usato. Se la sequenza esce dai fine corsa compare un avviso rosso e la sequenza non parte.",
+    "<b>Riepilogo</b>: scatti, escursione in passi e in µm, passo in µm e durata stimata. Un clic sul riepilogo (▶ a destra) mostra anche il profilo ottico usato e la calibrazione che verrà collegata alla pila. Se la sequenza esce dai fine corsa compare un avviso rosso e la sequenza non parte.",
     "<b>Salva in</b>: la cartella delle foto. <span class='ui'>Scegli…</span> apre il pannello del Finder, <span class='ui'>Apri</span> la mostra nel Finder.",
     "<b>Scatti per posizione</b>: quante foto fare a ogni posizione (predefinito 1). Con più scatti il software di fusione può farne la media e ridurre il rumore (7.4).",
     "<b>Pausa dopo lo scatto</b>: tempo per scrivere sulla scheda e ricaricare il flash.",
@@ -499,7 +499,7 @@ al volo) con zoom e spostamento, e il live view della fotocamera.</p>
     "<b>Adatta</b> (<kbd>0</kbd>), <b>100%</b> (<kbd>1</kbd>: un pixel del sensore = un pixel dello schermo), <b>Reset</b> (<kbd>R</kbd>).",
     "<b>Segui ultimo</b> (<kbd>U</kbd>): mostra da solo ogni nuovo scatto.",
     "<b>Blocca vista</b> (<kbd>K</kbd>): cambiando scatto mantiene zoom e posizione, per confrontare la messa a fuoco nello stesso punto.",
-    "<b>Finder</b>: mostra il file nel Finder.",
+    "<b>Guide di composizione</b> (<kbd>G</kbd>): a ogni clic terzi, incrocio al centro, terzi e centro, nessuna. Linee di 1 pixel che seguono zoom e spostamento; funzionano anche nel live view.",
     "<b>Svuota</b>: ricomincia da capo. Gli scatti escono dal visualizzatore e la sequenza torna Pronta; i file restano nella cartella.",
     "<b>Ispettore</b> (<kbd>I</kbd>): istogrammi, pixel bruciati e neri, valori sotto il puntatore (vedi sotto).",
     "<b>Schermo intero</b> (<kbd>F</kbd>).",
@@ -899,6 +899,7 @@ add("""<h1><span class="n">15</span>Scorciatoie da tastiera</h1>
 <tr><td><kbd>U</kbd></td><td>segui ultimo</td></tr>
 <tr><td><kbd>K</kbd></td><td>blocca vista</td></tr>
 <tr><td><kbd>I</kbd></td><td>Ispettore</td></tr>
+<tr><td><kbd>G</kbd></td><td>guide di composizione</td></tr>
 <tr><td><kbd>F</kbd></td><td>schermo intero</td></tr>
 </tbody></table></div>
 </div>

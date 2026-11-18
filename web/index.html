@@ -129,16 +129,16 @@
       <p class="hint" id="s-name-hint"></p>
     </div>
 
-    <div class="fields two">
+    <div class="fields two seq-grid">
       <label>Inizio
         <span class="field-with-btn"><input type="number" id="s-start" min="0"><button class="btn ghost small" data-mark="start" title="Usa la posizione attuale"><span class="ico" aria-hidden="true">⌖</span> qui</button></span>
       </label>
       <label>Fine
         <span class="field-with-btn"><input type="number" id="s-end" min="0"><button class="btn ghost small" data-mark="end" title="Usa la posizione attuale"><span class="ico" aria-hidden="true">⌖</span> qui</button></span>
       </label>
-      <label>Passo (passi motore)<input type="number" id="s-step" min="1"></label>
-      <label>Numero di scatti<input type="number" id="s-count" min="2" title="Modifica per ricalcolare il passo"></label>
-      <label>Attesa dopo il movimento (ms)<input type="number" id="s-settle" min="0" step="100" title="Dopo ogni movimento, prima dello scatto: lascia smorzare le vibrazioni (1–3 s al microscopio)"></label>
+      <label class="third">Passo (passi motore)<input type="number" id="s-step" min="1"></label>
+      <label class="third">Numero di scatti<input type="number" id="s-count" min="2" title="Modifica per ricalcolare il passo"></label>
+      <label class="third">Attesa dopo il movimento (ms)<input type="number" id="s-settle" min="0" step="100" title="Dopo ogni movimento, prima dello scatto: lascia smorzare le vibrazioni (1–3 s al microscopio)"></label>
       <label class="span-all">Ottica e filtro (profilo)
         <span class="field-with-btn"><select id="s-optics"><option value="">Nessun profilo (nessun filtro)</option></select><button class="btn ghost small" id="s-optics-edit" title="Crea o modifica i profili nel tab Ottica">Modifica</button></span>
       </label>

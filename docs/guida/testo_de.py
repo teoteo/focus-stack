@@ -46,7 +46,7 @@ add(f"""
   <div class="icon">{ICON}</div>
   <h1 class="title">Focus Stack</h1>
   <div class="sub">Bedienungsanleitung<br>Motorisierter Fokussierer und Kamera für Focus-Stacking am Mikroskop</div>
-  <div class="shot-c"><img src="{IMG}/sessione.png" alt=""></div>
+  <div class="shot-c"><img src="{IMG}/sessione.jpg" alt=""></div>
   <div class="meta"><span>App-Version {VERSION}</span><span>November 2026</span></div>
 </section>
 """)
@@ -310,10 +310,10 @@ add(f"""
     f"<b>{ui('＋ Nuova pila')}</b>: bereitet nach einem Stapel den nächsten vor (der Status wird wieder {ui('Pronta')}). Auch mit demselben Namen kommt jeder Stapel in einen neuen Ordner.",
     f"<b>{ui('Inizio')}</b> und <b>{ui('Fine')}</b> in Schritten. <span class='ui'>⌖ {ui('qui')}</span> übernimmt die aktuelle Position.",
     "<b>Schrittweite</b> zwischen zwei Aufnahmen, in Motorschritten (Kapitel 11).",
-    f"<b>{ui('Numero di scatti')}</b>. Ändern Sie {ui('Inizio')}, {ui('Fine')} oder die Schrittweite, wird die Anzahl der Aufnahmen neu berechnet; ändern Sie die Anzahl der Aufnahmen, wird die Schrittweite neu berechnet. Das neu berechnete Feld wird orange und zeigt <span class='ui'>↺ war …</span>: Ein Klick macht die Änderung rückgängig.",
+    f"<b>{ui('Numero di scatti')}</b>. Ändern Sie {ui('Inizio')}, {ui('Fine')} oder die Schrittweite, wird die Anzahl der Aufnahmen neu berechnet; ändern Sie die Anzahl der Aufnahmen, wird die Schrittweite neu berechnet. Ändert sich die Schrittweite von selbst, wird sie orange und zeigt <span class='ui'>↺ war …</span>: Ein Klick macht die Änderung rückgängig.",
     "<b>Wartezeit nach Bewegung</b>: zum Abklingen der Vibrationen vor der Aufnahme (1–3 s am Mikroskop).",
     f"<b>{ui('Ottica e filtro (profilo)')}</b>: das Profil für Objektiv, Filter und Beleuchtung, das in die Daten des Stapels geschrieben wird (7.2). <span class='ui'>{ui('Modifica')}</span> öffnet es im Bereich {ui('Ottica')}. Ohne Profil wird der Stapel als „{ui('nessun filtro')}“ vermerkt.",
-    "<b>Übersicht</b>: Aufnahmen, Bereich in Schritten und µm, Schrittweite in µm, geschätzte Dauer und verwendetes Optikprofil. Liegt die Serie außerhalb der Grenzen, erscheint ein roter Hinweis und sie startet nicht.",
+    "<b>Übersicht</b>: Aufnahmen, Bereich in Schritten und µm, Schrittweite in µm und geschätzte Dauer. Ein Klick auf die Übersicht (▶ rechts) zeigt auch das verwendete Optikprofil und die Kalibrierung, die mit dem Stapel verknüpft wird. Liegt die Serie außerhalb der Grenzen, erscheint ein roter Hinweis und sie startet nicht.",
     f"<b>{ui('Salva in')}</b>: der Ordner für die Fotos. <span class='ui'>{ui('Scegli…')}</span> öffnet das Finder-Fenster, <span class='ui'>{ui('Apri')}</span> zeigt ihn im Finder.",
     f"<b>{ui('Scatti per posizione')}</b>: wie viele Fotos an jeder Position entstehen (Standard 1). Bei mehreren Aufnahmen kann die Fusionssoftware sie mitteln und so das Rauschen verringern (7.4).",
     "<b>Pause nach Aufnahme</b>: zum Schreiben auf die Karte und Laden des Blitzes.",
@@ -517,7 +517,7 @@ Auflösung (auch RAW-Dateien, die direkt umgewandelt werden) mit Zoom und Versch
     f"<b>{ui('Adatta')}</b> (<kbd>0</kbd>), <b>100 %</b> (<kbd>1</kbd>: ein Sensorpixel = ein Bildschirmpixel), <b>{ui('Reset')}</b> (<kbd>R</kbd>).",
     f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>): zeigt jede neue Aufnahme automatisch an.",
     f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>): behält Zoom und Position beim Wechsel der Aufnahme bei, um die Schärfe an derselben Stelle zu vergleichen.",
-    f"<b>{ui('Finder')}</b>: zeigt die Datei im Finder.",
+    "<b>Kompositionshilfen</b> (<kbd>G</kbd>): jeder Klick wechselt zwischen Drittel, Kreuz in der Mitte, Drittel und Mitte, keine. Linien von 1 Pixel, die Zoom und Verschieben folgen; sie funktionieren auch im Live-View.",
     f"<b>{ui('Svuota')}</b>: neu beginnen. Die Aufnahmen verschwinden aus dem Betrachter und die Serie ist wieder {ui('Pronta')}; die Dateien bleiben im Ordner.",
     f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>): Histogramme, ausgebrannte und schwarze Pixel, Werte unter dem Zeiger (siehe unten).",
     "<b>Vollbild</b> (<kbd>F</kbd>).",
@@ -923,6 +923,7 @@ add(f"""<h1><span class="n">15</span>Tastaturkurzbefehle</h1>
 <tr><td><kbd>U</kbd></td><td>neueste folgen</td></tr>
 <tr><td><kbd>K</kbd></td><td>Ansicht sperren</td></tr>
 <tr><td><kbd>I</kbd></td><td>{ui('Ispettore')}</td></tr>
+<tr><td><kbd>G</kbd></td><td>Kompositionshilfen</td></tr>
 <tr><td><kbd>F</kbd></td><td>Vollbild</td></tr>
 </tbody></table></div>
 </div>

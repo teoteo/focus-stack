@@ -330,6 +330,9 @@ class CalibrationRunner:
             use_bulb = bulb_s if kind == "dark" else 0
             if use_bulb:
                 meta["bulb_s"] = use_bulb
+            # ritardo dello specchio solo per i flat: a obiettivo tappato le vibrazioni non si vedono,
+            # e con 0 la fotocamera Nikon torna al suo ritardo di prima
+            shot_mirror_s = mirror_s if kind == "flat" else 0
             if kind == "flat":
                 meta["optics_profile"] = optics_profile or None
                 if optics:
@@ -345,7 +348,7 @@ class CalibrationRunner:
                     raise asyncio.CancelledError
                 self.status.index = i
                 self.status.message = tr("Fotogramma {i} di {n}", i=i + 1, n=count)
-                files = await self._capture(cam, folder / f"{FOLDER[kind]}_{i + 1:04d}", bulb_s=use_bulb, mirror_s=mirror_s)
+                files = await self._capture(cam, folder / f"{FOLDER[kind]}_{i + 1:04d}", bulb_s=use_bulb, mirror_s=shot_mirror_s)
                 temp = self._temperature()
                 if temp is not None:
                     temps.append(temp)

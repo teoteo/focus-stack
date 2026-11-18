@@ -131,7 +131,6 @@
  "Fermo": "Detenido",
  "Filtro": "Filtro",
  "Filtro montato": "Filtro montado",
- "Finder": "Finder",
  "Fine": "Fin",
  "Fine corsa": "Límites",
  "Fine corsa di sicurezza": "Límites de seguridad",
@@ -276,7 +275,6 @@
  "Modifica per ricalcolare il passo": "Modifícalo para recalcular el paso",
  "Modifiche non salvate": "Cambios sin guardar",
  "Mostra automaticamente ogni nuovo scatto (U)": "Mostrar automáticamente cada foto nueva (U)",
- "Mostra il file nel Finder": "Mostrar el archivo en el Finder",
  "Mostra il live view della fotocamera": "Mostrar la vista en vivo de la cámara",
  "Mostra l'avanzamento sulla rete locale": "Mostrar el progreso en la red local",
  "Mostra o nasconde i segni blu dei pixel neri": "Muestra u oculta las marcas azules de los píxeles negros",
@@ -630,5 +628,11 @@
  "qui": "aquí",
  "Usa posizione attuale": "Usar posición actual",
  "↺ era {v}": "↺ era {v}",
- "Ricalcolato dopo la modifica di «{f}»: clic per tornare ai valori di prima": "Recalculado tras cambiar «{f}»: haz clic para volver a los valores anteriores"
+ "Ricalcolato dopo la modifica di «{f}»: clic per tornare ai valori di prima": "Recalculado tras cambiar «{f}»: haz clic para volver a los valores anteriores",
+ "Profilo ottico e calibrazione": "Perfil óptico y calibración",
+ "Guide di composizione": "Guías de composición",
+ "Guide di composizione: nessuna. Clic: terzi (G)": "Guías de composición: ninguna. Clic: tercios (G)",
+ "Guide di composizione: terzi. Clic: centro (G)": "Guías de composición: tercios. Clic: centro (G)",
+ "Guide di composizione: centro. Clic: terzi e centro (G)": "Guías de composición: centro. Clic: tercios y centro (G)",
+ "Guide di composizione: terzi e centro. Clic: nessuna (G)": "Guías de composición: tercios y centro. Clic: ninguna (G)"
 }

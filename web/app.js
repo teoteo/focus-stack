@@ -633,7 +633,8 @@ function shotCount(p = formParams()) {
 const syncCount = () => ($("s-count").value = shotCount());
 
 // ---- campi collegati della pila: Inizio, Fine e Passo ricalcolano il Numero di scatti; il Numero di scatti
-// ricalcola il Passo. Il campo cambiato da solo si evidenzia con «↺ era X»: il pulsante annulla l'ultima modifica.
+// ricalcola il Passo. Solo il Passo, se cambia da solo, si evidenzia con «↺ era X» (il numero di scatti che si
+// aggiorna è atteso, il passo che cambia no): il pulsante annulla l'ultima modifica.
 const LINKED = ["s-start", "s-end", "s-step", "s-count"];
 const linkValues = () => Object.fromEntries(LINKED.map((id) => [id, $(id).value]));
 let linkEdit = null;   // modifica in corso: { field, before: {id: valore}, closed }
@@ -646,7 +647,7 @@ const linkDone = () => { linkPrev = linkValues(); };
 function linkMark() {
   for (const id of LINKED) {
     const input = $(id), label = input.closest("label");
-    const before = linkEdit && id !== linkEdit.field ? linkEdit.before[id] : "";
+    const before = linkEdit && id === "s-step" && id !== linkEdit.field ? linkEdit.before[id] : "";
     const changed = before !== "" && before !== input.value;
     input.classList.toggle("auto-upd", changed);
     let chip = label.querySelector(".revert");
@@ -682,6 +683,7 @@ function shutterSeconds() {
   return isFinite(n) ? n : 0;
 }
 
+let summaryOpen = false;   // riepilogo della pila aperto (profilo e calibrazione visibili)
 function updateSummary() {
   if (!formLoaded || !S) return;
   const p = formParams(), n = shotCount(p), span = Math.abs(p.end - p.start), k = p.shots_per_position;
@@ -692,8 +694,10 @@ function updateSummary() {
     : t("<b>{n}</b> scatti · escursione <b>{span}</b> passi", { n, span: fmtInt(span) });
   if (umPerStep()) html += " " + t("= <b>{um}</b> · passo <b>{step}</b>", { um: fmtUm(span), step: fmtUm(p.step) });
   html += "<br>" + t("Durata stimata <b>~{t}</b>", { t: fmtTime(n * perPos) });
-  html += `<span class="optics-line">${opticsSummary()}</span>`;
-  if (p.capture_mode === "download") html += `<span class="optics-line">${calibrationSummary()}</span>`;
+  // profilo ottico e calibrazione: a richiesta (si apre con un clic sul riepilogo; resta aperto fra un aggiornamento e l'altro)
+  let more = `<span class="optics-line">${opticsSummary()}</span>`;
+  if (p.capture_mode === "download") more += `<span class="optics-line">${calibrationSummary()}</span>`;
+  html = `<details id="s-sum-more"${summaryOpen ? " open" : ""}><summary title="${t("Profilo ottico e calibrazione")}">${html}</summary>${more}</details>`;
   // controllo fine corsa lato interfaccia (il server ricontrolla comunque)
   const [lo, hi] = S.focuser.connected ? S.focuser.bounds : [S.settings.limit_min, S.settings.limit_max];
   const dir = p.end >= p.start ? 1 : -1;
@@ -705,6 +709,9 @@ function updateSummary() {
     : t("⚠ La sequenza esce dai fine corsa {lo} – {hi}", lim)}</span>`;
   if (p.capture_mode === "trigger") html += `<span class="warn-text">${t("In modalità trigger imposta la destinazione su scheda.")}</span>`;
   $("s-summary").innerHTML = html;
+  // sequenza ferma e mai avviata: il contatore segue i campi (prima si aggiornava solo all'arrivo dello stato)
+  const q = S.sequence || {};
+  if (q.state === "idle" && !q.total) $("s-count-label").textContent = `0 / ${n}`;
 }
 
 // ---------------- meccanica ----------------
@@ -1644,6 +1651,7 @@ function bind() {
     $("s-step").value = Math.max(1, Math.ceil(span / (n - 1)));
     syncCount(); linkMark(); linkDone(); updateSummary();
   });
+  $("s-summary").addEventListener("toggle", (e) => { if (e.target.id === "s-sum-more") summaryOpen = e.target.open; }, true);
   // una nuova modifica dello stesso campo, dopo esserne usciti, riparte dai valori di quel momento
   LINKED.forEach((id) => $(id).addEventListener("blur", () => { if (linkEdit && linkEdit.field === id) linkEdit.closed = true; }));
   ["s-settle", "s-post", "s-backlash", "s-mode", "s-repeats", "c-bulb", "c-shutter"].forEach((id) => $(id).addEventListener("input", updateSummary));

@@ -140,10 +140,15 @@ def build_web(lang: str):
     # schermate: le immagini usate da questa lingua (img/<lingua> o, se mancano, quelle italiane)
     dst = OUT / img_dir
     dst.mkdir(parents=True, exist_ok=True)
-    for png in (HERE / img_dir).glob("*.png"):
-        target = dst / png.name
-        if not target.exists() or target.stat().st_mtime < png.stat().st_mtime:
-            shutil.copy2(png, target)
+    srcs = [f for f in (HERE / img_dir).iterdir() if f.suffix in (".png", ".jpg")]
+    names = {f.name for f in srcs}
+    for old in dst.iterdir():   # figure che hanno cambiato formato o non esistono più
+        if old.suffix in (".png", ".jpg") and old.name not in names:
+            old.unlink()
+    for src in srcs:
+        target = dst / src.name
+        if not target.exists() or target.stat().st_mtime < src.stat().st_mtime:
+            shutil.copy2(src, target)
     return [(lvl, hid) for lvl, hid, _ in heads]
 
 

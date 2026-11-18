@@ -31,6 +31,63 @@ function apply() {
   img.classList.toggle("pixelated", devicePct > 150);
   Inspector.transform(img.style.transform, devicePct > 150);
   $("z-fit").setAttribute("aria-pressed", view.mode === "fit");
+  drawGuides();
+}
+
+// ---------------- guide di composizione ----------------
+// Un clic le alterna: terzi → incrocio al centro → terzi e centro → nessuna. Sono riferite all'immagine (seguono zoom
+// e spostamento) e disegnate a 1 pixel fisico dello schermo.
+const GUIDE_MODES = ["off", "thirds", "center", "both"];
+let guideMode = "off";
+try { const m = localStorage.getItem("fs-guides"); if (GUIDE_MODES.includes(m)) guideMode = m; } catch { /* opzionale */ }
+const GUIDE_TITLES = {
+  off: () => t("Guide di composizione: nessuna. Clic: terzi (G)"),
+  thirds: () => t("Guide di composizione: terzi. Clic: centro (G)"),
+  center: () => t("Guide di composizione: centro. Clic: terzi e centro (G)"),
+  both: () => t("Guide di composizione: terzi e centro. Clic: nessuna (G)"),
+};
+function setGuides(mode) {
+  guideMode = mode;
+  try { localStorage.setItem("fs-guides", mode); } catch { /* opzionale */ }
+  const b = $("guides");
+  b.dataset.mode = mode;
+  b.setAttribute("aria-pressed", String(mode !== "off"));
+  b.title = GUIDE_TITLES[mode]();
+  drawGuides();
+}
+function drawGuides() {
+  const c = $("guides-canvas");
+  const on = guideMode !== "off" && natW > 0 && img.hasAttribute("src") && img.style.visibility !== "hidden";
+  c.classList.toggle("hidden", !on);
+  if (!on) return;
+  const r = stage.getBoundingClientRect(), d = DPR();
+  const W = Math.round(r.width * d), H = Math.round(r.height * d);
+  if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+  c.style.width = `${r.width}px`; c.style.height = `${r.height}px`;
+  const ctx = c.getContext("2d");
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#fff";
+  // riquadro dell'immagine in pixel fisici
+  const x0 = view.tx * d, y0 = view.ty * d, w = natW * view.scale * d, h = natH * view.scale * d;
+  const vline = (x, ya, yb) => {
+    x = Math.floor(x); const a = Math.max(0, Math.round(ya)), b = Math.min(H, Math.round(yb));
+    if (x >= 0 && x < W && b > a) ctx.fillRect(x, a, 1, b - a);
+  };
+  const hline = (y, xa, xb) => {
+    y = Math.floor(y); const a = Math.max(0, Math.round(xa)), b = Math.min(W, Math.round(xb));
+    if (y >= 0 && y < H && b > a) ctx.fillRect(a, y, b - a, 1);
+  };
+  if (guideMode === "thirds" || guideMode === "both") {
+    for (const k of [1, 2]) {
+      vline(x0 + (w * k) / 3, y0, y0 + h);
+      hline(y0 + (h * k) / 3, x0, x0 + w);
+    }
+  }
+  if (guideMode === "center" || guideMode === "both") {
+    const cx = x0 + w / 2, cy = y0 + h / 2, arm = Math.max(12 * d, Math.min(w, h) / 24);
+    vline(cx, cy - arm, cy + arm + 1);
+    hline(cy, cx - arm, cx + arm + 1);
+  }
 }
 
 function fit() {
@@ -261,7 +318,6 @@ function setLiveView(on, { restore = true } = {}) {
   $("liveview").setAttribute("aria-pressed", String(on));
   $("liveview").textContent = on ? t("■ Ferma live") : t("● Live");
   $("live-badge").classList.toggle("hidden", !on);
-  $("reveal").disabled = on;
   markStrip();
   if (on) {
     $("notice").classList.add("hidden");
@@ -280,6 +336,7 @@ function setLiveView(on, { restore = true } = {}) {
   clearInterval(liveInspTimer);
   img.removeAttribute("src");
   img.style.visibility = "";
+  drawGuides();   // nessuna immagine: niente guide
   $("msg").textContent = t("In attesa del primo scatto…");
   $("msg").classList.remove("hidden");
   $("v-name").textContent = t("Nessuno scatto");
@@ -371,7 +428,7 @@ if ("BroadcastChannel" in window) {
   };
 }
 $("lock").onclick = () => setLock(!lockView);
-$("reveal").onclick = () => !liveOn && current != null && fetch(`/api/shots/${current}/reveal`, { method: "POST", headers: { "X-FocusStack": "1" } });
+$("guides").onclick = () => setGuides(GUIDE_MODES[(GUIDE_MODES.indexOf(guideMode) + 1) % GUIDE_MODES.length]);
 $("clear").onclick = async () => {
   if (!shots.length) return;
   if (!confirm(t("Ricominciare da capo? Gli scatti ({n}) escono dal visualizzatore e la sequenza torna «Pronta».", { n: shots.length }) + "\n\n" +
@@ -451,12 +508,13 @@ document.addEventListener("keydown", (e) => {
   else if (k === "k" || k === "K") $("lock").click();
   else if (k === "f" || k === "F") $("fs").click();
   else if (k === "i" || k === "I") Inspector.toggle();
+  else if (k === "g" || k === "G") $("guides").click();
   else return;
   e.preventDefault();
 });
 
 // in modalità "adatta" la vista segue il ridimensionamento della finestra
-new ResizeObserver(() => { if (view.mode === "fit") fit(); }).observe(stage);
+new ResizeObserver(() => { if (view.mode === "fit") fit(); else drawGuides(); }).observe(stage);
 window.addEventListener("hashchange", () => {
   // la finestra principale chiede il live view (#live) o uno scatto (#id)
   if (location.hash === "#live") { if (!liveOn) { if (camState.connected) setLiveView(true); else wantLive = true; } return; }
@@ -470,5 +528,6 @@ Inspector.bind({
   // aperto o chiuso: lo spazio dell'immagine cambia; sul live view riparte il calcolo periodico
   onToggle: () => { if (view.mode === "fit") requestAnimationFrame(fit); if (liveOn) liveInspect(); },
 });
+setGuides(guideMode);
 apply();
 connectWS();   // il primo messaggio di stato carica l'elenco degli scatti

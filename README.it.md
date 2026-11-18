@@ -6,11 +6,11 @@ Controlla da Safari (macOS) un focheggiatore DIY **myFocuserPro2** oppure **Ardu
 microscopio e una fotocamera **Sony / Nikon / Canon** via USB, eseguendo sequenze automatiche
 *muovi → attendi → scatta* pronte da elaborare in **Helicon Focus**.
 
-![Una pila di 224 scatti di un fiore di brugo (Calluna vulgaris) in corso: schede del focheggiatore, della sequenza e della fotocamera, con l'ultimo scatto](docs/img/session.jpg)
-*Una pila in corso: 224 scatti di un fiore di brugo (Calluna vulgaris), qui con un obiettivo macro a 2,8×. A sinistra posizione e fine corsa del focheggiatore, al centro la sequenza e il tempo stimato, a destra le impostazioni della fotocamera e l'ultimo scatto.*
+![Una pila di 230 scatti di un fiore di brugo (Calluna vulgaris) in corso: schede del focheggiatore, della sequenza e della fotocamera, con l'ultimo scatto](docs/img/session.jpg)
+*Una pila in corso: 230 scatti di un fiore di brugo (Calluna vulgaris), qui con un obiettivo macro a 2,8×. A sinistra posizione e fine corsa del focheggiatore, al centro la sequenza e il tempo stimato (▶ mostra profilo ottico e calibrazione), a destra le impostazioni della fotocamera e l'ultimo scatto.*
 
-![Il visualizzatore con un fotogramma RAW della pila a piena risoluzione, l'Ispettore e la striscia dei fotogrammi](docs/img/viewer.jpg)
-*Il visualizzatore segue la pila scatto per scatto: RAW a piena risoluzione, striscia dei fotogrammi sotto e l'Ispettore con pixel bruciati e neri, istogramma e valori.*
+![Il visualizzatore con un fotogramma RAW della pila a piena risoluzione, le guide dei terzi, l'Ispettore e la striscia dei fotogrammi](docs/img/viewer.jpg)
+*Il visualizzatore segue la pila scatto per scatto: RAW a piena risoluzione, striscia dei fotogrammi sotto, guide di composizione (terzi, centro o entrambi) e l'Ispettore con pixel bruciati e neri, istogramma e valori.*
 
 ![La scheda Calibrazione mentre scatta i flat, con la libreria di calibrazione sotto](docs/img/calibration.jpg)
 *Calibrazione: esposizione della luce misurata sui RAW, dark e flat scattati in automatico, e una libreria che collega ogni pila alla calibrazione giusta.*

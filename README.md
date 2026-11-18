@@ -8,11 +8,11 @@ microscope and a **Sony / Nikon / Canon** camera over USB, running automatic
 
 The app and its PDF user guide are available in **Italian, English, French, German and Spanish**.
 
-![A 224-shot stack of a heather flower (Calluna vulgaris) in progress: focuser, sequence and camera cards, with the latest shot](docs/img/session.jpg)
-*A stack in progress: 224 shots of a heather flower (Calluna vulgaris), here with a macro lens at 2.8×. Focuser position and limits on the left, sequence and estimated time in the middle, camera settings and the latest shot on the right.*
+![A 230-shot stack of a heather flower (Calluna vulgaris) in progress: focuser, sequence and camera cards, with the latest shot](docs/img/session.jpg)
+*A stack in progress: 230 shots of a heather flower (Calluna vulgaris), here with a macro lens at 2.8×. Focuser position and limits on the left, sequence and estimated time in the middle (▶ shows the optics profile and calibration), camera settings and the latest shot on the right.*
 
-![The viewer showing a full-resolution RAW frame of the stack, with the Inspector and the strip of frames](docs/img/viewer.jpg)
-*The viewer follows the stack shot by shot: full-resolution RAW, strip of frames below, and the Inspector with clipped pixels, histogram and values.*
+![The viewer showing a full-resolution RAW frame of the stack with rule-of-thirds guides, the Inspector and the strip of frames](docs/img/viewer.jpg)
+*The viewer follows the stack shot by shot: full-resolution RAW, strip of frames below, composition guides (thirds, centre or both) and the Inspector with clipped pixels, histogram and values.*
 
 ![The Calibration tab taking flat frames, with the calibration library below](docs/img/calibration.jpg)
 *Calibration: light exposure measured on the RAWs, darks and flats taken automatically, and a library that links each stack to the right calibration set.*

@@ -49,6 +49,14 @@
   .vmain { display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 0; }
   .stage canvas.clipmask { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; will-change: transform; }
   .stage canvas.clipmask.pixelated { image-rendering: pixelated; }
+  /* guide di composizione: linee di 1 pixel fisico, in «differenza» così restano visibili su chiaro e su scuro */
+  .stage canvas.guides { position: absolute; left: 0; top: 0; pointer-events: none; mix-blend-mode: difference; }
+  .btn.vb.guides-btn { padding: 6px 10px; display: inline-flex; align-items: center; justify-content: center; }
+  .guides-btn svg { display: block; }
+  .guides-btn .g-thirds, .guides-btn .g-cross { display: none; }
+  .guides-btn[data-mode="thirds"] .g-thirds, .guides-btn[data-mode="both"] .g-thirds,
+  .guides-btn[data-mode="center"] .g-cross, .guides-btn[data-mode="both"] .g-cross { display: inline; }
+  .guides-btn[data-mode="off"] .g-thirds { display: inline; opacity: .35; }
   .insp { width: 320px; overflow-y: auto; background: var(--card); border-left: 1px solid var(--line); padding: 12px 14px 18px;
     font-size: 13.5px; }
   .insp h3 { display: flex; align-items: center; gap: 8px; font-size: 15px; margin: 0 0 4px; }
@@ -111,7 +119,13 @@
   <div class="group">
     <button class="btn ghost vb" id="follow" aria-pressed="true" title="Mostra automaticamente ogni nuovo scatto (U)">Segui ultimo</button>
     <button class="btn ghost vb" id="lock" aria-pressed="true" title="Mantieni zoom e posizione cambiando scatto (K)">Blocca vista</button>
-    <button class="btn ghost vb" id="reveal" title="Mostra il file nel Finder">Finder</button>
+    <button class="btn ghost vb guides-btn" id="guides" aria-pressed="false" data-mode="off" aria-label="Guide di composizione">
+      <svg viewBox="0 0 22 16" width="22" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4">
+        <rect x="1" y="1" width="20" height="14" rx="1.5"/>
+        <g class="g-thirds"><path d="M7.67 1v14M14.33 1v14M1 5.67h20M1 10.33h20"/></g>
+        <g class="g-cross" stroke-width="1.8"><path d="M11 4.5v7M7.5 8h7"/></g>
+      </svg>
+    </button>
     <button class="btn ghost vb" id="clear" title="Ricomincia da capo: svuota il visualizzatore e prepara una sequenza nuova (i file restano nella cartella)" disabled>Svuota</button>
     <button class="btn ghost vb" id="insp-btn" aria-pressed="false" title="Istogramma, pixel bruciati e neri, valori (I)">Ispettore</button>
     <button class="btn ghost vb" id="fs" title="Schermo intero (F)">⛶</button>
@@ -123,6 +137,7 @@
 <div class="stage" id="stage">
   <img id="img" alt="" draggable="false">
   <canvas class="clipmask hidden" id="clipmask" aria-hidden="true"></canvas>
+  <canvas class="guides hidden" id="guides-canvas" aria-hidden="true"></canvas>
   <div class="msg" id="msg">In attesa del primo scatto…</div>
   <div class="loading hidden" id="loading">Caricamento piena risoluzione…</div>
   <span class="live-badge hidden" id="live-badge">LIVE</span>

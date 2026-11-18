@@ -273,6 +273,23 @@ label.check { flex-direction: row; align-items: center; gap: 9px; font-size: 14.
 .folder-path { font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   direction: rtl; text-align: left; }   /* se il percorso è lungo resta visibile la parte finale */
 .fields .span-all { grid-column: 1 / -1; }
+/* pila: Inizio e Fine su due colonne, Passo, Numero di scatti e Attesa su tre */
+.fields.seq-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.fields.seq-grid > label { grid-column: span 3; }
+.fields.seq-grid > label.third { grid-column: span 2; }
+.fields.seq-grid > label.span-all { grid-column: 1 / -1; }
+.fields.seq-grid { align-items: end; }   /* un'etichetta su due righe non abbassa il suo campo rispetto agli altri */
+/* colonne strette: «↺ era X» dentro il campo, a destra, invece che sopra l'etichetta */
+.fields.seq-grid > label.third .revert { top: auto; bottom: 10px; right: 28px; }
+@media (max-width: 480px) { .fields.seq-grid > label, .fields.seq-grid > label.third { grid-column: 1 / -1; } }
+/* riepilogo della pila: la prima riga sempre visibile, profilo e calibrazione a richiesta */
+.summary details > summary { list-style: none; cursor: pointer; position: relative; padding-right: 26px; }
+.summary details > summary::-webkit-details-marker { display: none; }
+/* triangolo come quello di «Tempi, gioco…»: verso destra da chiuso, verso il basso da aperto (ma a destra del testo) */
+.summary details > summary::after { content: "▶"; position: absolute; right: 2px; top: 0; color: var(--text-2);
+  font-size: 13px; transition: transform .15s; }
+.summary details[open] > summary::after { transform: rotate(90deg); }
+.summary details > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 
 details.more { border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; margin-bottom: 14px; }
 details.more[open] { padding-bottom: 12px; }

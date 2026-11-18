@@ -37,7 +37,8 @@ def make_fig(notes, img_dir):
             dd = " dd" if mk["n"] >= 10 else ""   # due cifre: carattere più piccolo, dentro il cerchio
             marks.append(f'<span class="mk {mk["anchor"]}{dd}" style="left:{cx * 100:.2f}%;top:{cy * 100:.2f}%">{mk["n"]}</span>')
         style = f' style="width:{width}"' if width else ""
-        img = (f'<figure class="shot"{style}><div class="frame"><img src="{img_dir}/{name}.png" alt="">'
+        ext = "jpg" if (HERE / img_dir / f"{name}.jpg").exists() else "png"   # le figure con foto sono in JPEG
+        img = (f'<figure class="shot"{style}><div class="frame"><img src="{img_dir}/{name}.{ext}" alt="">'
                f'{"".join(marks)}</div>{f"<figcaption>{caption}</figcaption>" if caption else ""}</figure>')
         if not legend:
             return f'<div class="fig-wrap {layout}">{img}</div>'

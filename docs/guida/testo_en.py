@@ -222,7 +222,7 @@ add(f"""
   <div class="icon">{ICON}</div>
   <h1 class="title">Focus Stack</h1>
   <div class="sub">User Guide<br>motorized focuser and camera for focus stacking on the microscope</div>
-  <div class="shot-c"><img src="{IMG}/sessione.png" alt=""></div>
+  <div class="shot-c"><img src="{IMG}/sessione.jpg" alt=""></div>
   <div class="meta"><span>App version {VERSION}</span><span>November 2026</span></div>
 </section>
 """)
@@ -474,10 +474,10 @@ add(f"""
     f"<b>{ui('＋ Nuova pila')}</b>: once a stack is finished, prepares the next one (the status goes back to Ready). Even with the same name, every stack goes into a new folder.",
     f"<b>{ui('Inizio')}</b> and <b>{ui('Fine')}</b> in steps. <span class='ui'>⌖ {ui('qui')}</span> copies the current position.",
     "<b>Step</b> between one shot and the next, in motor steps (chapter 11).",
-    f"<b>Number of shots</b>. If you change {ui('Inizio')}, {ui('Fine')} or Step, the number of shots is recalculated; if you change the number of shots, the step is recalculated. The recalculated field turns orange and shows <span class='ui'>↺ was …</span>: one click undoes the change.",
+    f"<b>Number of shots</b>. If you change {ui('Inizio')}, {ui('Fine')} or Step, the number of shots is recalculated; if you change the number of shots, the step is recalculated. When the step changes on its own it turns orange and shows <span class='ui'>↺ was …</span>: one click undoes the change.",
     "<b>Settle time after move</b>: time for vibrations to die down before the shot (1–3 s on a microscope).",
     f"<b>{ui('Ottica e filtro (profilo)')}</b>: the objective, filter and illumination profile to record in the stack's data (7.2). <span class='ui'>{ui('Modifica')}</span> opens it in the {ui('Ottica')} tab. Without a profile the stack is recorded as “no filter”.",
-    "<b>Summary</b>: shots, travel in steps and in µm, step in µm, estimated duration and the optics profile used. If the sequence goes beyond the limits a red warning appears and the sequence won't start.",
+    "<b>Summary</b>: shots, travel in steps and in µm, step in µm and estimated duration. One click on the summary (▶ on the right) also shows the optics profile used and the calibration that will be linked to the stack. If the sequence goes beyond the limits a red warning appears and the sequence won't start.",
     f"<b>{ui('Salva in')}</b>: the photo folder. <span class='ui'>{ui('Scegli…')}</span> opens the Finder panel, <span class='ui'>{ui('Apri')}</span> shows it in the Finder.",
     f"<b>{ui('Scatti per posizione')}</b>: how many photos to take at each position (default 1). With several shots the fusion software can average them and reduce noise (7.4).",
     "<b>Pause after shot</b>: time to write to the card and recharge the flash.",
@@ -675,7 +675,7 @@ fly) with zoom and pan, and the camera's live view.</p>
     f"<b>{ui('Adatta')}</b> (<kbd>0</kbd>), <b>100%</b> (<kbd>1</kbd>: one sensor pixel = one screen pixel), <b>{ui('Reset')}</b> (<kbd>R</kbd>).",
     f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>): shows every new shot automatically.",
     f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>): keeps zoom and position when you change shot, to compare focus at the same spot.",
-    "<b>Finder</b>: shows the file in the Finder.",
+    "<b>Composition guides</b> (<kbd>G</kbd>): each click switches between thirds, a cross at the centre, thirds and centre, none. 1-pixel lines that follow zoom and panning; they also work in live view.",
     f"<b>{ui('Svuota')}</b>: starts over. The shots leave the viewer and the sequence goes back to Ready; the files stay in the folder.",
     f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>): histograms, burnt-out and black pixels, values under the pointer (see below).",
     "<b>Full screen</b> (<kbd>F</kbd>).",
@@ -1071,6 +1071,7 @@ add(f"""<h1><span class="n">15</span>Keyboard shortcuts</h1>
 <tr><td><kbd>U</kbd></td><td>follow latest</td></tr>
 <tr><td><kbd>K</kbd></td><td>lock view</td></tr>
 <tr><td><kbd>I</kbd></td><td>{ui('Ispettore')}</td></tr>
+<tr><td><kbd>G</kbd></td><td>composition guides</td></tr>
 <tr><td><kbd>F</kbd></td><td>full screen</td></tr>
 </tbody></table></div>
 </div>

@@ -11,8 +11,10 @@ home separata, per esempio  HOME=/tmp/fs-home .venv/bin/python run.py --no-brows
 """
 import argparse
 import json
+import re
 import sys
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -78,11 +80,63 @@ SCRUB = """() => {
 def post(path, body=None):
     req = urllib.request.Request(BASE + path, data=json.dumps(body or {}).encode(), method="POST",
                                  headers={"X-FocusStack": "1", "Content-Type": "application/json"})
-    return json.loads(urllib.request.urlopen(req).read() or b"{}")
+    try:
+        return json.loads(urllib.request.urlopen(req).read() or b"{}")
+    except urllib.error.HTTPError as exc:   # il server spiega il motivo nel corpo della risposta
+        raise RuntimeError(f"{path}: {exc.code} {exc.read().decode(errors='replace')}") from exc
 
 
 def state():
     return json.loads(urllib.request.urlopen(BASE + "/api/state").read())
+
+
+# ---- foto vere al posto di quelle del simulatore ----
+# Le immagini degli scatti di prova, della sequenza e del live view vengono sostituite da fotogrammi veri di una pila
+# (docs/guida/campione/: Calluna vulgaris, Sony A6400 + 70-350 a 2,8×). Dark e flat restano quelli del simulatore.
+SAMPLE_DIR = Path(__file__).parent / "campione"
+SAMPLES = sorted(f for f in SAMPLE_DIR.glob("calluna_*.jpg") if f.stem[-4:].isdigit())
+SAMPLE_LIVE = SAMPLE_DIR / "calluna_live.jpg"
+# figure con una foto dentro: in JPEG (le foto in PNG pesano 5-10 volte tanto); le altre restano PNG, più nitide sul testo
+PHOTO_FIGS = {"sessione", "ultimo-scatto", "live", "visualizzatore", "ispettore", "visualizzatore-live", "smartphone-pagina"}
+
+
+def save_shot(page, name: str, **kw) -> None:
+    """Salva la figura come <name>.jpg (foto) o <name>.png e toglie il file dell'altro formato rimasto da prima."""
+    jpg = name in PHOTO_FIGS
+    out = OUT / f"{name}.{'jpg' if jpg else 'png'}"
+    page.screenshot(path=str(out), **({"type": "jpeg", "quality": 72} if jpg else {}), **kw)
+    (OUT / f"{name}.{'png' if jpg else 'jpg'}").unlink(missing_ok=True)
+_kinds: dict[int, str] = {}
+
+
+def _shot_kind(sid: int) -> str:
+    if sid not in _kinds:
+        for it in json.loads(urllib.request.urlopen(BASE + "/api/shots").read()).get("items", []):
+            _kinds[it["id"]] = it.get("kind", "")
+    return _kinds.get(sid, "")
+
+
+def _jpeg(route, path: Path) -> None:
+    route.fulfill(path=str(path), headers={"Content-Type": "image/jpeg", "Cache-Control": "no-store"})
+
+
+def real_shot(route) -> None:
+    m = re.search(r"/api/shots/(\d+)/image\?size=(\w+)", route.request.url)
+    if not m or not SAMPLES or _shot_kind(int(m[1])) == "calibration":
+        return route.continue_()
+    f = SAMPLES[int(m[1]) % len(SAMPLES)]
+    _jpeg(route, f if m[2] == "full" else f.with_name(f.stem + "_anteprima.jpg"))
+
+
+def real_live(route) -> None:
+    return _jpeg(route, SAMPLE_LIVE) if SAMPLE_LIVE.exists() else route.continue_()
+
+
+def real_remote(route) -> None:   # anteprima della pagina per lo smartphone
+    if not SAMPLES:
+        return route.continue_()
+    f = SAMPLES[-1]
+    _jpeg(route, f if "z=1" in route.request.url else f.with_name(f.stem + "_anteprima.jpg"))
 
 
 def shot(page, name, target, marks=(), pad=0):
@@ -95,7 +149,7 @@ def shot(page, name, target, marks=(), pad=0):
     page.wait_for_timeout(150)
     box = el.bounding_box()
     clip = {"x": box["x"] - pad, "y": box["y"] - pad, "width": box["width"] + 2 * pad, "height": box["height"] + 2 * pad}
-    page.screenshot(path=str(OUT / f"{name}.png"), clip=clip)
+    save_shot(page, name, clip=clip)
     items = []
     for num, sel, anchor in marks:
         b = page.locator(sel).first.bounding_box()
@@ -128,6 +182,8 @@ post("/api/settings", {"language": LANG})   # la pagina si apre già nella lingu
 with sync_playwright() as p:
     browser = p.chromium.launch(channel="chrome")
     ctx = browser.new_context(viewport={"width": 1440, "height": 1000}, device_scale_factor=2)
+    ctx.route("**/api/shots/*/image*", real_shot)
+    ctx.route("**/api/camera/live*", real_live)
     page = ctx.new_page()
     page.goto(BASE + "/")
     page.wait_for_timeout(1500)
@@ -215,7 +271,7 @@ with sync_playwright() as p:
     page.wait_for_timeout(100)
     page.evaluate("window.scrollTo(0, 0)")
     if not ONLY or "sessione" in ONLY:
-        page.screenshot(path=str(OUT / "sessione.png"))
+        save_shot(page, "sessione")
     notes["sessione"] = {"w": 1440, "h": 1000, "marks": []}
     print("ok sessione")
 
@@ -229,6 +285,8 @@ with sync_playwright() as p:
         (9, ".row.goto", "l"), (10, "#f-halt", "l")))
     # «＋ Nuova pila» compare solo a pila finita: nella figura si mostra lo stesso
     keep_new = page.evaluate("setInterval(() => document.getElementById('s-new').classList.remove('hidden'), 30)")
+    # riepilogo aperto: nella figura si vedono anche le righe del profilo ottico e della calibrazione
+    page.evaluate("document.getElementById('s-sum-more').open || document.querySelector('#s-sum-more > summary').click()")
     page.wait_for_timeout(100)
     shot(page, "sequenza", "#card-seq", m(
         (1, "#s-chip", "r"), (2, "#s-name", "l"), (3, "#s-new", "r"), (4, "#s-start", "l"), (5, "#s-step", "l"),
@@ -338,7 +396,7 @@ with sync_playwright() as p:
     vw.wait_for_timeout(800)
     shot(vw, "visualizzatore", "body", m(
         (1, "#prev", "l"), (2, "#v-name", "l"), (3, "#liveview", "l"), (4, "#z-out", "l"), (5, "#z-fit", "l"),
-        (6, "#follow", "l"), (7, "#lock", "l"), (8, "#reveal", "l"), (9, "#clear", "l"), (10, "#insp-btn", "l"),
+        (6, "#follow", "l"), (7, "#lock", "l"), (8, "#guides", "l"), (9, "#clear", "l"), (10, "#insp-btn", "l"),
         (11, "#fs", "l"), (12, "#guide-btn", "r"), (13, "#strip", "l")))
     vw.set_viewport_size({"width": 1500, "height": 1250})   # il pannello dell'Ispettore intero, fino ai valori sotto il puntatore
     vw.click("#z-fit")
@@ -372,6 +430,7 @@ with sync_playwright() as p:
     shot(page, "barra-posizione", "#card-focuser .position", pad=0)
     phone_ctx = browser.new_context(viewport={"width": 390, "height": 1200}, device_scale_factor=2,
                                     is_mobile=True, has_touch=True, color_scheme="dark")
+    phone_ctx.route("**/preview*", real_remote)
     ph = phone_ctx.new_page()
     ph.goto(REMOTE_URL)
     ph.wait_for_timeout(2500)
