@@ -1,21 +1,26 @@
+<p align="center"><img src="docs/img/icon.png" width="128" height="128" alt="Focus Stack"></p>
+
 # Focus Stack — myFocuserPro2 or Ardufocus focuser + camera for microscopy
 
 *English · [Italiano](README.it.md)*
 
-Controls, from Safari on macOS, a DIY **myFocuserPro2** or **Ardufocus** focuser mounted on a
+Controls, from a Mac app or a web browser, a DIY **myFocuserPro2** or **Ardufocus** focuser mounted on a
 microscope and a **Sony / Nikon / Canon** camera over USB, running automatic
 *move → settle → shoot* sequences ready for **Helicon Focus**.
 
 The app and its PDF user guide are available in **Italian, English, French, German and Spanish**.
 
-![A 230-shot stack of a heather flower (Calluna vulgaris) in progress: focuser, sequence and camera cards, with the latest shot](docs/img/session.jpg)
-*A stack in progress: 230 shots of a heather flower (Calluna vulgaris), here with a macro lens at 2.8×. Focuser position and limits on the left, sequence and estimated time in the middle (▶ shows the optics profile and calibration), camera settings and the latest shot on the right.*
+![A 368-shot stack in progress: focuser, sequence and camera cards, with the latest shot](docs/img/session.jpg)
+*A stack in progress: 368 shots, 21.5 µm apart, with a macro lens at 2.8×. Focuser position and limits on the left, sequence, progress and time left in the middle (▶ shows the optics profile and calibration), camera settings and the latest shot on the right.*
 
-![The viewer showing a full-resolution RAW frame of the stack with rule-of-thirds guides, the Inspector and the strip of frames](docs/img/viewer.jpg)
-*The viewer follows the stack shot by shot: full-resolution RAW, strip of frames below, composition guides (thirds, centre or both) and the Inspector with clipped pixels, histogram and values.*
+![The viewer showing a full-resolution RAW frame of the stack, with the stack counter, the Inspector and the strip of frames](docs/img/viewer.jpg)
+*The viewer follows the stack shot by shot: progress and data of the shot at the top, full-resolution RAW, the strip of the current stack below, composition guides (thirds, centre or both) and the Inspector with clipped pixels, histogram and values.*
+
+![The Optics tab: index on the left, the macro lens profile in the middle, magnification, scale and depth of field on the right](docs/img/optics.jpg)
+*Optics: one profile per microscope objective or macro lens (lenses from the Lensfun database, close-up lenses, extension tubes). The summary on the right computes magnification, µm per pixel on the specimen, depth of field and the recommended step.*
 
 ![The Calibration tab taking flat frames, with the calibration library below](docs/img/calibration.jpg)
-*Calibration: light exposure measured on the RAWs, darks and flats taken automatically, and a library that links each stack to the right calibration set.*
+*Calibration: light exposure measured on the RAWs, darks and flats taken automatically, the sets the next stack will use, and a library that links each stack to the right calibration set.*
 
 ## Supported focusers
 
@@ -41,13 +46,13 @@ original firmware first (`-U flash:r:ardufocus-original.hex:i`) so you can put i
 
 ## Why a local server + PWA (and not a plain PWA)
 
-Safari supports neither Web Serial nor WebUSB, so a web page cannot talk directly to the Arduino
-or the camera. The app is therefore split in two:
+Web browsers cannot be relied on for Web Serial or WebUSB, so a web page cannot talk directly to the
+Arduino or the camera. The app is therefore split in two:
 
 ```
-Safari (PWA, interface)  ⇄  http://localhost:8765  ⇄  Python server
-                                                       ├─ pyserial  → focuser (USB serial)
-                                                       └─ libgphoto2 → camera (USB PTP)
+App window or web browser  ⇄  http://localhost:8765  ⇄  Python server
+                                                         ├─ pyserial  → focuser (USB serial)
+                                                         └─ libgphoto2 → camera (USB PTP)
 ```
 
 The server listens on `127.0.0.1` only, so it cannot be reached from other computers. The optional
@@ -78,21 +83,23 @@ to press the focuser's reset button.
 
 ## Running
 
-**As a Mac app:** Focus Stack.app starts the server without a Terminal window, opens Safari and stays
-in the Dock while the server runs; clicking the Dock icon brings the page back to the front. If the
-server does not start, it shows an alert; the log is in `~/Library/Logs/FocusStack.log`.
+**As a Mac app:** Focus Stack.app starts the server without a Terminal window, shows the interface in
+its own window and stays in the Dock while the server runs; clicking the Dock icon brings the window
+back. Closing the window does *not* stop the server. If the server does not start, it shows an alert;
+the log is in `~/Library/Logs/FocusStack.log`. The same interface also opens in any web browser at
+`http://localhost:8765`.
 
 **Quitting:** quit Focus Stack (⌘Q, or Quit from the Dock icon's menu). The server first stops any
-running sequence (the app asks for confirmation) and halts the motor, then shuts down; the Safari page
+running sequence (the app asks for confirmation) and halts the motor, then shuts down; a browser page left open
 shows “Focus Stack is closed” and reloads by itself when you reopen the app.
-Closing Safari does *not* stop the server.
+Closing the browser does *not* stop the server.
 If you open the app while the server is already running, it just shows the page; to reload the code
 after an update, quit the app and open it again.
 
 **From source (development):**
 
 1. Double-click **`Avvia Focus Stack.command`**. The first time it creates the Python environment and
-   installs the dependencies; then it opens Safari at `http://localhost:8765`. It also replaces an
+   installs the dependencies; then it opens `http://localhost:8765` in the web browser. It also replaces an
    already running server with the updated code.
 2. To try it without hardware, tick **Simulator** in the Focuser and Camera cards.
 
@@ -263,8 +270,8 @@ The conversion is cached in `~/Library/Caches/MyFocuserStack`.
 | Capture mode | **Download to the Mac** (recommended), **Memory card only**, **Trigger only** (fastest; set the destination to the card) |
 
 **Save folder:** in the Sequence card, *Save to* row. **Choose…** opens the macOS “Choose folder”
-panel; **Open** shows the folder in the Finder. Safari cannot read disk paths, so the panel is opened
-by the server. If the folder does not exist it is created and, before saving it, the app checks that it
+panel; **Open** shows the folder in the Finder. In the app the panel belongs to the window; a web
+browser cannot read disk paths, so there the panel is opened by the server. If the folder does not exist it is created and, before saving it, the app checks that it
 can write there.
 
 Shots are saved in the chosen folder (default `~/Pictures/FocusStack`), in a `<name>_<date-time>/`

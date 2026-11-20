@@ -420,7 +420,7 @@
  "Segui ultimo": "Follow latest",
  "Sensore": "Sensor",
  "Sequenza avviata": "Sequence started",
- "Sequenza avviata: live view chiuso, ora segue l'ultimo scatto": "Sequence started: live view closed, now following the latest shot",
+ "Primo scatto della sequenza: live view chiuso, ora segue l'ultimo scatto": "First shot of the sequence: live view closed, now following the latest shot",
  "Sequenza di stacking": "Stacking sequence",
  "Serve a etichettare correttamente i pulsanti Avvicina/Allontana.": "Used to label the Closer/Away buttons correctly.",
  "Serve un passo almeno {k} volte più corto: microstep più fine o più riduzione meccanica.": "You need a step at least {k} times shorter: finer microstepping or more mechanical reduction.",

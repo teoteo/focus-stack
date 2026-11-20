@@ -1,13 +1,13 @@
-"""Avvia il server locale e apre l'interfaccia in Safari."""
+"""Avvia il server locale e apre l'interfaccia nel browser predefinito."""
 import argparse
 import json
 import os
 import socket
-import subprocess
 import sys
 import threading
 import time
 import urllib.request
+import webbrowser
 
 import uvicorn
 
@@ -65,7 +65,7 @@ def open_when_ready():
     for _ in range(50):
         try:
             urllib.request.urlopen(URL + "api/state", timeout=0.5)
-            subprocess.run(["open", "-a", "Safari", URL])
+            webbrowser.open(URL)   # browser predefinito (macOS e Linux)
             return
         except OSError:
             time.sleep(0.2)
@@ -76,5 +76,5 @@ if not args.no_browser:
     threading.Thread(target=open_when_ready, daemon=True).start()
 # Solo localhost: il controllo dell'hardware non viene esposto in rete.
 # timeout_graceful_shutdown: senza limite lo spegnimento aspettava per sempre la fine dei flussi del live view
-# (Safari li tiene aperti), con la porta del focheggiatore ancora occupata.
+# (il browser li tiene aperti), con la porta del focheggiatore ancora occupata.
 uvicorn.run("backend.main:api", host="127.0.0.1", port=args.port, log_level="warning", timeout_graceful_shutdown=3)

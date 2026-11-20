@@ -9,6 +9,7 @@ try { document.documentElement.dataset.theme = localStorage.getItem("fs-theme") 
 let shots = [];          // scatti del gruppo corrente (la sequenza in corso o l'ultima, oppure le prove fatte dopo)
 let allCount = 0;        // tutti gli scatti che il server tiene, anche dei gruppi precedenti (per «Svuota»)
 let lastState = null;    // ultimo stato ricevuto dal WebSocket
+let liveStopRev = null;  // ultimo valore visto di live_stop_rev (null fino al primo stato)
 let current = null;      // id dello scatto mostrato
 let currentKey = null;   // chiave unica dello scatto mostrato (gli id ripartono da 0 a ogni riavvio)
 let follow = true;       // segue automaticamente l'ultimo scatto
@@ -310,14 +311,20 @@ function connectWS() {
     if (st.language && st.language !== LANG) { location.reload(); return; }   // lingua cambiata in Configurazione
     camState = st.camera;
     lastState = st;
-    const wasRunning = seqRunning;
+    // «Ferma live» premuto in un'altra finestra
+    if (liveStopRev != null && st.live_stop_rev > liveStopRev && liveOn) setLiveView(false);
+    liveStopRev = st.live_stop_rev ?? liveStopRev;
     seqRunning = ["running", "paused", "stopping"].includes(st.sequence.state);
-    // sequenza appena partita con il live view acceso: si chiude il live e si seguono gli scatti nuovi
-    if (seqRunning && !wasRunning && liveOn) {
+    seqLivePaused = seqRunning && !st.sequence.live_ok;   // in pausa dall'arrivo della slitta al primo piano
+    // primo scatto della sequenza con il live view acceso: si chiude il live e si seguono gli scatti nuovi.
+    // Fino a lì resta acceso, per guardare la slitta che torna all'inizio.
+    const seqShots = seqRunning ? st.sequence.shots || 0 : 0;
+    if (seqShots > 0 && seqShotsPrev === 0 && liveOn) {
       setFollow(true);
       setLiveView(false);
-      notice(t("Sequenza avviata: live view chiuso, ora segue l'ultimo scatto"));
+      notice(t("Primo scatto della sequenza: live view chiuso, ora segue l'ultimo scatto"));
     }
+    seqShotsPrev = seqShots;
     if (wantLive && camState.connected) setLiveView(true);
     wantLive = false;
     renderLiveView();
@@ -331,7 +338,7 @@ function connectWS() {
 
 // ---------------- live view (stream MJPEG del server nella stessa <img>, con zoom e pan) ----------------
 let liveOn = false, liveStartedAt = 0, liveTimer = 0;
-let camState = { connected: false }, seqRunning = false;
+let camState = { connected: false }, seqRunning = false, seqLivePaused = false, seqShotsPrev = 0;
 let wantLive = location.hash === "#live";   // aperto dalla finestra principale con il live view acceso
 let noticeTimer = 0;
 
@@ -405,7 +412,7 @@ function liveInspect() {
   clearInterval(liveInspTimer);
   if (!liveOn) return;
   liveInspTimer = setInterval(() => {
-    if (!liveOn || !Inspector.open || !img.naturalWidth || seqRunning) return;
+    if (!liveOn || !Inspector.open || !img.naturalWidth || seqLivePaused) return;
     Inspector.analyze(img, { live: true,
       basis: t("Fotogramma del live view ({w} × {h}), aggiornato di continuo", { w: img.naturalWidth, h: img.naturalHeight }),
       note: t("Il live view è un'anteprima compressa della fotocamera: controlla l'esposizione anche su uno scatto di prova.") });
@@ -424,10 +431,10 @@ function renderLiveView() {
     return;
   }
   const badge = $("live-badge");
-  badge.textContent = seqRunning ? t("IN PAUSA") : camState.busy ? t("SCATTO…") : t("LIVE");
-  badge.classList.toggle("paused", seqRunning || camState.busy);
+  badge.textContent = seqLivePaused ? t("IN PAUSA") : camState.busy ? t("SCATTO…") : t("LIVE");
+  badge.classList.toggle("paused", seqLivePaused || camState.busy);
   $("v-name").textContent = t("Live view");
-  $("v-meta").textContent = seqRunning ? t("In pausa durante la sequenza") : camState.model || "";
+  $("v-meta").textContent = seqLivePaused ? t("In pausa durante la sequenza") : camState.model || "";
   $("prev").disabled = $("next").disabled = !shots.length;
   document.title = `${t("Live view")} — ${t("Visualizzatore")}`;
 }
@@ -456,12 +463,16 @@ $("follow").onclick = () => {
   setLiveView(false, { restore: false });
   if (follow && shots.length) show(shots[shots.length - 1].id, { keepView: false });
 };
-$("liveview").onclick = () => setLiveView(!liveOn);
+$("liveview").onclick = () => {
+  // «Ferma live» la ferma anche nella finestra principale: passa dal server, vedi live_stop_rev
+  if (liveOn) fetch("/api/camera/live/stop", { method: "POST", headers: { "X-FocusStack": "1" } }).catch(() => {});
+  setLiveView(!liveOn);
+};
 $("guide-btn").href = `/guide/${["it", "en", "fr", "de", "es"].includes(LANG) ? LANG : "en"}.html#visualizzatore`;
 // live avviato dalla finestra principale: parte anche qui (non durante la sequenza)
 if ("BroadcastChannel" in window) {
   new BroadcastChannel("focus-stack").onmessage = (ev) => {
-    if (ev.data && ev.data.live && !liveOn && !seqRunning && camState.connected) setLiveView(true);
+    if (ev.data && ev.data.live && !liveOn && !seqLivePaused && camState.connected) setLiveView(true);
   };
 }
 $("lock").onclick = () => setLock(!lockView);

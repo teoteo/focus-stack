@@ -68,6 +68,8 @@ class SequenceStatus:
     step: int | None = None
     repeats: int = 1             # scatti per posizione
     repeat: int = 0              # scatto in corso nella posizione (0 = primo)
+    shots: int = 0               # scatti fatti finora (contando le ripetizioni)
+    live_ok: bool = False        # il live view può restare acceso: la slitta sta ancora raggiungendo l'inizio
 
 
 # suoni di sistema di macOS: uno chiaro se la sequenza è completata, uno grave se si è fermata per un errore
@@ -188,6 +190,21 @@ class SequenceRunner:
             self._log(tr("Fotocamera non ricollegata: {exc}", exc=exc))
             return False
 
+    async def _end_live(self, camera) -> None:
+        """La slitta è al primo piano: il live view si spegne prima dell'attesa anti-vibrazione (Canon e Nikon
+        abbassano lo specchio), così il primo scatto parte come senza live view. Fino a qui si poteva guardare
+        il ritorno all'inizio. Lo spegne lo stream (main.live_frames, che vede live_ok falso); se nessuno lo
+        guarda è già spento, altrimenti dopo 3 s lo spegne questa funzione."""
+        self.status.live_ok = False
+        for _ in range(30):
+            if not getattr(camera, "live", False):
+                return
+            await asyncio.sleep(0.1)
+        try:
+            await camera.end_preview()
+        except Exception as exc:  # noqa: BLE001
+            self._log(tr("Live view non spento: {exc}", exc=exc))
+
     async def _capture(self, camera, p: SequenceParams, base: Path | None) -> list[str]:
         """Scatto con nuovi tentativi: se la fotocamera non risponde (sta ancora scrivendo il RAW precedente,
         in autofocus non trova il fuoco, oppure è sparita dall'USB) aspetta 3 s e riprova; al secondo errore
@@ -282,7 +299,7 @@ class SequenceRunner:
 
         self.status = SequenceStatus(state="running", total=len(positions), started_at=time.time(),
                                      folder=str(folder) if meta_ok else None,
-                                     start=p.start, end=p.end, step=p.step, repeats=repeats)
+                                     start=p.start, end=p.end, step=p.step, repeats=repeats, live_ok=True)
         self._log(tr("Avvio sequenza: {n} scatti da {start} a {end}, passo {step}",
                      n=len(positions), start=p.start, end=p.end, step=p.step)
                   + (" · " + tr("{k} scatti per posizione", k=repeats) if repeats > 1 else ""))
@@ -320,6 +337,8 @@ class SequenceRunner:
                     self.status.repeat = k
                     if need_move:
                         await focuser.move_to(pos, wait=True)
+                        if self.status.live_ok:
+                            await self._end_live(camera)
                         await self._checkpoint()
                         await asyncio.sleep(p.settle_ms / 1000)
                         need_move = False
@@ -353,6 +372,7 @@ class SequenceRunner:
                     record = {"index": i + 1, "repeat": k + 1, "repeats": repeats, "position": pos,
                               "temperature": focuser.temperature, "time": shot_time, "files": files}
                     self.status.files.extend(files)
+                    self.status.shots += 1
                     self._on_shot(record)
                     temp = f", {focuser.temperature:.1f} °C" if focuser.temperature is not None else ""
                     label = tr("Scatto {i}/{n} @ {pos}", i=i + 1, n=len(positions), pos=pos)
@@ -382,6 +402,7 @@ class SequenceRunner:
                 self.status.message = str(exc)
                 self._log(tr("ERRORE sequenza: {exc}", exc=exc))
         finally:
+            self.status.live_ok = False
             power.release()
             self.status.eta_s = None
             if p.sound_on_end and self.status.state in ("done", "error"):

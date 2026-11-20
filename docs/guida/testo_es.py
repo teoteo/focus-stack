@@ -289,11 +289,13 @@ cámara.</p>
 ], layout="stack")}
 </div>
 <p>La vista en vivo llega hasta 15 imágenes por segundo y es la forma más cómoda de encontrar el inicio y el fin de
-la secuencia mientras mueves el enfocador con el teclado. Cuando empieza la secuencia, la vista en vivo se cierra (el
-espejo tiene que bajar y la cámara tiene que disparar con normalidad) y el recuadro vuelve a mostrar la última foto,
-también en el visor; terminada la pila, vuelve a activarla con <span class="ui">{ui('● Live')}</span>. En las réflex el
-espejo permanece subido mientras la vista en vivo está activa. La vista en vivo activada desde la ventana principal
-arranca también en el visor, si está abierto.</p>
+la secuencia mientras mueves el enfocador con el teclado. Cuando empieza la secuencia, la vista en vivo sigue
+activa mientras el enfocador vuelve a la posición inicial, para que puedas vigilarlo; al llegar se pone en pausa (el
+espejo tiene que bajar y la cámara tiene que disparar con normalidad) y se cierra con la primera foto: el recuadro
+vuelve a mostrar la última foto, también en el visor. Terminada la pila, vuelve a activarla con
+<span class="ui">{ui('● Live')}</span>. En las réflex el espejo permanece subido mientras la vista en vivo está activa.
+La vista en vivo activada desde la ventana principal arranca también en el visor, si está abierto;
+<span class="ui">{ui('■ Ferma live')}</span> la apaga en las dos ventanas.</p>
 <div class="box tip"><span class="t">Para enfocar con precisión</span>Abre la vista en vivo en el <b>visor</b>: puedes
 ampliar al 100% y más, y desplazarte hasta el detalle que te interesa (capítulo 8).</div>
 """)

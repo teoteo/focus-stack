@@ -292,11 +292,13 @@ wieder anstecken oder die Kamera aus- und einschalten.</p>
 ], layout="stack")}
 </div>
 <p>Das Live-View liefert bis zu 15 Bilder pro Sekunde und ist der bequemste Weg, Anfang und Ende der Serie zu finden,
-während Sie den Fokussierer mit der Tastatur bewegen. Wenn die Serie startet, wird das Live-View geschlossen (der
-Spiegel muss herunterklappen und die Kamera normal auslösen), und das Feld zeigt wieder die letzte Aufnahme, auch im
-Betrachter; nach dem Stapel schalten Sie es mit <span class="ui">{ui('● Live')}</span> wieder ein. Bei
-Spiegelreflexkameras bleibt der Spiegel hochgeklappt, solange das Live-View eingeschaltet ist. Ein im Hauptfenster
-eingeschaltetes Live-View startet auch im Betrachter, wenn dieser geöffnet ist.</p>
+während Sie den Fokussierer mit der Tastatur bewegen. Wenn die Serie startet, bleibt das Live-View an,
+während der Fokussierer zur Startposition zurückfährt, damit Sie ihn beobachten können; dort angekommen pausiert es
+(der Spiegel muss herunterklappen und die Kamera normal auslösen) und schließt sich bei der ersten Aufnahme: Das Feld
+zeigt wieder die letzte Aufnahme, auch im Betrachter. Nach dem Stapel schalten Sie es mit
+<span class="ui">{ui('● Live')}</span> wieder ein. Bei Spiegelreflexkameras bleibt der Spiegel hochgeklappt, solange
+das Live-View eingeschaltet ist. Ein im Hauptfenster eingeschaltetes Live-View startet auch im Betrachter, wenn dieser
+geöffnet ist; <span class="ui">{ui('■ Ferma live')}</span> schaltet es in beiden Fenstern aus.</p>
 <div class="box tip"><span class="t">Für präzises Fokussieren</span>Öffnen Sie das Live-View im <b>Betrachter</b>: Dort
 können Sie auf 100 % und mehr vergrößern und zum gewünschten Detail verschieben (Kapitel 8).</div>
 """)

@@ -75,6 +75,7 @@ class App:
         self.camera_lock = asyncio.Lock()
         # live view: pagine collegate allo stream e ultimo errore (es. fotocamera senza live view)
         self.live_clients = 0
+        self.live_stop_rev = 0               # cresce a ogni «Ferma live»: tutte le finestre chiudono la loro live
         self.live_error = ""
         self.runner = SequenceRunner(lambda: self.focuser if self.focuser and self.focuser.connected else None,
                                      lambda: self.camera if self.camera and self.camera.connected else None,
@@ -166,6 +167,11 @@ class App:
         """Sequenza o calibrazione in corso: la fotocamera è occupata."""
         return self.runner.busy or self.calib.busy
 
+    def live_paused(self) -> bool:
+        """Live view in pausa: durante la calibrazione e durante la sequenza, tranne mentre la slitta
+        raggiunge il primo piano (si può guardare il ritorno all'inizio)."""
+        return self.calib.busy or (self.runner.busy and not self.runner.status.live_ok)
+
     def manifest_context(self, profile: str | None = None) -> dict:
         """Dati per il manifesto sequence.json (vedi sequence.build_manifest)."""
         f, cam = self.focuser, self.camera
@@ -240,6 +246,7 @@ class App:
             "last_shot": last,
             "shot_count": len(self.shots),
             "shots_rev": self.shots_rev,
+            "live_stop_rev": self.live_stop_rev,
             "shot_group": self.shot_group,
             "log": list(self.log_lines)[-200:],
             "boot_signature": BOOT_SIGNATURE,
@@ -1140,7 +1147,7 @@ async def live_frames(cam: GPhotoCamera):
     seq = 0
     try:
         while cam.connected and app_state.camera is cam:
-            if app_state.busy():
+            if app_state.live_paused():
                 # sequenza e calibrazione scattano come senza live view (specchio, ritardi): live view spento
                 if cam.live:
                     await cam.end_preview()
@@ -1175,6 +1182,14 @@ async def camera_live():
     app_state.live_error = ""
     return StreamingResponse(live_frames(cam), media_type=f"multipart/x-mixed-replace; boundary={LIVE_BOUNDARY}",
                              headers={"Cache-Control": "no-store"})
+
+
+@api.post("/api/camera/live/stop")
+@guard
+async def camera_live_stop():
+    """«Ferma live» in una finestra: lo stato lo dice a tutte (principale e visualizzatore), che chiudono la loro."""
+    app_state.live_stop_rev += 1
+    return {"live_stop_rev": app_state.live_stop_rev}
 
 
 @api.post("/api/camera/settings/reload")

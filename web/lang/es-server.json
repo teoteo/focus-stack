@@ -293,5 +293,6 @@
   "Tieni questa pagina aperta: lo schermo resta acceso finché il suono è attivo.": "Mantenga esta página abierta: la pantalla sigue encendida mientras el sonido esté activado.",
   "Impossibile aprire {path}": "No se puede abrir {path}",
   "Il pacchetto scaricato non ha la firma dello sviluppatore di Focus Stack": "El paquete descargado no está firmado por el desarrollador de Focus Stack",
-  "ISO {v}: questa fotocamera arriva al massimo a {top}.": "ISO {v}: esta cámara llega como máximo a {top}."
+  "ISO {v}: questa fotocamera arriva al massimo a {top}.": "ISO {v}: esta cámara llega como máximo a {top}.",
+  "Live view non spento: {exc}": "Visión en directo no apagada: {exc}"
 }

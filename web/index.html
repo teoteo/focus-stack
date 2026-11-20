@@ -679,6 +679,24 @@
       </section>
     </div>
 
+  </div>
+
+  <aside class="set-sum card" id="cal-sum" aria-label="Riepilogo">
+    <h4>Per la prossima pila</h4>
+    <div class="sum-kv"><span>Dark</span><b id="ksum-dark">—</b><em id="ksum-darkx"></em></div>
+    <div class="sum-kv"><span>Flat</span><b id="ksum-flat">—</b><em id="ksum-flatx"></em></div>
+    <div class="sum-kv"><span>Dark dei flat</span><b id="ksum-fdark">—</b><em id="ksum-fdarkx"></em></div>
+    <hr>
+    <div class="sum-temp" id="card-temp">
+      <header class="card-head"><h2>Temperatura</h2><span class="chip" id="t-chip">—</span></header>
+      <div class="temp-big" id="t-value">—</div>
+      <svg class="spark" id="t-spark" viewBox="0 0 300 70" preserveAspectRatio="none"></svg>
+      <p class="hint" id="t-range" data-i18n-html>Ultimi 60 minuti. La temperatura di ogni scatto viene salvata in <code>sequence.json</code>.</p>
+    </div>
+  </aside>
+
+  <!-- la libreria occupa anche la colonna del riepilogo: la tabella ha molte colonne -->
+  <div class="set-wide">
     <h3 class="set-group">Libreria</h3>
     <div class="set-card">
       <section class="set-sec" id="card-library">
@@ -700,20 +718,6 @@
       </section>
     </div>
   </div>
-
-  <aside class="set-sum card" id="cal-sum" aria-label="Riepilogo">
-    <h4>Per la prossima pila</h4>
-    <div class="sum-kv"><span>Dark</span><b id="ksum-dark">—</b><em id="ksum-darkx"></em></div>
-    <div class="sum-kv"><span>Flat</span><b id="ksum-flat">—</b><em id="ksum-flatx"></em></div>
-    <div class="sum-kv"><span>Dark dei flat</span><b id="ksum-fdark">—</b><em id="ksum-fdarkx"></em></div>
-    <hr>
-    <div class="sum-temp" id="card-temp">
-      <header class="card-head"><h2>Temperatura</h2><span class="chip" id="t-chip">—</span></header>
-      <div class="temp-big" id="t-value">—</div>
-      <svg class="spark" id="t-spark" viewBox="0 0 300 70" preserveAspectRatio="none"></svg>
-      <p class="hint" id="t-range" data-i18n-html>Ultimi 60 minuti. La temperatura di ogni scatto viene salvata in <code>sequence.json</code>.</p>
-    </div>
-  </aside>
 
 </main>
 

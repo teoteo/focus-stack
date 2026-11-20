@@ -85,7 +85,11 @@ function connectWS() {
   ws.onmessage = (ev) => {
     const data = JSON.parse(ev.data);
     if (data && "reply" in data) { const done = wsWaiting.get(data.reply); if (done) done(data); return; }
-    S = data; render();
+    S = data;
+    // «Ferma live» premuto in un'altra finestra
+    if (liveStopRev != null && data.live_stop_rev > liveStopRev && liveOn) setLive(false);
+    liveStopRev = data.live_stop_rev ?? liveStopRev;
+    render();
   };
   ws.onopen = () => { wsConn = ws; setDot("st-link", "on"); };
   ws.onclose = () => {
@@ -466,6 +470,7 @@ function renderLastShot() {
 
 // ---------------- live view (stream MJPEG del server in un <img>) ----------------
 let liveOn = false, liveStartedAt = 0;
+let liveStopRev = null;   // ultimo valore visto di live_stop_rev (null fino al primo stato)
 
 // canale fra la finestra principale e il visualizzatore (Safari 15.4+; senza, semplicemente non si parlano)
 const windowLink = "BroadcastChannel" in window ? new BroadcastChannel("focus-stack") : null;
@@ -488,13 +493,15 @@ function setLive(on) {
   if (S) renderLive(S.camera, running());
 }
 
-let liveRunPrev = false;
+let liveShotsPrev = 0;
 function renderLive(c, run) {
   $("live-btn").disabled = !c.connected;
-  // sequenza appena partita: il live view si chiude e il riquadro torna a mostrare l'ultimo scatto
-  const started = run && !liveRunPrev && !!(S.sequence && S.sequence.state === "running");
-  liveRunPrev = run;
-  if (started && liveOn) { setLive(false); toast(t("Sequenza avviata: live view chiuso, ora segue l'ultimo scatto")); return; }
+  // primo scatto della sequenza: il live view si chiude e il riquadro torna a mostrare l'ultimo scatto.
+  // Fino a lì resta acceso, per guardare la slitta che torna all'inizio.
+  const q = S.sequence || {}, shots = run ? q.shots || 0 : 0;
+  const firstShot = shots > 0 && liveShotsPrev === 0;
+  liveShotsPrev = shots;
+  if (firstShot && liveOn) { setLive(false); toast(t("Primo scatto della sequenza: live view chiuso, ora segue l'ultimo scatto")); return; }
   if (!liveOn) return;
   if (!c.connected) { setLive(false); return; }
   // l'errore di uno stream precedente può arrivare ancora per un attimo dopo il riavvio
@@ -503,11 +510,11 @@ function renderLive(c, run) {
     toast(c.live_error, true);
     return;
   }
-  const paused = run || c.busy;
+  const seqPaused = run && !q.live_ok;   // in pausa dall'arrivo al primo piano
   const badge = $("live-badge");
-  badge.textContent = run ? t("IN PAUSA") : c.busy ? t("SCATTO…") : t("LIVE");
-  badge.classList.toggle("paused", paused);
-  $("live-meta").innerHTML = run
+  badge.textContent = seqPaused ? t("IN PAUSA") : c.busy ? t("SCATTO…") : t("LIVE");
+  badge.classList.toggle("paused", seqPaused || c.busy);
+  $("live-meta").innerHTML = seqPaused
     ? `<span>${t("Live view in pausa durante la sequenza")}</span>`
     : `<span><b>${c.model}</b></span><span>${t("doppio clic: schermo intero")}</span>`;
 }
@@ -1805,6 +1812,11 @@ function bind() {
     return api("/api/camera/connect", { model: sel.model || "", port: sel.port || "", simulate: $("c-sim").checked });
   });
   $("c-disconnect").onclick = (e) => act(e.target, () => api("/api/camera/disconnect"));
+  // «Simulatore» e l'elenco si escludono: scegliere una fotocamera vera toglie la spunta (prima restava spuntata
+  // da una prova precedente e si collegava di nuovo il simulatore); con la spunta l'elenco è grigio
+  const syncSim = () => { $("c-model").disabled = $("c-sim").checked; $("c-detect").disabled = $("c-sim").checked; };
+  $("c-model").addEventListener("change", () => { if ($("c-model").value) $("c-sim").checked = false; syncSim(); });
+  $("c-sim").addEventListener("change", syncSim);
   for (const [name, id] of Object.entries(CAM_FIELDS)) {
     $(id).onchange = (e) => {
       // le Sony raggiungono il valore «a scatti»: se dopo 12 s non è arrivato, lo si dice invece di lasciare il menu grigio
@@ -1824,6 +1836,8 @@ function bind() {
   // con il live view acceso il visualizzatore si apre sul live view (zoom e pan)
   $("v-open").onclick = () => openViewer(liveOn ? "live" : S && S.last_shot ? S.last_shot.id : null);
   $("live-btn").onclick = () => {
+    // «Ferma live» la ferma anche nel visualizzatore (e viceversa): passa dal server, vedi live_stop_rev
+    if (liveOn) api("/api/camera/live/stop").catch(() => {});
     setLive(!liveOn);
     // avviato a mano: parte anche nel visualizzatore, se è aperto (stessa origine, canale fra le finestre)
     if (liveOn && windowLink) windowLink.postMessage({ live: true });

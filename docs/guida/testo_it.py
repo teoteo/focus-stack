@@ -287,10 +287,12 @@ fotocamera.</p>
 </div>
 <p>Il live view arriva fino a 15 immagini al secondo ed è il modo più comodo per trovare il punto di
 partenza e di arrivo della sequenza mentre muovi il focheggiatore con la tastiera. Quando parte la sequenza il
-live si chiude (lo specchio deve scendere e la fotocamera deve scattare come al solito) e il riquadro torna a
-mostrare l'ultimo scatto, anche nel visualizzatore; finita la pila lo riaccendi con <span class="ui">● Live</span>.
-Sulle reflex lo specchio resta sollevato finché il live è acceso. Il live acceso dalla finestra principale parte
-anche nel visualizzatore, se è aperto.</p>
+live resta acceso mentre il focheggiatore torna al punto di partenza, così puoi controllarlo; arrivato lì si mette in
+pausa (lo specchio deve scendere e la fotocamera deve scattare come al solito) e al primo scatto si chiude: il
+riquadro torna a mostrare l'ultimo scatto, anche nel visualizzatore. Finita la pila lo riaccendi con
+<span class="ui">● Live</span>. Sulle reflex lo specchio resta sollevato finché il live è acceso. Il live acceso dalla
+finestra principale parte anche nel visualizzatore, se è aperto; <span class="ui">■ Ferma live</span> lo spegne in
+tutte e due le finestre.</p>
 <div class="box tip"><span class="t">Per mettere a fuoco con precisione</span>Apri il live nel
 <b>visualizzatore</b>: puoi ingrandire al 100% e oltre e spostarti sul dettaglio che ti interessa
 (capitolo 8).</div>

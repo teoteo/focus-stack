@@ -292,11 +292,13 @@ Si l'appareil n'accepte pas une valeur en 12 secondes, l'app le signale : débra
 ], layout="stack")}
 </div>
 <p>La visée en direct atteint 15 images par seconde : c'est le moyen le plus pratique de trouver le début et la fin
-de la séquence tout en déplaçant le focuser au clavier. Quand la séquence démarre, la visée en direct se ferme (le
-miroir doit redescendre et l'appareil doit déclencher normalement) et le cadre affiche de nouveau la dernière photo, dans
-la visionneuse aussi ; une fois la pile terminée, rallumez-la avec <span class="ui">{ui('● Live')}</span>. Sur les
-reflex, le miroir reste levé tant que la visée en direct est active. La visée en direct allumée depuis la fenêtre
-principale démarre aussi dans la visionneuse, si elle est ouverte.</p>
+de la séquence tout en déplaçant le focuser au clavier. Quand la séquence démarre, la visée en direct reste
+allumée pendant que le focuser revient au point de départ, pour que vous puissiez le surveiller ; une fois arrivé, elle
+se met en pause (le miroir doit redescendre et l'appareil doit déclencher normalement) et elle se ferme à la première
+photo : le cadre affiche de nouveau la dernière photo, dans la visionneuse aussi. Une fois la pile terminée, rallumez-la
+avec <span class="ui">{ui('● Live')}</span>. Sur les reflex, le miroir reste levé tant que la visée en direct est
+active. La visée en direct allumée depuis la fenêtre principale démarre aussi dans la visionneuse, si elle est
+ouverte ; <span class="ui">{ui('■ Ferma live')}</span> l'éteint dans les deux fenêtres.</p>
 <div class="box tip"><span class="t">Pour une mise au point précise</span>Ouvrez la visée en direct dans la
 <b>visionneuse</b> : vous pouvez zoomer à 100 % et au-delà et vous déplacer sur le détail qui vous intéresse
 (chapitre 8).</div>

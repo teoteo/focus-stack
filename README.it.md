@@ -1,19 +1,24 @@
+<p align="center"><img src="docs/img/icon.png" width="128" height="128" alt="Focus Stack"></p>
+
 # Focus Stack — focheggiatore myFocuserPro2 o Ardufocus + fotocamera per microscopia
 
 *[English](README.md) · Italiano*
 
-Controlla da Safari (macOS) un focheggiatore DIY **myFocuserPro2** oppure **Ardufocus** montato sul
+Controlla da un'app per Mac o da un browser web un focheggiatore DIY **myFocuserPro2** oppure **Ardufocus** montato sul
 microscopio e una fotocamera **Sony / Nikon / Canon** via USB, eseguendo sequenze automatiche
 *muovi → attendi → scatta* pronte da elaborare in **Helicon Focus**.
 
-![Una pila di 230 scatti di un fiore di brugo (Calluna vulgaris) in corso: schede del focheggiatore, della sequenza e della fotocamera, con l'ultimo scatto](docs/img/session.jpg)
-*Una pila in corso: 230 scatti di un fiore di brugo (Calluna vulgaris), qui con un obiettivo macro a 2,8×. A sinistra posizione e fine corsa del focheggiatore, al centro la sequenza e il tempo stimato (▶ mostra profilo ottico e calibrazione), a destra le impostazioni della fotocamera e l'ultimo scatto.*
+![Una pila di 368 scatti in corso: schede del focheggiatore, della sequenza e della fotocamera, con l'ultimo scatto](docs/img/session.jpg)
+*Una pila in corso: 368 scatti a 21,5 µm l'uno dall'altro, con un obiettivo macro a 2,8×. A sinistra posizione e fine corsa del focheggiatore, al centro la sequenza, l'avanzamento e il tempo che manca (▶ mostra profilo ottico e calibrazione), a destra le impostazioni della fotocamera e l'ultimo scatto.*
 
-![Il visualizzatore con un fotogramma RAW della pila a piena risoluzione, le guide dei terzi, l'Ispettore e la striscia dei fotogrammi](docs/img/viewer.jpg)
-*Il visualizzatore segue la pila scatto per scatto: RAW a piena risoluzione, striscia dei fotogrammi sotto, guide di composizione (terzi, centro o entrambi) e l'Ispettore con pixel bruciati e neri, istogramma e valori.*
+![Il visualizzatore con un fotogramma RAW della pila a piena risoluzione, il contatore della pila, l'Ispettore e la striscia dei fotogrammi](docs/img/viewer.jpg)
+*Il visualizzatore segue la pila scatto per scatto: avanzamento e dati dello scatto in alto, RAW a piena risoluzione, la striscia della pila in corso sotto, guide di composizione (terzi, centro o entrambi) e l'Ispettore con pixel bruciati e neri, istogramma e valori.*
+
+![La scheda Ottica: indice a sinistra, il profilo dell'obiettivo macro al centro, ingrandimento, scala e profondità di campo a destra](docs/img/optics.jpg)
+*Ottica: un profilo per ogni obiettivo da microscopio o obiettivo macro (obiettivi dal database Lensfun, lenti addizionali, tubi di prolunga). Il riepilogo a destra calcola ingrandimento, µm per pixel sul campione, profondità di campo e passo consigliato.*
 
 ![La scheda Calibrazione mentre scatta i flat, con la libreria di calibrazione sotto](docs/img/calibration.jpg)
-*Calibrazione: esposizione della luce misurata sui RAW, dark e flat scattati in automatico, e una libreria che collega ogni pila alla calibrazione giusta.*
+*Calibrazione: esposizione della luce misurata sui RAW, dark e flat scattati in automatico, i set che userà la prossima pila e una libreria che collega ogni pila alla calibrazione giusta.*
 
 *Le immagini mostrano l'interfaccia in inglese; l'app è anche in italiano.*
 
@@ -41,13 +46,13 @@ firmware originale (`-U flash:r:ardufocus-originale.hex:i`) per poterlo rimetter
 
 ## Perché un server locale + PWA (e non una PWA pura)
 
-Safari non supporta né Web Serial né WebUSB, quindi una pagina web non può parlare
-direttamente con l'Arduino o con la fotocamera. L'app è quindi divisa in due parti:
+Non si può contare sul supporto di Web Serial e WebUSB nei browser web, quindi una pagina web non
+può parlare direttamente con l'Arduino o con la fotocamera. L'app è quindi divisa in due parti:
 
 ```
-Safari (PWA, interfaccia)  ⇄  http://localhost:8765  ⇄  server Python
-                                                        ├─ pyserial  → myFocuserPro2 (USB seriale)
-                                                        └─ libgphoto2 → fotocamera (USB PTP)
+Finestra dell'app o browser web  ⇄  http://localhost:8765  ⇄  server Python
+                                                              ├─ pyserial  → myFocuserPro2 (USB seriale)
+                                                              └─ libgphoto2 → fotocamera (USB PTP)
 ```
 
 Il server ascolta solo su `127.0.0.1`, quindi non è raggiungibile da altri computer. La pagina
@@ -79,12 +84,14 @@ riavvia da USB: durante l'aggiornamento l'app chiede di premere il tasto reset d
 ## Avvio
 
 1. Fai doppio clic su **`Avvia Focus Stack.command`**. La prima volta crea l'ambiente
-   Python e installa le dipendenze; poi apre Safari su `http://localhost:8765`.
+   Python e installa le dipendenze; poi apre `http://localhost:8765` nel browser web.
 2. Per provare senza hardware, spunta **Simulatore** nei pannelli Focheggiatore e Fotocamera.
 
-**Come app per Mac:** Focus Stack.app avvia il server senza finestra del Terminale, apre Safari e
-resta nel Dock finché il server è acceso; un clic sull'icona nel Dock riporta in primo piano la
-pagina. Se il server non parte mostra un avviso; il registro è in `~/Library/Logs/FocusStack.log`.
+**Come app per Mac:** Focus Stack.app avvia il server senza finestra del Terminale, mostra
+l'interfaccia in una finestra sua e resta nel Dock finché il server è acceso; un clic sull'icona nel
+Dock riapre la finestra. Chiudere la finestra *non* spegne il server. Se il server non parte mostra un
+avviso; il registro è in `~/Library/Logs/FocusStack.log`. La stessa interfaccia si apre anche in
+qualsiasi browser web su `http://localhost:8765`.
 Il punto 1 qui sopra (`Avvia Focus Stack.command`) serve solo per lo sviluppo, con il codice di
 questa cartella.
 
@@ -92,10 +99,10 @@ Da Terminale: `.venv/bin/python run.py [--port 8765] [--no-browser]`
 
 **Spegnimento:** chiudi l'app Focus Stack (⌘Q, oppure Esci dal menu dell'icona nel Dock). Il
 server prima interrompe un'eventuale sequenza (l'app chiede conferma) e ferma il motore, poi si
-spegne; la pagina in Safari mostra “Focus Stack è chiuso” e si ricarica da sola quando riapri l'app.
+spegne; una pagina rimasta aperta nel browser mostra “Focus Stack è chiuso” e si ricarica da sola quando riapri l'app.
 Se il server è stato avviato con “Avvia Focus Stack.command”, si spegne con `Ctrl+C` nella finestra
 del Terminale (o chiudendola).
-Chiudere Safari *non* spegne il server.
+Chiudere il browser *non* spegne il server.
 Se apri l'app mentre il server è già acceso, mostra solo la pagina; per ricaricare il codice dopo
 un aggiornamento chiudi l'app e riaprila. “Avvia Focus Stack.command” invece chiude un server già
 acceso e lo sostituisce con la versione aggiornata.
@@ -267,8 +274,9 @@ La conversione è in cache in `~/Library/Caches/MyFocuserStack`.
 | Modalità | **Scarica sul Mac** (consigliata), **Solo scheda**, **Solo trigger** (più veloce; con questa imposta la destinazione su scheda) |
 
 **Cartella di salvataggio:** nella scheda Sequenza, riga *Salva in*. **Scegli…** apre il pannello
-"Scegli cartella" di macOS; **Apri** mostra la cartella nel Finder. Safari non può leggere percorsi
-del disco, quindi il pannello lo apre il server. Se la cartella non esiste viene creata e, prima di
+"Scegli cartella" di macOS; **Apri** mostra la cartella nel Finder. Nell'app il pannello è quello
+della finestra; un browser web non può leggere percorsi del disco, quindi lì il pannello lo apre il
+server. Se la cartella non esiste viene creata e, prima di
 salvarla, l'app verifica di poterci scrivere.
 
 Gli scatti vengono salvati nella cartella scelta (predefinita `~/Pictures/FocusStack`), in una

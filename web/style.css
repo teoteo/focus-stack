@@ -423,6 +423,9 @@ input[aria-invalid="true"] { border-color: var(--warn); box-shadow: 0 0 0 1px va
 /* la pagina: un riquadro per gruppo (Focheggiatore, App, Sistema) con il titolo fuori; dentro, le sezioni
    sono separate da una linea sottile, senza riquadri annidati */
 .set-main { min-width: 0; }
+/* sezione larga sotto pagina e riepilogo (Libreria di calibrazione) */
+.set-wide { min-width: 0; grid-column: 2 / span 2; grid-row: 2; }
+.view.settings:has(.set-wide) .set-nav { grid-row: 1 / span 2; }
 .set-group { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-2); font-weight: 600; margin: 0 0 8px 4px; }
 .set-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 4px 20px; box-shadow: var(--shadow); margin-bottom: 26px; }
 .set-sec { padding: 16px 0 18px; border-top: 1px solid var(--line); scroll-margin-top: calc(var(--topbar-h, 62px) + 14px); }
@@ -506,6 +509,8 @@ label.set-row { cursor: pointer; }
   .set-sum { position: static; max-height: none; grid-column: 2; grid-row: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
   .set-sum h4, .set-sum hr { grid-column: 1 / -1; }
   .set-main { grid-column: 2; grid-row: 2; }
+  .set-wide { grid-column: 2; grid-row: 3; }
+  .view.settings:has(.set-wide) .set-nav { grid-row: 1 / span 3; }
   .set-nav { grid-column: 1; grid-row: 1 / span 2; }
 }
 @media (max-width: 760px) {
@@ -516,6 +521,8 @@ label.set-row { cursor: pointer; }
   .view.settings .set-search { min-width: 130px; margin: 0; }
   .set-sum { grid-column: 1; grid-row: 2; }
   .set-main { grid-column: 1; grid-row: 3; padding: 14px 12px 4px; }
+  .set-wide { grid-column: 1; grid-row: 4; padding: 0 12px 4px; }
+  .view.settings:has(.set-wide) .set-nav { grid-row: 1; }
   .set-row { grid-template-columns: minmax(0, 1fr); }
 }
 

@@ -462,10 +462,12 @@ accept a value within 12 seconds, the app tells you: unplug and replug the USB c
 ], layout="stack")}
 </div>
 <p>Live view runs at up to 15 frames per second and is the easiest way to find the start and end of the
-sequence while you move the focuser with the keyboard. When the sequence starts, live view closes (the mirror has to
-come down and the camera has to shoot normally) and the frame goes back to showing the latest shot, in the viewer
-too; when the stack is done, turn it back on with <span class="ui">{ui('● Live')}</span>. On DSLRs the mirror stays up
-while live view is on. Live view turned on from the main window also starts in the viewer, if it is open.</p>
+sequence while you move the focuser with the keyboard. When the sequence starts, live view stays on
+while the focuser goes back to the start position, so you can watch it; once there it pauses (the mirror has to come
+down and the camera has to shoot normally) and it closes at the first shot: the frame goes back to showing the latest
+shot, in the viewer too. When the stack is done, turn it back on with <span class="ui">{ui('● Live')}</span>. On DSLRs
+the mirror stays up while live view is on. Live view turned on from the main window also starts in the viewer, if it
+is open; <span class="ui">{ui('■ Ferma live')}</span> turns it off in both windows.</p>
 <div class="box tip"><span class="t">For precise focusing</span>Open live view in the <b>viewer</b>: you can zoom
 to 100% and beyond and pan to the detail you care about (chapter 8).</div>
 """)
