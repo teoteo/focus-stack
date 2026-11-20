@@ -290,5 +290,8 @@
   "Tratto del movimento continuo: da {lo} a {hi} passi": "Tramo del movimiento continuo: de {lo} a {hi} pasos",
   "Collegamento automatico del focheggiatore non riuscito: {exc}": "No se pudo conectar automáticamente el enfocador: {exc}",
   "Collegamento automatico della fotocamera non riuscito: {exc}": "No se pudo conectar automáticamente la cámara: {exc}",
-  "Tieni questa pagina aperta: lo schermo resta acceso finché il suono è attivo.": "Mantenga esta página abierta: la pantalla sigue encendida mientras el sonido esté activado."
+  "Tieni questa pagina aperta: lo schermo resta acceso finché il suono è attivo.": "Mantenga esta página abierta: la pantalla sigue encendida mientras el sonido esté activado.",
+  "Impossibile aprire {path}": "No se puede abrir {path}",
+  "Il pacchetto scaricato non ha la firma dello sviluppatore di Focus Stack": "El paquete descargado no está firmado por el desarrollador de Focus Stack",
+  "ISO {v}: questa fotocamera arriva al massimo a {top}.": "ISO {v}: esta cámara llega como máximo a {top}."
 }

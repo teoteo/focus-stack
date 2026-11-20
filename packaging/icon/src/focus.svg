@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+ <filter id="near" x="-40%" y="-80%" width="180%" height="260%"><feGaussianBlur stdDeviation="13"/></filter>
+ <filter id="far" x="-40%" y="-80%" width="180%" height="260%"><feGaussianBlur stdDeviation="32"/></filter>
+</defs>
+<!-- livello dell'icona Liquid Glass (AppIcon.icon): rigenerare con packaging/icon/make-icons.sh -->
+
+<ellipse cx="512" cy="512" rx="270" ry="124" fill="none" stroke="#6aaefc" stroke-width="46" opacity="1"/>
+<ellipse cx="512" cy="495" rx="270" ry="124" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="6"/>
+<circle cx="512" cy="512" r="44" fill="#f8fafc"/>
+</svg>

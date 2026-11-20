@@ -5,6 +5,12 @@
 #   ./build_release.sh            build in build/dist/
 #   ./build_release.sh --publish  build + release GitHub v<VERSION> (richiede `gh auth login`)
 #
+# Firma: senza SIGN_ID è ad hoc (nessun account Apple; alla prima apertura serve «Apri comunque»).
+# Con SIGN_ID="Developer ID Application: Nome (TEAMID)" firma con il runtime rafforzato e notarizza;
+# le credenziali si salvano una volta nel portachiavi con
+#   xcrun notarytool store-credentials focusstack-notary --apple-id … --team-id …
+# (NOTARY_PROFILE per usare un altro nome).
+#
 # Prima di pubblicare: aumentare VERSION; se è cambiato il firmware aumentare anche FSBUILD in
 # firmware/myFP2F_DRV8825_330/fsbuild.h. Requisiti sul Mac di chi pubblica: arduino-cli con il
 # core arduino:avr e le librerie di myFocuserPro2 in ~/Documents/Arduino/libraries.
@@ -47,24 +53,34 @@ arduino-cli compile -b arduino:avr:nano:cpu=atmega328old --build-property "compi
 cp "$ROOT/build/firmware-ardufocus/myFP2F_DRV8825_330.ino.hex" "$FWOUT/firmware-ardufocus.hex"
 printf '{"build": %s, "hex": "firmware.hex", "boards": {"ardufocus": "firmware-ardufocus.hex"}}\n' "$FSBUILD" > "$FWOUT/manifest.json"
 
-# ---------- applet (programma di avvio) e icona ----------
-osacompile -s -o "$APP" "$ROOT/packaging/launcher.applescript"
-# packaging/AppIcon-1024.png = packaging/AppIcon.svg nella griglia di macOS, con angoli e margine trasparenti
+# ---------- app per Mac (Swift, packaging/mac) e icona ----------
+# Una finestra nativa sull'interfaccia web: avvia il server Python incluso e lo spegne quando si esce.
+echo "== App Swift (Apple Silicon + Intel)"
+SWIFT_DIR="$ROOT/packaging/mac"
+SWIFT_ARGS=(--package-path "$SWIFT_DIR" -c release --arch arm64 --arch x86_64)
+swift build "${SWIFT_ARGS[@]}" 2>&1 | grep -v "x86_64 architecture is deprecated" | tail -1
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp "$(swift build "${SWIFT_ARGS[@]}" --show-bin-path)/FocusStack" "$APP/Contents/MacOS/Focus Stack"
+sed "s/__VERSION__/$VERSION/g" "$SWIFT_DIR/Info.plist" > "$APP/Contents/Info.plist"
+plutil -lint -s "$APP/Contents/Info.plist"
+printf 'APPL????' > "$APP/Contents/PkgInfo"
+# testi di Info.plist nelle 5 lingue (e lingue dichiarate: i menu di sistema seguono la lingua di macOS)
+cp -R "$SWIFT_DIR/lproj/"*.lproj "$APP/Contents/Resources/"
+# icona: packaging/icon (rigenerare con packaging/icon/make-icons.sh). Assets.car = icona a livelli Liquid
+# Glass (macOS 26+, CFBundleIconName); AppIcon.icns = la stessa appiattita per macOS 13-25 (CFBundleIconFile)
+ICON_DIR="$ROOT/packaging/icon"
+mkdir -p "$STAGE/icon"
+xcrun actool "$ICON_DIR/AppIcon.icon" --compile "$STAGE/icon" --platform macosx --minimum-deployment-target 13.0 \
+  --app-icon AppIcon --output-partial-info-plist "$STAGE/icon/partial.plist" --output-format human-readable-text >/dev/null
+cp "$STAGE/icon/Assets.car" "$APP/Contents/Resources/"
 ICONSET="$STAGE/AppIcon.iconset"; mkdir -p "$ICONSET"
-ICON_SRC="$ROOT/packaging/AppIcon-1024.png"
+ICON_SRC="$ICON_DIR/AppIcon-1024.png"
 for s in 16 32 128 256 512; do
   sips -z $s $s "$ICON_SRC" --out "$ICONSET/icon_${s}x${s}.png" >/dev/null
   d=$((s * 2)); sips -z $d $d "$ICON_SRC" --out "$ICONSET/icon_${s}x${s}@2x.png" >/dev/null
 done
-iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/applet.icns"
-rm -rf "$ICONSET" "$APP/Contents/Resources/Assets.car"
-PLIST="$APP/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Delete :CFBundleIconName" "$PLIST" 2>/dev/null || true
-plutil -replace CFBundleIdentifier -string local.focusstack.app "$PLIST"
-plutil -replace CFBundleName -string "Focus Stack" "$PLIST"
-plutil -replace CFBundleShortVersionString -string "$VERSION" "$PLIST"
-plutil -replace CFBundleVersion -string "$VERSION" "$PLIST"
-plutil -replace LSMinimumSystemVersion -string "13.0" "$PLIST"
+iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
+rm -rf "$ICONSET" "$STAGE/icon"
 
 # ---------- guida HTML (web/guide/, aperta dai «?» dell'app) ----------
 python3 "$ROOT/docs/guida/genera_guida_web.py" | tail -1
@@ -104,11 +120,41 @@ for arch in arm64 x86_64; do
 done
 find "$RES" -name __pycache__ -type d -prune -exec rm -rf {} +
 
-# ---------- firma ad hoc (non serve un account Apple) e zip ----------
-codesign --force --deep --sign - "$APP"
+# ---------- firma e zip ----------
+SIGN_ID="${SIGN_ID:-}"
+NOTARY_PROFILE="${NOTARY_PROFILE:-focusstack-notary}"
 ZIP="$DIST/FocusStack-$VERSION.zip"
 rm -f "$ZIP"
-ditto -c -k --keepParent "$APP" "$ZIP"
+if [[ -z "$SIGN_ID" ]]; then
+  echo "== Firma ad hoc"
+  codesign --force --deep --sign - "$APP"
+  ditto -c -k --keepParent "$APP" "$ZIP"
+else
+  echo "== Firma Developer ID: $SIGN_ID"
+  SIGN=(codesign --force --timestamp --options runtime --sign "$SIGN_ID")
+  # dall'interno verso l'esterno: librerie, poi programmi (Python, fs-rawstat), infine l'app
+  find "$RES" -type f \( -name "*.so" -o -name "*.dylib" \) -print0 | xargs -0 "${SIGN[@]}"
+  find "$RES" -type f -perm +111 ! -name "*.so" ! -name "*.dylib" -print0 |
+    while IFS= read -r -d '' f; do
+      if file -b "$f" | grep -q "Mach-O"; then
+        "${SIGN[@]}" --entitlements "$ROOT/packaging/mac/python.entitlements" "$f"
+      fi
+    done
+  "${SIGN[@]}" "$APP"
+  codesign --verify --deep --strict "$APP"
+  echo "== Notarizzazione (qualche minuto)"
+  ditto -c -k --keepParent "$APP" "$ZIP"
+  NOTARY_OUT="$(xcrun notarytool submit "$ZIP" --keychain-profile "$NOTARY_PROFILE" --wait 2>&1)" || true
+  echo "$NOTARY_OUT" | tail -3
+  if ! echo "$NOTARY_OUT" | grep -q "status: Accepted"; then
+    echo "Notarizzazione non riuscita: dettagli con xcrun notarytool log <id> --keychain-profile $NOTARY_PROFILE" >&2
+    exit 1
+  fi
+  xcrun stapler staple "$APP"
+  rm -f "$ZIP"
+  ditto -c -k --keepParent "$APP" "$ZIP"
+  spctl -a -vv "$APP"
+fi
 echo "== Creato $ZIP ($(du -h "$ZIP" | cut -f1))"
 
 if (( PUBLISH )); then
@@ -117,8 +163,12 @@ if (( PUBLISH )); then
     echo "Focus Stack $VERSION — firmware del focheggiatore build $FSBUILD."
     echo
     echo "**Prima installazione:** scarica lo zip, aprilo, trascina *Focus Stack* in Applicazioni e aprila."
-    echo "macOS dirà che non può verificare lo sviluppatore: apri Impostazioni di Sistema → Privacy e sicurezza,"
-    echo "scorri in basso e premi **Apri comunque**. Serve solo la prima volta: poi l'app si aggiorna da sola."
+    if [[ -z "$SIGN_ID" ]]; then
+      echo "macOS dirà che non può verificare lo sviluppatore: apri Impostazioni di Sistema → Privacy e sicurezza,"
+      echo "scorri in basso e premi **Apri comunque**. Serve solo la prima volta: poi l'app si aggiorna da sola."
+    else
+      echo "Poi l'app si aggiorna da sola."
+    fi
   } > "$NOTES"
   gh release create "v$VERSION" "$ZIP" --title "Focus Stack $VERSION" --notes-file "$NOTES"
   echo "== Pubblicata la release v$VERSION"

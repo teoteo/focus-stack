@@ -290,5 +290,8 @@
   "Tratto del movimento continuo: da {lo} a {hi} passi": "Tronçon du mouvement continu : de {lo} à {hi} pas",
   "Collegamento automatico del focheggiatore non riuscito: {exc}": "Échec de la connexion automatique du focuser : {exc}",
   "Collegamento automatico della fotocamera non riuscito: {exc}": "Échec de la connexion automatique de l'appareil photo : {exc}",
-  "Tieni questa pagina aperta: lo schermo resta acceso finché il suono è attivo.": "Gardez cette page ouverte : l'écran reste allumé tant que le son est activé."
+  "Tieni questa pagina aperta: lo schermo resta acceso finché il suono è attivo.": "Gardez cette page ouverte : l'écran reste allumé tant que le son est activé.",
+  "Impossibile aprire {path}": "Impossible d'ouvrir {path}",
+  "Il pacchetto scaricato non ha la firma dello sviluppatore di Focus Stack": "Le paquet téléchargé n'est pas signé par le développeur de Focus Stack",
+  "ISO {v}: questa fotocamera arriva al massimo a {top}.": "ISO {v} : cet appareil va au maximum jusqu'à {top}."
 }

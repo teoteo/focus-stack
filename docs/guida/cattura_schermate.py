@@ -1,5 +1,5 @@
 """Schermate della guida: avvia prima un'istanza di prova con i simulatori
-    .venv/bin/python run.py --no-browser --port 8799
+    HOME=/tmp/fs-home .venv/bin/python run.py --no-browser --port 8797
 e poi esegui (serve Playwright con Google Chrome), una volta per lingua:
     python3.11 docs/guida/cattura_schermate.py --lang it [URL] [cartella-sequenza]
     python3.11 docs/guida/cattura_schermate.py --lang en
@@ -7,7 +7,9 @@ Salva le immagini in docs/guida/img/<lingua>/ e in img/<lingua>/annotazioni.json
 elemento numerato, relativa all'immagine (0–1), più un sequence.txt d'esempio nella lingua.
 Imposta la lingua dell'app e alla fine la rimette su "auto". ATTENZIONE: modifica le impostazioni
 dell'app (meccanica, fine corsa, sequenza, profili ottici, lingua): avviare l'istanza di prova con una
-home separata, per esempio  HOME=/tmp/fs-home .venv/bin/python run.py --no-browser --port 8799
+home separata, come sopra. NON usare la porta 8799: è quella dell'app di prova («Focus Stack Prova»), che usa le
+impostazioni vere; se è aperta, lo script le modificherebbe. Lo script si ferma se la cartella degli scatti del server
+è quella dell'utente (~/Pictures).
 """
 import argparse
 import json
@@ -21,7 +23,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 ap = argparse.ArgumentParser()
-ap.add_argument("base", nargs="?", default="http://127.0.0.1:8799")
+ap.add_argument("base", nargs="?", default="http://127.0.0.1:8797")
 ap.add_argument("seq_dir", nargs="?", default=None, help="cartella per la sequenza di prova")
 ap.add_argument("--lang", choices=("it", "en", "fr", "de", "es"), default="it")
 ap.add_argument("--only", default="", help="rifà solo queste figure (nomi separati da virgole); le altre restano")
@@ -90,6 +92,14 @@ def state():
     return json.loads(urllib.request.urlopen(BASE + "/api/state").read())
 
 
+# sicurezza: lo script cambia meccanica, fine corsa, preset e lingua. Se il server risponde con la cartella degli
+# scatti dell'utente, è l'app vera (o l'app di prova, porta 8799) e non un'istanza con HOME separata: ci si ferma.
+_root = state()["settings"].get("output_root") or ""
+if _root.startswith(str(Path.home())):
+    sys.exit(f"Il server su {BASE} usa le impostazioni vere ({_root}): avvia un'istanza con HOME separata "
+             "(vedi l'inizio del file) e riprova.")
+
+
 # ---- foto vere al posto di quelle del simulatore ----
 # Le immagini degli scatti di prova, della sequenza e del live view vengono sostituite da fotogrammi veri di una pila
 # (docs/guida/campione/: Calluna vulgaris, Sony A6400 + 70-350 a 2,8×). Dark e flat restano quelli del simulatore.
@@ -145,6 +155,9 @@ def shot(page, name, target, marks=(), pad=0):
     if ONLY and name not in ONLY:
         return
     el = page.locator(target).first
+    # le sezioni delle schede di impostazioni non hanno margine proprio: si prende un po' del riquadro intorno
+    if pad < 14 and el.evaluate("e => e.classList.contains('set-sec')"):
+        pad = 14
     el.scroll_into_view_if_needed()
     page.wait_for_timeout(150)
     box = el.bounding_box()
@@ -185,6 +198,7 @@ with sync_playwright() as p:
     ctx.route("**/api/shots/*/image*", real_shot)
     ctx.route("**/api/camera/live*", real_live)
     page = ctx.new_page()
+    page.on("dialog", lambda d: d.accept())
     page.goto(BASE + "/")
     page.wait_for_timeout(1500)
 
@@ -259,6 +273,7 @@ with sync_playwright() as p:
       set('f-info', '""" + SAMPLE["f_info"] + """');
       set('c-info', 'Nikon DSC D5600');
       set('s-root-label', '\u200e~/Pictures/FocusStack\u200e');
+      set('sum-phonex', new URL(window.FAKE_URL).host);   // riepilogo della Configurazione: niente indirizzo vero
       const root = document.getElementById('k-root');
       if (root && root.textContent.includes(SEQ)) root.textContent = root.textContent.replace(SEQ, '~/Pictures/FocusStack');
       document.querySelectorAll('#k-table td').forEach((td) => { if (td.textContent === SIM) td.textContent = 'Nikon DSC D5600'; });
@@ -284,7 +299,8 @@ with sync_playwright() as p:
         (5, "#rail", "l"), (6, "#jog-size", "l"), (7, "#jog-um", "l"), (8, ".jog-buttons", "l"),
         (9, ".row.goto", "l"), (10, "#f-halt", "l")))
     # «＋ Nuova pila» compare solo a pila finita: nella figura si mostra lo stesso
-    keep_new = page.evaluate("setInterval(() => document.getElementById('s-new').classList.remove('hidden'), 30)")
+    keep_new = page.add_style_tag(content="#s-new.hidden { display: inline-flex !important; }")
+    page.wait_for_timeout(100)
     # riepilogo aperto: nella figura si vedono anche le righe del profilo ottico e della calibrazione
     page.evaluate("document.getElementById('s-sum-more').open || document.querySelector('#s-sum-more > summary').click()")
     page.wait_for_timeout(100)
@@ -294,7 +310,7 @@ with sync_playwright() as p:
         (11, "#s-repeats", "l"), (12, "#s-post", "l"), (13, "#s-backlash", "l"), (14, "#s-mode", "l"),
         (15, "label.check:has(#s-return)", "r"), (16, "#s-sound", "l"), (17, "#s-preset", "l"), (18, "#card-seq .progress-box", "l"),
         (19, "#card-seq .seq-actions", "l"), (20, "#s-finder", "l")))
-    page.evaluate(f"clearInterval({keep_new})")
+    keep_new.evaluate("e => e.remove()")
     shot(page, "fotocamera", "#card-camera", m(
         (1, "#c-chip", "r"), (2, "#c-connected-line", "l"), (3, "#c-shutter", "l"), (4, "#c-aperture", "l"),
         (5, "#c-target", "l"), (6, "#c-bulb", "l"), (7, "#c-mirror", "l"), (8, "#c-reload", "l"), (9, "#c-test", "r")))
@@ -311,33 +327,38 @@ with sync_playwright() as p:
     page.select_option("#o-profile", PROFILE_OPTOVAR); page.dispatch_event("#o-profile", "change")
     page.evaluate("window.scrollTo(0, 0)")
     page.wait_for_timeout(300)
-    page.evaluate("document.querySelector('#card-optics .subsection').style.display = 'none'")
-    shot(page, "ottica", "#card-optics", m(
-        (1, "#o-profile", "l"), (2, "#o-profile-save", "l"), (3, "#o-profile-del", "r"), (4, "#o-kind", "l"),
+    # gruppo «Strumenti» (profondità di campo) nascosto: ha la sua figura
+    hide_tools = "document.querySelectorAll('#card-optics > .set-group')[3].style.display = document.querySelector('#opt-dof').parentElement.style.display = '{v}'"
+    page.evaluate(hide_tools.format(v="none"))
+    # una modifica non salvata: compare la barra in alto con Annulla, Salva come nuovo e Salva profilo
+    page.fill("#o-level", "70"); page.dispatch_event("#o-level", "input")
+    page.wait_for_timeout(300)
+    page.evaluate("window.scrollTo(0, 0)")
+    shot(page, "ottica", "#view-optics", m(
+        (1, "#o-profile", "l"), (2, "#o-profile-save", "l"), (3, "#o-profile-del", "r"), (4, "#o-kind", "r"),
         # in ordine fisico, come nella pagina: sensore, adattatore, cambio intermedio, obiettivo
-        (5, "#d-px", "l"), (6, "#o-relay-name", "l"), (7, "#o-inter-name", "l"), (8, "#o-objective", "l"),
-        (9, "#d-mag", "l"), (10, "#d-na", "l"), (11, "#o-immersion", "l"), (12, "#o-pxcal", "l"), (13, "#o-pxresult", "l"),
-        (14, "#o-filter-mode", "l"), (15, "#o-fname", "l"), (16, "#o-fcenter", "l"), (17, "#o-illum", "l"),
-        (18, "#o-notes", "l"), (19, "#o-save", "l"), (20, "#o-chip", "r")))
-    page.evaluate("document.querySelector('#card-optics .subsection').style.display = ''")
-    # profondità di campo: profilo senza Optovar (come gli esempi del capitolo 11), riquadro stretto
-    # perché i tre numeri non si sovrappongano
+        (5, "#d-px", "l"), (6, "#o-relay-name", "r"), (7, "#o-inter-name", "l"), (8, "#o-objective", "r"),
+        (9, "#d-mag", "l"), (10, "#d-na", "r"), (11, "#o-immersion", "l"), (12, "#o-pxcal", "r"), (13, "#o-pxresult", "l"),
+        (14, "#o-filter-mode", "r"), (15, "#o-fname", "l"), (16, "#o-fcenter", "r"), (17, "#o-illum", "l"),
+        (18, "#o-notes", "r"), (19, "#o-save", "l"), (20, "#o-chip", "r"), (21, "#opt-nav", "t"), (22, "#opt-sum", "t")))
+    page.click("#o-undo")
+    page.wait_for_timeout(200)
+    page.evaluate(hide_tools.format(v=""))
+    # profondità di campo: profilo senza Optovar (come gli esempi del capitolo 11)
     page.select_option("#o-profile", PROFILE); page.dispatch_event("#o-profile", "change")
     page.wait_for_timeout(300)
-    page.evaluate("Object.assign(document.querySelector('#card-optics .subsection').style, {width: '520px'})")
-    shot(page, "profondita", "#card-optics .subsection", m(
-        (1, "#d-ov", "l"), (2, "#d-result", "l"), (3, "#d-apply", "l")), pad=0)
-    page.evaluate("document.querySelector('#card-optics .subsection').style.width = ''")
+    shot(page, "profondita", "#opt-dof", m(
+        (1, "#d-ov", "l"), (2, "#d-result", "l"), (3, "#d-apply", "r")), pad=6)
     notes["profondita"]["text"] = page.inner_text("#d-result")
     # profilo macro: lo stesso esempio del capitolo 7.3 (90 mm a 1:2, f/8, Raynox +8 diottrie)
     page.select_option("#o-profile", PROFILE_MACRO); page.dispatch_event("#o-profile", "change")
     page.wait_for_timeout(500)
     page.evaluate("window.scrollTo(0, 0)")
-    page.evaluate("document.querySelector('#card-optics .subsection').style.display = 'none'")
+    page.evaluate(hide_tools.format(v="none"))
     shot(page, "ottica-macro", "#card-optics", m(
-        (1, "#o-kind", "l"), (2, "#m-search", "l"), (3, "#m-maker", "l"), (4, "#m-focal", "l"), (5, "#m-lens-add", "l"),
-        (6, "#m-mag", "l"), (7, "#m-fnum", "l"), (8, "#m-ext", "l"), (9, "#m-closeups", "l"), (10, "#o-pxresult", "l")))
-    page.evaluate("document.querySelector('#card-optics .subsection').style.display = ''")
+        (1, "#o-kind", "l"), (2, "#m-search", "l"), (3, "#m-maker", "r"), (4, "#m-focal", "l"), (5, "#m-lens-add", "r"),
+        (6, "#m-mag", "l"), (7, "#m-fnum", "r"), (8, "#m-ext", "l"), (9, "#m-closeups", "r"), (10, "#o-pxresult", "l")))
+    page.evaluate(hide_tools.format(v=""))
     page.select_option("#o-profile", PROFILE); page.dispatch_event("#o-profile", "change")
     page.wait_for_timeout(300)
 
@@ -346,41 +367,50 @@ with sync_playwright() as p:
     page.wait_for_timeout(1200)
     page.evaluate("window.scrollTo(0, 0)")
     shot(page, "calibrazione-esposizione", "#card-expo", m(
-        (1, "#x-stat", "l"), (2, "#x-target", "l"), (3, "#x-start", "l"), (4, "#x-result", "l")))
+        (1, "#x-stat", "l"), (2, "#x-target", "r"), (3, "#x-start", "l"), (4, "#x-result", "r")))
     page.click("#k-kind button[data-kind=flat]")
     page.wait_for_timeout(300)
     shot(page, "calibrazione-frame", "#card-calib", m(
-        (1, "#k-kind", "l"), (2, "#k-count", "l"), (3, "#k-target", "l"), (4, "#card-calib .progress-box", "l"),
-        (5, "#card-calib .seq-actions", "l")))
+        (1, "#k-kind", "l"), (2, "#k-count", "r"), (3, "#k-target", "l"), (4, "#card-calib .progress-box", "l"),
+        (5, "#card-calib .set-actions", "l")))
     shot(page, "calibrazione-libreria", "#card-library", m((1, "#k-open", "l"), (2, "#k-match", "l"), (3, "#k-table", "l")))
+    shot(page, "calibrazione-riepilogo", "#cal-sum", m((1, "#ksum-dark", "l"), (2, "#t-value", "l"), (3, "#t-spark", "l")), pad=4)
 
     # ---- configurazione ----
     page.click(".tabs button[data-tab=config]")
     page.wait_for_timeout(1200)
     page.evaluate("window.scrollTo(0, 0)")
+    page.fill("#lim-max", "44000"); page.dispatch_event("#lim-max", "input")
+    page.wait_for_timeout(200)
     shot(page, "fine-corsa", "#card-limits", m(
-        (1, "#lim-min", "l"), (2, "#lim-max", "l"), (3, "#lim-dir", "l"), (4, "#lim-save", "l"),
+        (1, "#lim-min", "l"), (2, "#lim-max", "l"), (3, "#lim-dir", "l"), (4, "#lim-save", "r"),
         (5, "#lim-zero", "l"), (6, "#lim-fw", "l")))
+    page.click("#lim-undo")
+    # la pagina intera, con l'indice a sinistra e il riepilogo a destra
+    page.evaluate("window.scrollTo(0, 0)")
+    page.wait_for_timeout(300)
+    shot(page, "configurazione", "#view-config", m(
+        (1, "#cfg-search", "l"), (2, "#cfg-nav a[href='#card-motor']", "l"), (3, "#card-motor .card-head h2", "l"),
+        (4, "#card-motor .set-details summary", "l"), (5, "#cfg-sum", "t")))
     shot(page, "meccanica", "#card-mech", m(
-        (1, "#mech-mode", "l"), (2, "#m-spr", "l"), (3, "#m-micro", "r"), (4, "#m-gear", "l"),
-        (5, "#m-umrev", "r"), (6, "#m-result", "l"), (7, "#m-save", "l")))
+        (1, "#mech-mode", "l"), (2, "#m-spr", "r"), (3, "#m-micro", "l"), (4, "#m-gear", "r"),
+        (5, "#m-umrev", "l"), (6, "#m-result", "l")))
     page.click("#mech-mode button[data-mode=manual]")
     page.fill("#m-umstep", "0.083"); page.dispatch_event("#m-umstep", "input")   # il valore misurato dell'esempio
     page.wait_for_timeout(200)
-    shot(page, "meccanica-manuale", "#card-mech", m((1, "#mech-mode", "l"), (2, "#m-umstep", "l"), (3, "#m-result", "l")))
+    shot(page, "meccanica-manuale", "#card-mech", m((1, "#mech-mode", "l"), (2, "#m-umstep", "r"), (3, "#m-result", "l")))
     page.click("#mech-mode button[data-mode=computed]")
-    shot(page, "comandi-manuali", "#card-jog", m((1, "#jog-max", "l"), (2, "#jog-hold", "l"), (3, "#jog-chunk", "l")))
+    shot(page, "comandi-manuali", "#card-jog", m((1, "#jog-max", "l"), (2, "#jog-hold", "r"), (3, "#jog-chunk", "l")))
     # bobine spente a motore fermo: compare l'opzione "Alimentale comunque durante la sequenza"
     post("/api/focuser/motor", {"name": "coil_power", "value": False})
     page.wait_for_timeout(1500)
     shot(page, "motore", "#card-motor", m(
-        (1, "#mo-step_mode", "l"), (2, "#mo-speed", "l"), (3, "#mo-coil_power", "l"), (4, "#opt-coil-seq", "l"),
-        (5, "#mo-reverse", "l"), (6, "#mo-backlash_in_enabled", "l"), (7, "#mo-backlash_in_steps", "l"), (8, "#mo-reload", "r")))
+        (1, "#mo-step_mode", "l"), (2, "#mo-speed", "r"), (3, "#mo-coil_power", "l"), (4, "#opt-coil-seq", "r"),
+        (5, "#mo-reverse", "l"), (6, "#mo-backlash_in_enabled", "r"), (7, "#mo-backlash_in_steps", "r"), (8, "#mo-reload", "r")))
     post("/api/focuser/motor", {"name": "coil_power", "value": True})
     shot(page, "smartphone", "#card-remote", m((1, "#r-enabled", "l"), (2, "#r-qr", "l"), (3, "#r-new", "l")))
     # 1 a sinistra e 2 a destra: le due righe sono troppo vicine per due numeri uno sopra l'altro
-    shot(page, "aggiornamenti", "#card-updates", m((1, "#up-app", "l"), (2, "#up-fw", "r"), (3, "#fw-update", "l"), (4, "#up-check", "r")))
-    shot(page, "temperatura", "#card-temp", m((1, "#t-value", "l"), (2, "#t-spark", "l")))
+    shot(page, "aggiornamenti", "#card-updates", m((1, "#up-app", "r"), (2, "#up-fw", "l"), (3, "#fw-update", "r"), (4, "#up-check", "r")))
     notes["meccanica"]["text"] = page.inner_text("#m-result")
 
     page.click(".tabs button[data-tab=log]")
@@ -395,7 +425,7 @@ with sync_playwright() as p:
     vw.click("#z-100")
     vw.wait_for_timeout(800)
     shot(vw, "visualizzatore", "body", m(
-        (1, "#prev", "l"), (2, "#v-name", "l"), (3, "#liveview", "l"), (4, "#z-out", "l"), (5, "#z-fit", "l"),
+        (1, "#prev", "l"), (2, "#v-count", "l"), (3, "#liveview", "l"), (4, "#z-out", "l"), (5, "#z-fit", "l"),
         (6, "#follow", "l"), (7, "#lock", "l"), (8, "#guides", "l"), (9, "#clear", "l"), (10, "#insp-btn", "l"),
         (11, "#fs", "l"), (12, "#guide-btn", "r"), (13, "#strip", "l")))
     vw.set_viewport_size({"width": 1500, "height": 1250})   # il pannello dell'Ispettore intero, fino ai valori sotto il puntatore

@@ -21,6 +21,8 @@
   --rail-seq: rgba(92, 178, 255, .32);
   --forbid: repeating-linear-gradient(135deg, rgba(255,107,107,.35) 0 6px, rgba(255,107,107,.12) 6px 12px);
   --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.25);
+  /* come Focus Fusion: riquadri delle impostazioni, fondo al passaggio del mouse, contorno dei controlli (≥ 3:1) */
+  --panel: #10151d; --hover: #1b2330; --control: #656f7d; --seg-on: color-mix(in srgb, var(--accent) 35%, transparent);
   color-scheme: dark;
 }
 :root[data-theme="light"] {
@@ -31,6 +33,7 @@
   --ok: #138a52; --warn: #b26b00; --bad: #c62828; --bad-strong: #d32f2f;
   --rail-seq: rgba(31,111,209,.25);
   --shadow: 0 1px 2px rgba(16,24,40,.06), 0 4px 16px rgba(16,24,40,.06);
+  --panel: #f7f8fa; --hover: #e3eaf3; --control: #7b8592; --seg-on: color-mix(in srgb, var(--accent) 25%, transparent);
   color-scheme: light;
 }
 
@@ -55,14 +58,14 @@ code, kbd { font: 13px ui-monospace, "SF Mono", Menlo, monospace; background: va
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line);
 }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; }
-.tabs { display: flex; gap: 4px; background: var(--card); border: 1px solid var(--line); padding: 4px; border-radius: 12px; }
-.tabs button { font: inherit; font-size: 14px; font-weight: 550; color: var(--text-2); background: none; border: 0;
-  padding: 7px 16px; border-radius: 9px; cursor: pointer; }
+.tabs { display: flex; gap: 3px; background: var(--bg-2); border: 1px solid var(--line); padding: 3px; border-radius: 11px; }
+.tabs button { font: inherit; font-size: 14px; font-weight: 600; color: var(--text-2); background: none; border: 0;
+  padding: 7px 16px; border-radius: 8px; cursor: pointer; }
 @media (max-width: 520px) {
   .tabs { width: 100%; flex-wrap: wrap; }
   .tabs button { flex: 1 1 auto; padding: 7px 8px; font-size: 13.5px; }
 }
-.tabs button[aria-selected="true"] { background: var(--card-2); color: var(--text); box-shadow: 0 0 0 1px var(--line); }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
 .status { display: flex; align-items: center; gap: 14px; margin-left: auto; flex-wrap: wrap; }
 .dot-label { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-2); }
 .dot-label i { width: 9px; height: 9px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 3px rgba(255,107,107,.15); }
@@ -114,7 +117,7 @@ code, kbd { font: 13px ui-monospace, "SF Mono", Menlo, monospace; background: va
 .optics-line { display: block; margin-top: 4px; color: var(--muted); }
 @media (max-width: 860px) { .optics-grid { grid-template-columns: 1fr; } }
 /* tipo di ottica: le sezioni dell'altro tipo spariscono */
-#card-optics[data-kind="macro"] .only-micro, #card-optics:not([data-kind="macro"]) .only-macro { display: none; }
+#view-optics[data-kind="macro"] .only-micro, #view-optics:not([data-kind="macro"]) .only-macro { display: none; }
 /* ricerca obiettivi (Lensfun + elenco personale) */
 .lens-search { position: relative; margin: 6px 0 0; }
 .lens-results { position: absolute; z-index: 15; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px;
@@ -392,3 +395,147 @@ input.auto-upd { border-color: var(--warn); box-shadow: 0 0 0 3px color-mix(in s
 .revert:hover, .revert:focus-visible { background: color-mix(in srgb, var(--warn) 24%, transparent); outline: none; }
 /* icona «riscansiona» (porte, fotocamere): disegnata, della stessa grandezza del ⌖ */
 .btn .ico-svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* campo con un valore non valido (es. µm per pixel misurati che non sono un numero) */
+input[aria-invalid="true"] { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn); }
+
+/* ---------------- schede di impostazioni (Configurazione): indice | pagina | riepilogo ----------------
+   Stile delle Impostazioni di Focus Fusion (commit 4d18cf7), per avere le due app coordinate:
+   pagina su fondo card, ogni sezione in un riquadro su fondo panel con il titolo appena sopra,
+   etichette in una colonna fissa di 190 px (colore secondario), controlli subito accanto, nessun separatore,
+   caselle di spunta, spiegazioni chiuse sotto «▸ Dettagli», pulsanti con fondo pieno e contorno «control»
+   (≥ 3:1 su ogni sfondo, WCAG 1.4.11). Indice e riepilogo restano fermi (--topbar-h la imposta app.js). */
+.view.settings [hidden] { display: none !important; }
+.view.settings { grid-template-columns: 236px minmax(0, 860px) minmax(230px, 290px); justify-content: center; gap: 20px; }
+.set-nav, .set-sum { position: sticky; top: calc(var(--topbar-h, 62px) + 18px); max-height: calc(100vh - var(--topbar-h, 62px) - 36px); overflow-y: auto; }
+
+/* indice: come la barra laterale di Focus Fusion */
+.set-nav { display: flex; flex-direction: column; gap: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.view.settings .set-search { height: 34px; margin-bottom: 6px; font-size: 14px; border: 1px solid var(--control); border-radius: 7px; background: var(--card); }
+.set-h { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-2); font-weight: 600; padding: 12px 12px 4px; }
+.set-nav a { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border-radius: 8px; color: var(--text);
+  text-decoration: none; font-size: 15px; }
+.set-nav a:hover { background: var(--hover); }
+.set-nav a.on { background: color-mix(in srgb, var(--accent) 30%, transparent); font-weight: 600; }
+.set-dot { margin-left: auto; width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--accent); }
+.set-dot.dot-warn { background: var(--warn); }
+
+/* la pagina: un riquadro per gruppo (Focheggiatore, App, Sistema) con il titolo fuori; dentro, le sezioni
+   sono separate da una linea sottile, senza riquadri annidati */
+.set-main { min-width: 0; }
+.set-group { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-2); font-weight: 600; margin: 0 0 8px 4px; }
+.set-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 4px 20px; box-shadow: var(--shadow); margin-bottom: 26px; }
+.set-sec { padding: 16px 0 18px; border-top: 1px solid var(--line); scroll-margin-top: calc(var(--topbar-h, 62px) + 14px); }
+.set-card > .set-sec:first-child { border-top: 0; }
+.set-sec .card-head { margin: 0 0 8px; justify-content: flex-start; flex-wrap: wrap; min-height: 34px; }
+.set-sec .card-head h2 { font-size: 16px; font-weight: 600; }
+.set-box { min-width: 0; }
+.set-box > .hint { margin: 0 0 8px; }
+.set-box > .result { margin: 10px 0 2px; background: none; border: 0; padding: 0; }  /* niente riquadri annidati */
+.set-note { font-size: 13.5px; color: var(--text-2); margin: 10px 0 0; }
+.set-note a { color: var(--accent); text-underline-offset: 2px; }
+.set-sub { font-size: 15px; font-weight: 600; color: var(--text); margin: 14px 0 4px; }
+
+/* righe */
+.set-rows { display: flex; flex-direction: column; gap: 10px; }
+.set-row { display: grid; grid-template-columns: 190px minmax(0, 1fr); align-items: center; gap: 4px 16px;
+  font-size: 15px; color: var(--text-2); font-weight: 400; }
+label.set-row { cursor: pointer; }
+.set-lbl { min-width: 0; }
+/* spiegazione breve accanto al controllo (come «libera ora: 9,6 GB» in Focus Fusion) */
+.set-help { flex: 1 1 220px; min-width: 0; font-size: 13.5px; color: var(--text-2); line-height: 1.4; }
+.set-val { font-size: 14.5px; color: var(--text); font-variant-numeric: tabular-nums; margin-right: 6px; }
+.set-ctl { display: flex; align-items: center; justify-content: flex-start; gap: 8px; flex-wrap: wrap; color: var(--text); min-width: 0; }
+.set-row > .warn, .set-rows > .warn { margin: 0; }
+
+/* controlli: contorno «control», fondo card, raggio 7, alti 34 */
+.view.settings .set-ctl select, .view.settings .set-ctl .num { height: 34px; min-height: 34px; border: 1px solid var(--control); border-radius: 7px; background-color: var(--card); }
+.view.settings .set-ctl select { min-width: 180px; max-width: 300px; }
+.view.settings .set-ctl .num { width: 92px; text-align: right; font-variant-numeric: tabular-nums; }
+.view.settings .set-ctl .num.wide { width: 120px; }
+.set-ctl .unit { font-size: 13.5px; color: var(--text-2); min-width: 34px; }
+.set-ctl .ro { font-variant-numeric: tabular-nums; color: var(--text); }
+.view.settings .btn { min-height: 34px; padding: 5px 13px; font-size: 14px; font-weight: 500; border-radius: 7px; }
+.view.settings .btn.ghost { background: var(--card); border: 1px solid var(--control); color: var(--text); }
+.view.settings .btn.ghost:hover:not(:disabled) { background: var(--hover); border-color: var(--muted); filter: none; }
+.view.settings .btn.primary { background: var(--accent); color: var(--accent-ink); border: 0; font-weight: 600; }
+/* scelte segmentate: senza fondo, la scelta attiva su fondo accent trasparente */
+.view.settings .set-ctl .seg { background: none; border: 0; padding: 0; gap: 4px; }
+.view.settings .set-ctl .seg button { font-size: 14px; font-weight: 500; color: var(--text); padding: 6px 12px; border-radius: 7px; }
+.view.settings .set-ctl .seg button:hover { background: var(--hover); }
+.view.settings .set-ctl .seg button[aria-checked="true"] { background: var(--seg-on); color: var(--text); font-weight: 600; }
+/* caselle di spunta: contorno «control», spunta nel colore del testo */
+.view.settings input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: 18px; height: 18px; min-height: 0; margin: 0; padding: 0; flex: none;
+  border: 1.5px solid var(--control); border-radius: 4px; background: transparent; position: relative; cursor: pointer; }
+.view.settings input[type="checkbox"]::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: 13px; line-height: 1; font-weight: 700; color: var(--text); opacity: 0; }
+.view.settings input[type="checkbox"]:checked::after { opacity: 1; }
+.view.settings input[type="checkbox"]:disabled { opacity: .45; cursor: not-allowed; }
+.view.settings input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* «▸ Dettagli» in fondo al riquadro, chiuso all'inizio */
+.set-details { margin-top: 10px; font-size: 13.5px; color: var(--text-2); }
+.set-details summary { cursor: pointer; color: var(--text-2); font-size: 13.5px; width: max-content; list-style: none; }
+.set-details summary::-webkit-details-marker { display: none; }
+.set-details summary::before { content: "▶"; display: inline-block; font-size: 9px; width: 14px; vertical-align: 1px; transition: transform .15s; }
+.set-details[open] summary::before { transform: rotate(90deg); }
+.set-details summary:hover { color: var(--text); }
+.set-details p { margin: 6px 0 0; max-width: 75ch; line-height: 1.5; }
+@media (prefers-reduced-motion: reduce) { .set-details summary::before { transition: none; } }
+
+/* barra «Modifiche non salvate»: compare solo quando c'è qualcosa da salvare */
+.save-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0 0; padding: 9px 12px; border-radius: 8px;
+  background: color-mix(in srgb, var(--warn) 10%, transparent); border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent); font-size: 14px; color: var(--text); }
+.save-bar > span { margin-right: auto; }
+.save-bar > span::before { content: "●"; color: var(--warn); margin-right: 7px; }
+.set-hit { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 7px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent); }
+
+/* riepilogo */
+.set-sum { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; }
+.set-sum h4 { margin: 0; font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-2); }
+.set-sum hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
+.sum-kv { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.sum-kv > span { font-size: 13px; color: var(--text-2); }
+.sum-kv > b { font-size: 15.5px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.sum-kv > b.big { font-size: 21px; letter-spacing: -.01em; }
+.sum-kv > em { font-style: normal; font-size: 13px; color: var(--text-2); overflow-wrap: anywhere; }
+.sum-kv > em.sum-ok { color: var(--ok); } .sum-kv > em.sum-warn { color: var(--warn); }
+
+@media (max-width: 1240px) {
+  .view.settings { grid-template-columns: 210px minmax(0, 1fr); }
+  .set-sum { position: static; max-height: none; grid-column: 2; grid-row: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .set-sum h4, .set-sum hr { grid-column: 1 / -1; }
+  .set-main { grid-column: 2; grid-row: 2; }
+  .set-nav { grid-column: 1; grid-row: 1 / span 2; }
+}
+@media (max-width: 760px) {
+  .view.settings { grid-template-columns: minmax(0, 1fr); }
+  .set-nav { grid-column: 1; grid-row: 1; flex-direction: row; overflow-x: auto; max-height: none; z-index: 5; padding: 6px; top: var(--topbar-h, 62px); }
+  .set-nav .set-h { display: none; }
+  .set-nav a { white-space: nowrap; min-height: 36px; }
+  .view.settings .set-search { min-width: 130px; margin: 0; }
+  .set-sum { grid-column: 1; grid-row: 2; }
+  .set-main { grid-column: 1; grid-row: 3; padding: 14px 12px 4px; }
+  .set-row { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Ottica e Calibrazione nello stesso stile */
+.view.settings .set-ctl .txt { height: 34px; min-height: 34px; width: 210px; border: 1px solid var(--control); border-radius: 7px; background-color: var(--card); }
+.view.settings .set-ctl .txt.wide { width: 320px; }
+.set-ctl .unit.pre { min-width: 0; }
+.set-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+.set-note.top { margin: 0 0 10px; }
+.save-bar.sticky { position: sticky; top: calc(var(--topbar-h, 62px) + 10px); z-index: 6; margin: 0 0 16px; background: var(--card);
+  box-shadow: var(--shadow); border-color: var(--warn); }
+.view.settings .lens-search { display: block; position: relative; }
+.view.settings #m-closeups { margin-top: 10px; }
+.view.settings .closeup-row .btn { min-height: 34px; }
+.view.settings .progress-box { background: none; border: 0; padding: 0; margin-top: 12px; }   /* niente riquadri annidati */
+.view.settings .table-wrap { margin: 12px 0 0; }
+.sum-temp .card-head { margin: 0 0 4px; }
+.sum-temp .card-head h2 { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-2); }
+.sum-temp .temp-big { font-size: 28px; }
+.sum-temp .spark { height: 60px; }
+.sum-temp .hint { font-size: 12.5px; margin: 6px 0 0; }
+.ok-t { color: var(--ok); } .warn-t { color: var(--warn); }
+@media (max-width: 760px) { .view.settings .set-ctl .txt, .view.settings .set-ctl .txt.wide { width: 100%; } }

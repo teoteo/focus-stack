@@ -82,8 +82,9 @@ déclencher</b> : des dizaines de photos à des mises au point différentes, pr
 image entièrement nette avec <b>Helicon Focus</b> (ou un programme similaire).</p>
 <h2>Principe de fonctionnement</h2>
 <p>L'app Focus Stack lance sur le Mac un petit programme (le <i>serveur</i>) qui dialogue avec le focuser (une
-carte Arduino équipée du firmware myFocuserPro2) et avec l'appareil photo. L'interface s'ouvre dans
-<b>Safari</b>, à l'adresse <code>http://localhost:8765</code>, et n'est accessible que depuis ce Mac.</p>
+carte Arduino équipée du firmware myFocuserPro2) et avec l'appareil photo. L'interface s'ouvre dans la
+<b>fenêtre de l'app</b> : c'est une page web servie à l'adresse <code>http://localhost:8765</code>, accessible
+uniquement depuis ce Mac (on peut aussi l'ouvrir dans un navigateur).</p>
 <ul>
 <li>Le <b>focuser</b> fait tourner la molette de mise au point avec un moteur pas à pas. Chaque <i>pas</i> du
   moteur déplace la platine (ou l'objectif) d'une fraction de micromètre : de combien, c'est la
@@ -94,7 +95,7 @@ carte Arduino équipée du firmware myFocuserPro2) et avec l'appareil photo. L'i
 </ul>
 <h2>Matériel nécessaire</h2>
 <ul>
-<li>Un Mac sous macOS 13 ou ultérieur (Intel) ou macOS 14 ou ultérieur (Apple Silicon), avec Safari.</li>
+<li>Un Mac sous macOS 13 ou ultérieur (Intel) ou macOS 14 ou ultérieur (Apple Silicon).</li>
 <li>Un focuser <b>myFocuserPro2</b> (version avec pilote DRV8825) ou <b>Ardufocus</b> (carte rev1 avec DRV8825),
   connecté par son câble USB et alimenté (12 V).</li>
 <li>Un appareil photo Nikon, Canon ou Sony avec son câble USB. Dans ce guide, l'exemple est un <b>Nikon D5600</b>.</li>
@@ -128,12 +129,14 @@ add(f"""
 <p>L'app contient déjà tout ce dont elle a besoin : il n'y a rien d'autre à installer.</p>
 <h2>Lancement et fermeture</h2>
 <ul>
-<li>Au lancement, Focus Stack ouvre sa page dans Safari et reste dans le Dock. Un clic sur l'icône du Dock
-  ramène la page au premier plan.</li>
+<li>Au lancement, Focus Stack ouvre sa fenêtre et reste dans le Dock. Fermer la fenêtre (<kbd>⌘W</kbd>) ne fait
+  que la masquer : l'app reste ouverte et un clic sur l'icône du Dock la ramène. Le visualiseur et le guide
+  s'ouvrent dans des fenêtres séparées ; les liens vers des sites externes s'ouvrent dans le navigateur.</li>
 <li>Pour quitter : <kbd>⌘Q</kbd> dans l'app, ou <span class="ui">Quitter</span> dans le menu de l'icône du Dock.
   Si une séquence est en cours, l'app demande confirmation, l'interrompt et arrête le moteur.</li>
-<li>Fermer Safari ne quitte <b>pas</b> l'app. Si la page reste ouverte, elle affiche « {ui("Focus Stack è chiuso")} »
-  et se recharge toute seule quand vous rouvrez l'app.</li>
+<li>Pendant une pile ou une série de calibration, l'icône du Dock affiche une <b>barre de progression</b>. Quand
+  elle se termine, ou s'arrête sur une erreur, pendant que vous utilisez une autre app, une <b>notification</b>
+  arrive : la première fois, macOS demande l'autorisation.</li>
 </ul>
 <h2>Mises à jour</h2>
 <p>Au lancement, puis toutes les 6 heures, l'app vérifie s'il existe une nouvelle version. Si c'est le cas, une
@@ -270,6 +273,10 @@ add(f"""
     f"<b>{ui('Rileggi')}</b> les réglages de l'appareil photo. Après chaque modification, l'app relit la valeur que l'appareil a réellement acceptée.",
     f"<b>{ui('◉ Scatto di prova')}</b> : une photo à la position actuelle, qui s'affiche dans {ui('Ultimo scatto')} et dans la visionneuse.",
 ])}
+<p>Avec les <b>Sony</b>, le temps de pose et l'ISO changent par crans, comme en tournant la molette : une valeur
+éloignée peut demander quelques secondes. Pour l'<b>A6400</b>, le menu ISO va jusqu'à 102400, le maximum qu'il accepte.
+Si l'appareil n'accepte pas une valeur en 12 secondes, l'app le signale : débranchez et rebranchez le câble USB, ou
+éteignez et rallumez l'appareil.</p>
 <h2>Dernière photo et visée en direct</h2>
 <div class="two">
 {fig("ultimo-scatto", [
@@ -370,7 +377,7 @@ figure, un profil pour microscope : un objectif 10× avec le changeur de grossi
 monté sur une bague T2 sans lentille.</p>
 {fig("ottica", [
     f"<b>{ui('Profilo da modificare')}</b> : choisissez-le pour charger ses valeurs ; <i>{ui('— nuovo profilo —')}</i> part d'un formulaire vide.",
-    f"<b>{ui('Salva come nuovo profilo…')}</b> : demande un nom et enregistre une copie, sans modifier le profil de départ.",
+    f"<b>{ui('Salva come nuovo profilo…')}</b>, dans la barre qui apparaît en haut : demande un nom et enregistre une copie, sans modifier le profil de départ.",
     f"<b>{ui('Elimina profilo')}</b>, après confirmation.",
     f"<b>{ui('Tipo di ottica')}</b> : <i>{ui('Microscopio')}</i> (objectif avec grossissement et ON gravés) ou <i>{ui('Macro fotografica')}</i> (objectif photo, tubes et bonnettes, 7.3).",
     f"<b>{ui('Pixel del sensore (pixel pitch in µm)')}</b>. Nikon D5600 : <b>3,9 µm</b> (23,5 mm ÷ 6000 pixels). On le trouve dans la fiche technique de l’appareil, sur <b>digicamdb.com</b> (appareils photo) ou dans la base de capteurs d’<b>AstroBin</b> (caméras dédiées, en cherchant par exemple IMX571).",
@@ -387,8 +394,10 @@ monté sur une bague T2 sans lentille.</p>
     "<b>Centre</b> et <b>largeur de bande</b> en nm pour un passe-bande ; pour un passe-haut ou un passe-bas, la longueur d'onde de coupure.",
     f"<b>{ui('Illuminazione')}</b> (texte libre, avec suggestions), <b>intensité</b> en % et <b>température de couleur</b> en K (par exemple 4000 K pour une lumière neutre).",
     f"<b>{ui('Note')}</b> libres, qui sont enregistrées dans les données de la pile.",
-    f"<b>{ui('Salva profilo')}</b> : remplace le profil choisi ; s'il est nouveau, demande un nom.",
+    f"<b>{ui('Salva profilo')}</b>, dans la barre <i>{ui('Modifiche non salvate')}</i> qui apparaît en haut dès que vous changez une valeur, avec <b>{ui('Annulla')}</b> (retour au profil enregistré) : remplace le profil choisi ; s'il est nouveau, demande un nom.",
     "Le <b>profil</b> ouvert ; en orange s'il y a des modifications non enregistrées.",
+    "<b>Index</b> des sections, avec la recherche : un clic mène à la section. Avec Microscope ou Macro, seules les sections de ce type apparaissent.",
+    "<b>Récapitulatif</b>, toujours visible pendant la saisie : grandissement sur le capteur, échelle sur l'échantillon (mesurée ou calculée, avec l'écart), profondeur de champ et pas conseillé.",
 ], layout="full")}
 <p>Un champ vide signifie « non indiqué » et n'est pas écrit. Si vous ne choisissez aucun profil dans la séquence, la
 pile est notée <b>sans filtre</b> et sans données optiques. Les mêmes valeurs d'ouverture numérique, de grossissement et
@@ -486,6 +495,13 @@ plus récents : pour les darks, même appareil photo, même ISO et même temps 
 profil optique. Les images ne sont pas copiées. C'est la même bibliothèque que celle qu'utilise <b>Focus Fusion</b>, qui y
 enregistre ses « masters » à côté.</p>
 
+<p>À droite, le <b>récapitulatif</b> reste visible pendant que vous travaillez dans l'onglet.</p>
+{fig("calibrazione-riepilogo", [
+    f"<b>{ui('Per la prossima pila')}</b> : pour les darks, les flats et les darks des flats, ✓ avec la date du jeu qui serait utilisé, ou <i>{ui('manca')}</i> en orange. S'il manque un jeu, un point orange apparaît aussi à côté de <i>{ui('Libreria')}</i> dans l'index.",
+    "<b>Température</b> actuelle de la sonde.",
+    "Évolution sur les <b>60 dernières minutes</b> : comparez-la avec la température des darks dans le tableau.",
+], layout="side narrow")}
+
 <h2>7.7 Suivi sur smartphone</h2>
 <p>Pour suivre une longue pile loin du Mac, <span class="ui">{ui('Configurazione')} › {ui('Avanzamento da smartphone')}</span>
 active une page <b>en lecture seule</b> sur le réseau local.</p>
@@ -512,11 +528,12 @@ EVID = ui("Evidenzia sull'immagine")
 add(f"""
 <h1><span class="n">8</span>La visionneuse</h1>
 <p>Elle s'ouvre avec <span class="ui">{ui('Apri visualizzatore ↗')}</span> ou d'un clic sur la dernière photo, dans une
-fenêtre séparée que vous pouvez placer sur un second écran. Elle affiche les photos en pleine résolution (y compris
+fenêtre séparée. Avec deux écrans, elle s'ouvre d'elle-même en plein écran sur l'autre ; on peut le désactiver dans
+<span class="ui">{ui('Configurazione')} › {ui('Visualizzatore')}</span>. Elle affiche les photos en pleine résolution (y compris
 les RAW, convertis à la volée) avec zoom et déplacement, ainsi que la visée en direct de l'appareil photo.</p>
 {fig("visualizzatore", [
     "<b>◀ ▶</b> photo précédente et suivante (flèches <kbd>←</kbd> <kbd>→</kbd>).",
-    "Nom du fichier ; numéro de la photo, type, position, température et heure.",
+    "<b>Compteur de la pile</b> : pendant la séquence, la dernière photo prise sur le total (par exemple 75/115, <i>en cours</i>), puis <i>terminée</i> ; avec les photos test, leur nombre. À côté, le nom du fichier et, dessous, numéro de la photo, position, température et heure. Pendant la pile, une ligne bleue le long du bord supérieur de la fenêtre montre l'avancement.",
     f"<b>{ui('● Live')}</b> (<kbd>L</kbd>) : la visée en direct dans la même fenêtre, avec zoom et déplacement.",
     "<b>Zoom</b> − et + (<kbd>−</kbd> <kbd>+</kbd>) et niveau d'agrandissement.",
     f"<b>{ui('Adatta')}</b> (<kbd>0</kbd>), <b>100%</b> (<kbd>1</kbd> : un pixel du capteur = un pixel de l'écran), <b>{ui('Reset')}</b> (<kbd>R</kbd>).",
@@ -527,7 +544,7 @@ les RAW, convertis à la volée) avec zoom et déplacement, ainsi que la visée 
     f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>) : histogrammes, pixels brûlés et noirs, valeurs sous le pointeur (voir ci-dessous).",
     "<b>Plein écran</b> (<kbd>F</kbd>).",
     "<b>?</b> : ce guide, au chapitre de la visionneuse.",
-    f"<b>Vignettes</b> : un clic ouvre la photo. <i>{ui('P')}</i> = photo test, <i>{ui('C')}</i> = image de calibration, <i>{ui('E')}</i> = photo pour l'exposition, les numéros sont les photos de la séquence.",
+    f"<b>Vignettes</b> : un clic ouvre la photo. <i>{ui('P')}</i> = photo test, <i>{ui('C')}</i> = image de calibration, <i>{ui('E')}</i> = photo pour l'exposition, les numéros sont les photos de la séquence. La bande montre seulement la séquence en cours ou la dernière : elle se vide au démarrage d'une séquence, et la première photo test prise ensuite en commence une nouvelle. Les fichiers restent dans le dossier.",
 ], layout="full", anchors={n: "b" for n in range(1, 12)})}
 <p>À la souris : faites glisser pour déplacer l'image, molette (ou pincement sur le trackpad) pour zoomer autour du
 pointeur, double-clic pour passer de « ajuster » à 100 % et inversement. Au-delà de 150 %, les pixels restent nets,
@@ -554,11 +571,22 @@ add(f"""
 <h1><span class="n">9</span>Limites de sécurité</h1>
 <p class="lead">Les limites empêchent l'objectif de toucher la lame et la mécanique d'arriver en butée. Il faut
 les définir avant tout, sans se presser.</p>
+<p>L'onglet <b>{ui('Configurazione')}</b> est une page unique, divisée en groupes {ui('Focheggiatore')}, {ui('App')} et
+{ui('Sistema')}. Les onglets {ui('Ottica')} et {ui('Calibrazione')} sont construits de la même façon.</p>
+{fig("configurazione", [
+    f"<b>{ui('Cerca')}</b> : tapez une partie d'un nom (par exemple « jeu ») et seules les lignes qui le contiennent restent.",
+    "<b>Index</b> : un clic mène à la section ; l'entrée en surbrillance suit le défilement. Un point signale des modifications non enregistrées ou une mise à jour disponible.",
+    "<b>Titre de la section</b> ; le <b>?</b> ouvre le guide à cet endroit.",
+    f"<b>{ui('Dettagli')}</b> : les explications plus longues, fermées au départ.",
+    f"<b>{ui('Riepilogo')}</b>, toujours visible : résolution, course utile, firmware, version de l'app et suivi sur smartphone.",
+], layout="full")}
+<p>Presque tout s'enregistre dès que vous changez une valeur : les réglages du moteur partent aussitôt au firmware,
+la mécanique et les autres options dans les réglages de l'app. Les limites, ci-dessous, font exception.</p>
 {fig("fine-corsa", [
     f"<b>{ui('Fine corsa inferiore')}</b> en pas ; <span class='ui'>⌖ {ui('Usa posizione attuale')}</span> la reprend de la position du focuser.",
     f"<b>{ui('Fine corsa superiore')}</b>. Vide = le maximum du firmware.",
     f"<b>Vers l'échantillon</b> : si, en se rapprochant de l'échantillon, le nombre de pas diminue ou augmente. Sert à étiqueter correctement {ui('Avvicina')}/{ui('Allontana')}.",
-    f"<b>{ui('Salva fine corsa')}</b>.",
+    f"<b>{ui('Salva fine corsa')}</b>, dans la barre <i>{ui('Modifiche non salvate')}</i> qui apparaît quand vous changez une valeur ; <b>{ui('Annulla')}</b> revient aux valeurs enregistrées. C'est la seule partie de la Configuration qui ne s'enregistre pas toute seule.",
     f"<b>{ui('Imposta qui lo zero')}</b> : la position actuelle devient 0 ; les limites et la séquence sont décalées en conséquence.",
     f"<b>{ui('Scrivi il massimo nel firmware')}</b> : la limite supérieure devient la limite du firmware.",
 ], layout="full")}
@@ -601,8 +629,7 @@ moteur est couplé à la vis micrométrique.</p>
     f"<b>{ui('Microstep')}</b> : lu dans le firmware, il ne se modifie pas ici (voir {ui('Motore (firmware)')}).",
     f"<b>{ui('Rapporto di riduzione')}</b> : combien de tours fait le moteur pour un tour de molette.",
     f"<b>{ui('Corsa per giro manopola (µm)')}</b> : de combien de µm la platine se déplace à chaque tour de la molette micrométrique.",
-    "<b>Résultat</b> : µm par pas, pas par µm, µm pour 1000 pas.",
-    f"<b>{ui('Salva meccanica')}</b>.",
+    "<b>Résultat</b> : µm par pas, pas par µm, µm pour 1000 pas. Les modifications sont enregistrées automatiquement.",
 ])}
 <h2>10.1 La chaîne de transmission</h2>
 <p>Du moteur à la platine, le mouvement passe par plusieurs étages, et chacun multiplie ou divise :</p>
@@ -749,7 +776,7 @@ add(f"""
 <p class="lead">Chaque photo n'est nette que dans une fine tranche de l'échantillon, la <b>profondeur de champ</b>.
 Pour que tout soit net après le stacking, la mise au point ne doit pas se déplacer de plus que cette tranche entre une
 photo et la suivante, avec un peu de chevauchement.</p>
-<p>Le calcul se trouve en bas de l'onglet <b>{ui('Ottica')}</b> et utilise l'ouverture numérique, le grossissement sur le
+<p>Le calcul se trouve en bas de l'onglet <b>{ui('Ottica')}</b>, dans le groupe <b>{ui('Strumenti')}</b> (le résultat apparaît aussi dans le récapitulatif à droite), et utilise l'ouverture numérique, le grossissement sur le
 capteur (objectif × changeur intermédiaire × adaptateur) et le pixel du capteur du profil ouvert (chapitre 7.2).</p>
 {fig("profondita", [
     f"<b>{ui('Sovrapposizione (%)')}</b> entre une tranche nette et la suivante ; 20 à 30 % est une bonne valeur.",
@@ -814,7 +841,7 @@ add(f"""
 <h2>{ui('Motore (firmware)')}</h2>
 {fig("motore", [
     f"<b>{ui('Microstep')}</b> : {ui('passo intero')}, 1/2 … 1/32 (voir 10.2). Le modifier change l'échelle des positions : vérifiez ensuite à nouveau les limites.",
-    f"<b>{ui('Velocità')}</b> du firmware : {ui('Lenta').lower()}, {ui('Media').lower()}, {ui('Veloce').lower()}.",
+    f"<b>{ui('Velocità')}</b> du firmware : {ui('Lenta').lower()}, {ui('Media').lower()}, {ui('Veloce').lower()}. Avec le myFocuserPro2 et le firmware build 7, la vitesse maximale des mouvements est de 80, 200 et 400 pas par seconde ; chaque mouvement démarre à 40 pas par seconde et accélère.",
     f"<b>{ui('Bobine alimentate a motore fermo')}</b> : le moteur maintient sa position, mais chauffe.",
     f"<b>{ui('Alimentale comunque durante la sequenza')}</b> (apparaît quand les bobines sont éteintes ; activée par défaut) : les bobines s'allument au lancement de la pile et s'éteignent de nouveau après le retour au début.",
     f"<b>{ui('Inverti verso di rotazione')}</b>.",
@@ -845,7 +872,7 @@ nombreuses secondes.</p>
 {fig("aggiornamenti", [
     "Version de l'<b>app</b> et résultat de la dernière vérification.",
     "Version du <b>firmware</b> sur le focuser.",
-    f"<b>{ui('Aggiorna firmware')}</b> : environ 20 secondes, les réglages du focuser sont conservés. Ne débranchez pas le câble ; en cas de problème, il suffit de recommencer. La build 5 rend le mouvement continu quand le bouton est maintenu enfoncé ; depuis la build 4, il y a l'arrêt automatique si le Mac cesse de communiquer.",
+    f"<b>{ui('Aggiorna firmware')}</b> : environ 20 secondes, les réglages du focuser sont conservés. Ne débranchez pas le câble ; en cas de problème, il suffit de recommencer. La build 5 rend le mouvement continu quand le bouton est maintenu enfoncé ; depuis la build 4, il y a l'arrêt automatique si le Mac cesse de communiquer. La build 7 démarre les mouvements plus doucement (40 pas par seconde) et divise par deux la vitesse lente du myFocuserPro2.",
     f"<b>{ui('Controlla ora')}</b> s'il existe des mises à jour de l'app.",
 ], layout="side")}
 <p>L'app choisit toute seule le firmware adapté à la carte (myFocuserPro2 ou Ardufocus). L'<b>Ardufocus</b> ne
@@ -855,10 +882,10 @@ carte.</p>
 dernier mouvement. Pour ne pas perdre la position, l'app la fait enregistrer immédiatement chaque fois qu'elle ferme la
 connexion ({ui('Disconnetti')}, sortie de l'app, mise à jour).</p>
 <h2>{ui('Temperatura')}</h2>
-{fig("temperatura", [
-    "Température actuelle de la sonde.",
-    "Évolution sur les 60 dernières minutes. La température de chaque photo est enregistrée dans <code>sequence.json</code> et résumée dans <code>sequence.txt</code> : utile, car la mise au point dérive avec la dilatation thermique.",
-], layout="side")}
+<p>La température actuelle de la sonde est dans la barre du haut. Le graphique des 60 dernières minutes se trouve dans
+le récapitulatif de l'onglet <b>{ui('Calibrazione')}</b> (chapitre 7.6), à côté des darks. La température de chaque photo
+est enregistrée dans <code>sequence.json</code> et résumée dans <code>sequence.txt</code> : utile, car la mise au point
+dérive avec la dilatation thermique.</p>
 """)
 
 # 13

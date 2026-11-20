@@ -54,6 +54,7 @@ UI = {
     "● Live": "● Live",
     "■ Ferma live": "■ Stop live",
     "Apri visualizzatore ↗": "Open viewer ↗",
+    "Visualizzatore": "Viewer",
     "Inizio": "Start",
     "Fine": "End",
     "⌖ qui": "⌖ here",
@@ -114,7 +115,6 @@ UI = {
     "Lingua": "Language",
     "Corsa per giro manopola (µm)": "Travel per knob turn (µm)",
     "µm per passo": "µm per step",
-    "Salva meccanica": "Save mechanics",
     "Motore (firmware)": "Motor (firmware)",
     "Microstep": "Microstep",
     "Velocità": "Speed",
@@ -258,8 +258,9 @@ different focus positions, ready to be merged into one fully sharp image with <b
 similar program).</p>
 <h2>How it works</h2>
 <p>The Focus Stack app starts a small program on the Mac (the <i>server</i>) that talks to the focuser (an
-Arduino board running the myFocuserPro2 firmware) and to the camera. The interface opens in <b>Safari</b> at
-<code>http://localhost:8765</code> and can only be reached from this Mac.</p>
+Arduino board running the myFocuserPro2 firmware) and to the camera. The interface opens in the <b>app's
+window</b>: it is a web page served at <code>http://localhost:8765</code>, reachable only from this Mac (it can also be
+opened in a browser).</p>
 <ul>
 <li>The <b>focuser</b> turns the focus knob with a stepper motor. Each motor <i>step</i> moves the stage (or the
   objective) by a fraction of a micrometre; how much is worked out by the <b>mechanical setup</b> (chapter 10).</li>
@@ -269,7 +270,7 @@ Arduino board running the myFocuserPro2 firmware) and to the camera. The interfa
 </ul>
 <h2>What you need</h2>
 <ul>
-<li>A Mac with macOS 13 or later (Intel) or macOS 14 or later (Apple Silicon), with Safari.</li>
+<li>A Mac with macOS 13 or later (Intel) or macOS 14 or later (Apple Silicon).</li>
 <li>A <b>myFocuserPro2</b> focuser (DRV8825 driver version) or an <b>Ardufocus</b> (rev1 board with DRV8825),
   connected with its USB cable and powered (12 V).</li>
 <li>A Nikon, Canon or Sony camera with its USB cable. This guide uses a <b>Nikon D5600</b> as the example.</li>
@@ -302,12 +303,14 @@ add(f"""
 <p>The app already contains everything it needs: there is nothing else to install.</p>
 <h2>Starting and quitting</h2>
 <ul>
-<li>When it starts, Focus Stack opens its page in Safari and stays in the Dock. Clicking the Dock icon brings
-  the page back to the front.</li>
+<li>When it starts, Focus Stack opens its window and stays in the Dock. Closing the window (<kbd>⌘W</kbd>)
+  only hides it: the app keeps running and clicking the Dock icon brings it back. The viewer and the guide open
+  in separate windows; links to external sites open in the browser.</li>
 <li>To quit: <kbd>⌘Q</kbd> on the app, or <span class="ui">{ui("Esci")}</span> from the Dock icon's menu.
   If a sequence is running, the app asks for confirmation, stops it and halts the motor.</li>
-<li>Closing Safari does <b>not</b> quit the app. If the page stays open it shows “{ui("Focus Stack è chiuso")}” and
-  reloads by itself when you reopen the app.</li>
+<li>During a stack or a calibration series the Dock icon shows a <b>progress bar</b>. When it finishes, or stops
+  because of an error, while you are using another app you get a <b>notification</b>: the first time macOS asks
+  for permission.</li>
 </ul>
 <h2>Updates</h2>
 <p>At start-up, and then every 6 hours, the app checks for a new version. If there is one, a bar with
@@ -441,6 +444,9 @@ add(f"""
     f"<b>{ui('Rileggi')}</b> the settings from the camera. After every change the app reads back the value the camera actually accepted.",
     "<b>Test shot</b>: one photo at the current position, shown in Latest shot and in the viewer.",
 ])}
+<p>With <b>Sony</b> cameras, shutter speed and ISO change in steps, as if turning the dial: a distant value can take
+a few seconds. For the <b>A6400</b> the ISO menu goes up to 102400, the highest value it accepts. If the camera does not
+accept a value within 12 seconds, the app tells you: unplug and replug the USB cable, or switch the camera off and on.</p>
 <h2>Latest shot and live view</h2>
 <div class="two">
 {fig("ultimo-scatto", [
@@ -525,7 +531,7 @@ of type <b>{ui('Microscopio')}</b> or <b>{ui('Macro fotografica')}</b> (7.3). Th
 10× objective with an Optovar 1.6× magnification changer and the camera on a T2 adapter with no lens.</p>
 {fig("ottica", [
     f"<b>{ui('Profilo da modificare')}</b>: choose one to load its values; <i>{ui('— nuovo profilo —')}</i> starts from an empty form.",
-    f"<b>{ui('Salva come nuovo profilo…')}</b>: asks for a name and saves a copy, leaving the original profile as it was.",
+    "<b>Save as new profile…</b>, in the bar that appears at the top: asks for a name and saves a copy, leaving the original profile as it was.",
     f"<b>{ui('Elimina profilo')}</b>, after a confirmation.",
     f"<b>{ui('Tipo di ottica')}</b>: <i>{ui('Microscopio')}</i> (objective with engraved magnification and NA) or <i>{ui('Macro fotografica')}</i> (photographic lens, tubes and close-up lenses, 7.3).",
     "<b>Sensor pixel</b> (pixel pitch) in µm. Nikon D5600: <b>3.9 µm</b> (23.5 mm ÷ 6,000 pixels). It is in the camera's specifications, on <b>digicamdb.com</b> (photo cameras) or in the sensor database of <b>AstroBin</b> (dedicated cameras, searching for example IMX571).",
@@ -542,8 +548,10 @@ of type <b>{ui('Microscopio')}</b> or <b>{ui('Macro fotografica')}</b> (7.3). Th
     "<b>Centre</b> and <b>bandwidth</b> in nm for a band pass; for long pass and short pass, the cut-off wavelength.",
     f"<b>{ui('Illuminazione')}</b> (free text, with suggestions), <b>intensity</b> in % and <b>colour temperature</b> in K (for example 4000 K for a neutral light).",
     f"Free <b>{ui('Note')}</b>, recorded in the stack's data.",
-    f"<b>{ui('Salva profilo')}</b>: overwrites the chosen profile; if it is a new one, asks for a name.",
+    "<b>Save profile</b>, in the <i>Unsaved changes</i> bar that appears at the top as soon as you change a value, with <b>Cancel</b> (back to the saved profile): overwrites the chosen profile; if it is a new one, asks for a name.",
     "The open <b>profile</b>; amber if there are unsaved changes.",
+    "<b>Index</b> of the sections, with search: a click takes you to the section. With Microscope or Macro it shows only the sections of that type.",
+    "<b>Summary</b>, always in view while you type: magnification on the sensor, scale on the sample (measured or calculated, with the deviation), depth of field and recommended step.",
 ], layout="full")}
 <p>An empty field means “not specified” and is not written. If you choose no profile in the sequence, the stack is
 recorded as taken <b>without a filter</b> and with no optical data. The same NA, magnification and pixel values are
@@ -640,6 +648,13 @@ differ.</p>
 sets: for darks the same camera, ISO and shutter speed; for flats the same optics profile as well. The frames are not
 copied. It is the same library used by <b>Focus Fusion</b>, which saves its “masters” next to them.</p>
 
+<p>On the right, the <b>summary</b> stays in view while you work in the tab.</p>
+{fig("calibrazione-riepilogo", [
+    "<b>For the next stack</b>: for darks, flats and flat darks, ✓ with the date of the set that would be used, or <i>missing</i> in orange. If a set is missing, an orange dot also appears next to <i>Library</i> in the index.",
+    "Current probe <b>temperature</b>.",
+    "The <b>last 60 minutes</b>: compare it with the temperature of the darks in the table.",
+], layout="side narrow")}
+
 <h2>7.7 {ui('Avanzamento da smartphone')}</h2>
 <p>To follow a long stack away from the Mac, turn on a <b>read-only</b> page on the local network in
 <span class="ui">{ui('Configurazione')} › {ui('Avanzamento da smartphone')}</span>.</p>
@@ -665,11 +680,12 @@ and the sound does not arrive.</p>
 add(f"""
 <h1><span class="n">8</span>The viewer</h1>
 <p>Open it with <span class="ui">{ui('Apri visualizzatore ↗')}</span> or by clicking the latest shot. It is a separate
-window you can move to a second monitor. It shows the photos at full resolution (RAW files too, converted on the
+window: with two monitors it opens full screen on the other one by itself (you can turn this off in
+<span class="ui">{ui('Configurazione')} › {ui('Visualizzatore')}</span>). It shows the photos at full resolution (RAW files too, converted on the
 fly) with zoom and pan, and the camera's live view.</p>
 {fig("visualizzatore", [
     "<b>◀ ▶</b> previous and next shot (arrow keys <kbd>←</kbd> <kbd>→</kbd>).",
-    "File name; shot number, type, position, temperature and time.",
+    "<b>Stack counter</b>: during the sequence the last shot taken out of the total (for example 75/115, <i>running</i>), then <i>completed</i>; with test shots, how many there are. Next to it the file name and, below, shot number, position, temperature and time. During the stack a blue line along the top edge of the window shows the progress.",
     "<b>● Live</b> (<kbd>L</kbd>): live view in the same window, with zoom and pan.",
     "<b>Zoom</b> − and + (<kbd>−</kbd> <kbd>+</kbd>) and the zoom level.",
     f"<b>{ui('Adatta')}</b> (<kbd>0</kbd>), <b>100%</b> (<kbd>1</kbd>: one sensor pixel = one screen pixel), <b>{ui('Reset')}</b> (<kbd>R</kbd>).",
@@ -680,7 +696,7 @@ fly) with zoom and pan, and the camera's live view.</p>
     f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>): histograms, burnt-out and black pixels, values under the pointer (see below).",
     "<b>Full screen</b> (<kbd>F</kbd>).",
     "<b>?</b>: this guide, at the viewer chapter.",
-    "<b>Thumbnails</b>: click to open a shot. <i>P</i> = test shot, <i>C</i> = calibration frame, <i>E</i> = exposure photo, numbers are the sequence shots.",
+    "<b>Thumbnails</b>: click to open a shot. <i>P</i> = test shot, <i>C</i> = calibration frame, <i>E</i> = exposure photo, numbers are the sequence shots. The strip shows only the current or last sequence: it empties when a sequence starts, and the first test shot taken afterwards starts a new one. The files stay in the folder.",
 ], layout="full", anchors={n: "b" for n in range(1, 12)})}
 <p>With the mouse: drag to pan, scroll wheel (or pinch on the trackpad) to zoom around the pointer, double-click to
 switch between “fit” and 100%. Above 150% the pixels stay crisp, without blurring.</p>
@@ -706,11 +722,22 @@ add(f"""
 <h1><span class="n">9</span>Safety limits</h1>
 <p class="lead">The limits stop the objective from touching the slide and the mechanics from hitting their end
 stops. Set them first, calmly.</p>
+<p>The <b>Settings</b> tab is a single page, divided into the groups Focuser, App and System. The Optics and
+Calibration tabs are built the same way.</p>
+{fig("configurazione", [
+    "<b>Search</b>: type part of a name (for example “backlash”) and only the rows that contain it remain.",
+    "<b>Index</b>: a click takes you to the section; the highlighted entry follows the scrolling. A dot marks unsaved changes or an available update.",
+    "<b>Section title</b>; the <b>?</b> opens the guide at that point.",
+    "<b>Details</b>: the longer explanations, closed at first.",
+    "<b>Summary</b>, always in view: resolution, usable travel, firmware, app version and smartphone progress.",
+], layout="full")}
+<p>Almost everything is saved as soon as you change a value: the motor settings go straight to the firmware, the
+mechanics and the other options to the app's settings. The limits, below, are the exception.</p>
 {fig("fine-corsa", [
     f"<b>{ui('Fine corsa inferiore')}</b> in steps; <span class='ui'>⌖ {ui('Usa posizione attuale')}</span> takes it from the focuser's position.",
     f"<b>{ui('Fine corsa superiore')}</b>. Empty = the firmware maximum.",
     f"<b>Towards the specimen</b>: whether the step count goes down or up as you approach the specimen. It is used to label {ui('Avvicina')}/{ui('Allontana')} correctly.",
-    f"<b>{ui('Salva fine corsa')}</b>.",
+    "<b>Save limits</b>, in the <i>Unsaved changes</i> bar that appears when you change a value; <b>Cancel</b> goes back to the saved values. It is the only part of the Settings that is not saved automatically.",
     f"<b>{ui('Imposta qui lo zero')}</b>: the current position becomes 0; limits and sequence are shifted accordingly.",
     f"<b>{ui('Scrivi il massimo nel firmware')}</b>: the upper limit becomes the firmware's limit.",
 ], layout="full")}
@@ -752,8 +779,7 @@ fine focus.</p>
     "<b>Microstep</b>: read from the firmware, not edited here (see Motor).",
     f"<b>{ui('Rapporto di riduzione')}</b>: how many turns the motor makes for one turn of the knob.",
     "<b>Travel per knob turn</b>: how many µm the stage moves for each turn of the fine focus knob.",
-    "<b>Result</b>: µm per step, steps per µm, µm per 1000 steps.",
-    f"<b>{ui('Salva meccanica')}</b>.",
+    "<b>Result</b>: µm per step, steps per µm, µm per 1000 steps. Changes are saved automatically.",
 ])}
 <h2>10.1 The drive train</h2>
 <p>From the motor to the stage the movement passes through a few stages, and each one multiplies or divides:</p>
@@ -892,7 +918,7 @@ add(f"""
 <p class="lead">Each photo is sharp only in a thin layer of the specimen, the <b>depth of field</b>. To have
 everything in focus after stacking, the focus must not move more than that layer between one shot and the next,
 with a little overlap.</p>
-<p>The calculator is at the bottom of the <b>{ui('Ottica')}</b> tab and uses the numerical aperture, the magnification on
+<p>The calculator is at the bottom of the <b>{ui('Ottica')}</b> tab, in the <b>Tools</b> group (the result also appears in the summary on the right), and uses the numerical aperture, the magnification on
 the sensor (objective × intermediate changer × adapter) and the sensor pixel of the open profile (chapter 7.2).</p>
 {fig("profondita", [
     "<b>Overlap</b> between one sharp layer and the next; 20–30% is a good value.",
@@ -954,7 +980,7 @@ add(f"""
 <h2>{ui('Motore (firmware)')}</h2>
 {fig("motore", [
     "<b>Microstep</b>: full step, 1/2 … 1/32 (see 10.2). Changing it changes the scale of the positions: check the limits again afterwards.",
-    "Firmware <b>speed</b>: slow, medium, fast.",
+    "Firmware <b>speed</b>: slow, medium, fast. With the myFocuserPro2 and firmware build 7 the maximum speed of moves is 80, 200 and 400 steps per second; every move starts at 40 steps per second and accelerates.",
     f"<b>{ui('Bobine alimentate a motore fermo')}</b>: the motor holds its position, but runs warm.",
     f"<b>{ui('Alimentale comunque durante la sequenza')}</b> (appears when the coils are off; on by default): the coils are powered when the stack starts and turned off again after the return to the start.",
     f"<b>{ui('Inverti verso di rotazione')}</b>.",
@@ -983,7 +1009,7 @@ always reach their destination, even if the move takes many seconds.</p>
 {fig("aggiornamenti", [
     "<b>App</b> version and the result of the last check.",
     "<b>Firmware</b> version on the focuser.",
-    f"<b>{ui('Aggiorna firmware')}</b>: about 20 seconds; the focuser's settings are kept. Don't unplug the cable; if something goes wrong, just repeat it. Build 5 makes the movement continuous while the button is held down; from build 4 there is the automatic stop if the Mac stops communicating.",
+    f"<b>{ui('Aggiorna firmware')}</b>: about 20 seconds; the focuser's settings are kept. Don't unplug the cable; if something goes wrong, just repeat it. Build 5 makes the movement continuous while the button is held down; from build 4 there is the automatic stop if the Mac stops communicating. Build 7 starts moves more gently (40 steps per second) and halves the slow speed of the myFocuserPro2.",
     f"<b>{ui('Controlla ora')}</b> for app updates.",
 ], layout="side")}
 <p>The app picks the right firmware for the board by itself (myFocuserPro2 or Ardufocus). The <b>Ardufocus</b> does
@@ -992,10 +1018,10 @@ not restart over the USB cable: during the update the app asks you to press the 
 not to lose the position, the app has it saved immediately whenever it closes the connection ({ui('Disconnetti')},
 quitting the app, update).</p>
 <h2>{ui('Temperatura')}</h2>
-{fig("temperatura", [
-    "Current probe temperature.",
-    "The last 60 minutes. The temperature of every shot is saved in <code>sequence.json</code> and summarised in <code>sequence.txt</code>: useful because focus drifts with thermal expansion.",
-], layout="side")}
+<p>The current probe temperature is in the top bar. The graph of the last 60 minutes is in the summary of the
+<b>Calibration</b> tab (chapter 7.6), next to the darks. The temperature of every shot is saved in
+<code>sequence.json</code> and summarised in <code>sequence.txt</code>: useful because focus drifts with thermal
+expansion.</p>
 """)
 
 # 13

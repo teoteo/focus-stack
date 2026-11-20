@@ -99,10 +99,12 @@
 #define MOVE_STARTSPEED   200.0   // passi/s
 #define MOVE_MAXSPEED     2000.0  // passi/s
 #define MOVE_ACCEL        4000.0  // passi/s al secondo
+#define SLOW_FACTOR       2.5     // velocita "lenta" = normale / 2,5 (media = / 2)
 #else
-#define MOVE_STARTSPEED   100.0   // passi/s
+#define MOVE_STARTSPEED   40.0    // passi/s (100 fino alla build 5, 60 nella 6: piu basso, meno passi persi allo spunto)
 #define MOVE_MAXSPEED     400.0   // passi/s (motore 14HM11-0404S, 25 ohm: a 12 V oltre perde coppia)
 #define MOVE_ACCEL        2000.0  // passi/s al secondo
+#define SLOW_FACTOR       5.0     // velocita "lenta" = normale / 5 (era / 2,5 fino alla build 6; media = / 2)
 #endif
 
 

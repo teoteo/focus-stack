@@ -1,8 +1,8 @@
 // Service worker minimale: rende l'app installabile (Safari › File › Aggiungi al Dock)
 // e mette in cache l'interfaccia. Le API passano sempre dalla rete.
-const CACHE = "focus-stack-v5";
+const CACHE = "focus-stack-v7";
 const SHELL = ["/", "/index.html", "/style.css", "/app.js", "/i18n.js", "/lang.js", "/icon.svg", "/manifest.webmanifest",
-  "/viewer.html", "/viewer.js", "/inspector.js"];
+  "/viewer.html", "/viewer.js", "/inspector.js", "/native.js"];
 
 self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener("activate", (e) => e.waitUntil(

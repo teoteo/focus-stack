@@ -5,7 +5,6 @@ import asyncio
 import functools
 import hashlib
 import json
-import subprocess
 import time
 from collections import deque
 from contextlib import asynccontextmanager
@@ -21,7 +20,7 @@ from . import flasher
 from . import i18n
 from .i18n import tr
 from .optics import manifest_optics
-from . import calibration, rawstat, remote
+from . import calibration, desktop, rawstat, remote
 from .camera import GPHOTO_AVAILABLE, CameraError, GPhotoCamera, SimulatedCamera
 from .focuser import FocuserError, LimitError, MyFocuserPro2, SimulatedFocuser, list_serial_ports
 from .sequence import SequenceParams, SequenceRunner
@@ -55,6 +54,8 @@ class App:
         self.shots: list[dict] = []          # galleria della sessione (prova + sequenze)
         self.next_shot_id = 0                # gli id non si riusano dopo "Svuota" (l'elenco riparte vuoto)
         self.shots_rev = 0                   # cambia a ogni scatto aggiunto e a ogni "Svuota"
+        self.shot_group = 0                  # gruppo corrente della striscia del visualizzatore (vedi new_shot_group)
+        self.shot_group_family = ""          # sequence | calibration | test
         self.alarm: str = ""                  # avviso fine corsa / movimento non comandato
         self.alarm_kind: str = ""             # "limits" = posizione fuori dai fine corsa (il testo è tradotto)
         self.code_stale = False               # il codice su disco è più recente del server in esecuzione
@@ -105,10 +106,23 @@ class App:
             self.focuser.limit_max = int(lm) if lm is not None else None
 
     # ---------- galleria ----------
+    @staticmethod
+    def _shot_family(kind: str) -> str:
+        return {"sequence": "sequence", "calibration": "calibration"}.get(kind, "test")
+
+    def new_shot_group(self, family: str) -> None:
+        """Nuovo gruppo nella striscia del visualizzatore (avvio di una sequenza o di una calibrazione)."""
+        self.shot_group += 1
+        self.shot_group_family = family
+        self.shots_rev += 1
+
     def add_shot(self, files: list[str], kind: str, position: int | None, temperature: float | None,
                  index: int | None = None, repeat: int | None = None) -> None:
         if not files:
             return
+        family = self._shot_family(kind)
+        if family != self.shot_group_family:   # es. uno scatto di prova dopo una pila: la striscia ricomincia
+            self.new_shot_group(family)
         # file per il browser: preferisce il JPEG se la fotocamera salva RAW+JPEG
         display = next((f for f in files if f.lower().endswith(BROWSER_FORMATS)), files[0])
         # chiave unica per scatto: dopo un riavvio gli id ripartono da 0, la chiave no
@@ -120,7 +134,8 @@ class App:
         key = hashlib.sha1(f"{BOOT_ID}:{display}:{mtime}".encode()).hexdigest()[:16]
         self.shots.append({"id": self.next_shot_id, "key": key, "kind": kind, "file": display, "files": files,
                            "name": Path(display).name, "position": position, "temperature": temperature,
-                           "index": index, "repeat": repeat, "time": time.strftime("%H:%M:%S")})
+                           "index": index, "repeat": repeat, "time": time.strftime("%H:%M:%S"),
+                           "group": self.shot_group})
         self.next_shot_id += 1
         self.shots_rev += 1
         asyncio.get_running_loop().create_task(warm_cache(display))
@@ -225,6 +240,7 @@ class App:
             "last_shot": last,
             "shot_count": len(self.shots),
             "shots_rev": self.shots_rev,
+            "shot_group": self.shot_group,
             "log": list(self.log_lines)[-200:],
             "boot_signature": BOOT_SIGNATURE,
             "language": i18n.current(),
@@ -1211,7 +1227,8 @@ async def camera_test(body: TestShot):
 # ---------------- galleria / visualizzatore ----------------
 @api.get("/api/shots")
 async def shots():
-    return {"items": app_state.shots[-500:], "count": len(app_state.shots)}
+    # group: gruppo corrente della striscia (il visualizzatore mostra solo quello; vedi new_shot_group)
+    return {"items": app_state.shots[-500:], "count": len(app_state.shots), "group": app_state.shot_group}
 
 
 @api.post("/api/shots/clear")
@@ -1246,7 +1263,7 @@ async def shot_reveal(shot_id: int):
     shot = app_state.get_shot(shot_id)
     if not shot:
         raise HTTPException(404)
-    subprocess.Popen(["open", "-R", shot["file"]])
+    desktop.reveal(shot["file"])
     return {"ok": True}
 
 
@@ -1332,6 +1349,7 @@ async def sequence_start(body: SequenceBody):
             ctx["calibration"] = found
     app_state.runner.start(SequenceParams(**data), ctx,   # verifica anche i fine corsa
                            hold_coils=bool(app_state.cfg.get("coil_during_sequence", True)))
+    app_state.new_shot_group("sequence")   # partita davvero: la striscia del visualizzatore ricomincia
     app_state.cfg["sequence"].update({k: v for k, v in data.items() if k != "output_root"},
                                      optics_profile=profile)
     app_state.cfg["output_root"] = data["output_root"]
@@ -1415,6 +1433,7 @@ async def calibration_start(body: CalibrationStart):
                           optics_profile=profile, optics=ctx.get("optics"), illumination=ctx.get("illumination"),
                           bulb_s=seq.get("bulb_s") or 0, mirror_s=(seq.get("mirror_delay_ms") or 0) / 1000,
                           software=f"Focus Stack {app_version()}")
+    app_state.new_shot_group("calibration")
     app_state.cfg.setdefault("calibration", {}).update(count=body.count, **({"flat_target_pct": body.target_pct} if body.kind == "flat" else {}))
     store.save(app_state.cfg)
     return {"ok": True}
@@ -1464,7 +1483,7 @@ async def calibration_delete(body: CalibrationSetBody):
 async def calibration_open():
     root = calibration.library_root(app_state.cfg["output_root"])
     root.mkdir(parents=True, exist_ok=True)
-    subprocess.Popen(["open", str(root)])
+    desktop.open_path(root)
     return {"ok": True}
 
 
@@ -1713,30 +1732,33 @@ async def delete_optics_profile(body: OpticsProfileBody):
     return app_state.cfg["optics_profiles"]
 
 
+class OutputRootBody(BaseModel):
+    path: str
+
+
 @api.post("/api/choose-folder")
 @guard
 async def choose_folder():
-    """Apre il pannello "Scegli cartella" di macOS. Safari non può fornire percorsi reali del
-    disco a una pagina web, quindi la finestra la apre il server, che gira sullo stesso Mac."""
+    """Finestra "Scegli cartella" aperta dal server. Un browser non può fornire percorsi reali del
+    disco a una pagina web, quindi la apre il server, che gira sullo stesso computer. Nell'app per Mac
+    la finestra è nativa e il percorso arriva da /api/output-root."""
     current = Path(app_state.cfg["output_root"]).expanduser()
     start = current if current.is_dir() else Path.home()
-    # il percorso iniziale passa come argomento (argv), non dentro il testo dello script
-    script = [
-        "-e", "on run argv",
-        "-e", "tell current application to activate",
-        "-e", "set f to choose folder with prompt (item 2 of argv) default location (POSIX file (item 1 of argv))",
-        "-e", "return POSIX path of f",
-        "-e", "end run",
-        str(start), tr("Cartella in cui salvare gli scatti"),
-    ]
-    proc = await asyncio.create_subprocess_exec("osascript", *script, stdout=asyncio.subprocess.PIPE,
-                                                stderr=asyncio.subprocess.PIPE)
-    out, err = await proc.communicate()
-    if proc.returncode != 0:
-        if b"-128" in err:            # l'utente ha premuto Annulla
-            return {"cancelled": True}
-        raise RuntimeError(tr("Impossibile aprire la finestra di selezione: {err}", err=err.decode().strip()))
-    app_state.cfg["output_root"] = validate_output_root(out.decode().strip().rstrip("/") or "/")
+    path = await desktop.choose_folder(start, tr("Cartella in cui salvare gli scatti"))
+    if path is None:
+        return {"cancelled": True}
+    return set_output_root(path)
+
+
+@api.post("/api/output-root")
+@guard
+async def output_root(body: OutputRootBody):
+    """Cartella scelta dalla finestra nativa dell'app per Mac."""
+    return set_output_root(body.path)
+
+
+def set_output_root(path: str) -> dict:
+    app_state.cfg["output_root"] = validate_output_root(path)
     store.save(app_state.cfg)
     app_state.log(tr("Cartella di salvataggio: {path}", path=app_state.cfg["output_root"]))
     return {"path": app_state.cfg["output_root"]}
@@ -1758,13 +1780,13 @@ async def preset_delete(body: PresetBody):
     return app_state.cfg["presets"]
 
 
-# ---------------- integrazione Finder ----------------
+# ---------------- cartelle nel Finder (desktop.py) ----------------
 @api.post("/api/open-folder")
 async def open_folder():
     folder = app_state.runner.status.folder
     target = Path(folder) if folder and Path(folder).exists() else Path(app_state.cfg["output_root"]).expanduser()
     target.mkdir(parents=True, exist_ok=True)
-    subprocess.Popen(["open", str(target)])
+    desktop.open_path(target)
     return {"ok": True}
 
 
@@ -1774,7 +1796,7 @@ async def open_stack_folder():
     folder = app_state.runner.status.folder
     if not folder or not Path(folder).exists():
         raise HTTPException(400, tr("Nessuna pila da aprire"))
-    subprocess.Popen(["open", folder])
+    desktop.open_path(folder)
     return {"ok": True}
 
 

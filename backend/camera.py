@@ -77,6 +77,25 @@ class GPhotoCamera:
     def connected(self) -> bool:
         return self._cam is not None
 
+    # ISO massimo (esteso) dei modelli Sony provati: oltre, libgphoto2 non raggiunge mai il valore e blocca la
+    # fotocamera finché non si stacca il cavo. Verificato sulla A6400 il 2026-11-20 (80000 sì, 128000 no).
+    SONY_ISO_MAX = {"ILCE-6400": 102400}
+
+    def _iso_limit(self) -> float | None:
+        if not self.is_sony:
+            return None
+        for model, top in self.SONY_ISO_MAX.items():
+            if model.lower() in f"{self.driver or ''} {self.model or ''}".lower():
+                return top
+        return None
+
+    @staticmethod
+    def _iso_value(v: str) -> float | None:
+        try:
+            return float(str(v).replace(",", "."))
+        except ValueError:
+            return None   # «Auto ISO» e simili
+
     @property
     def is_sony(self) -> bool:
         # il nome dichiarato dalla fotocamera può non contenere la marca ("ILCE-6400"); quello del driver sì
@@ -154,7 +173,12 @@ class GPhotoCamera:
             except gp.GPhoto2Error:
                 pass
         self._resolve_keys()
-        self._read_settings_blocking()
+        out = self._read_settings_blocking()
+        for _ in range(6):
+            if not (self.is_sony and self._settings_look_unready(out)):
+                break
+            time.sleep(1)
+            out = self._read_settings_blocking()
         if self._has("exposuredelaymode"):
             self.mirror_method = "nikon"
         elif self._has("eosremoterelease"):
@@ -185,6 +209,9 @@ class GPhotoCamera:
                 w = self._cam.get_single_config(key)
                 choices = [w.get_choice(i) for i in range(w.count_choices())] \
                     if w.get_type() in (gp.GP_WIDGET_RADIO, gp.GP_WIDGET_MENU) else []
+                top = self._iso_limit() if logical == "iso" else None
+                if top:
+                    choices = [c for c in choices if (self._iso_value(c) or 0) <= top]
                 out[logical] = {"key": key, "current": str(w.get_value()), "choices": choices,
                                 "readonly": bool(w.get_readonly())}
             except gp.GPhoto2Error:
@@ -192,12 +219,20 @@ class GPhotoCamera:
         self.settings = out
         return out
 
+    def _settings_look_unready(self, out: dict) -> bool:
+        """Sony appena collegata: per qualche secondo risponde con valori senza senso (65535/65535, ISO 0, f/0)."""
+        cur = lambda k: str((out.get(k) or {}).get("current", ""))
+        return "65535" in cur("shutterspeed") or cur("iso") == "0" or cur("aperture") in ("f/0", "0")
+
     def _set_blocking(self, logical: str, value: str) -> dict:
         key = self._keys.get(logical)
         if not key:
             raise CameraError(tr("Impostazione '{name}' non supportata da questa fotocamera", name=logical))
         # Sony: il valore viene raggiunto "a scatti" e la fotocamera ignora il comando finché sta scrivendo
         # l'ultimo RAW sulla scheda; si rilegge e, se non ha preso il valore, si riprova (fino a ~6 s)
+        top = self._iso_limit() if logical == "iso" else None
+        if top and (self._iso_value(value) or 0) > top:
+            raise CameraError(tr("ISO {v}: questa fotocamera arriva al massimo a {top}.", v=value, top=f"{top:g}"))
         out = {}
         for attempt in range(6):
             w = self._cam.get_single_config(key)

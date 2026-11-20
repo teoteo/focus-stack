@@ -344,7 +344,7 @@ unsigned long DriverBoard::get_stepdelay(void) {
   unsigned long sdelay = myfocuser.stepdelay;
   switch (myfocuser.motorspeed) {
     case SLOW:
-      sdelay *= 2.5;
+      sdelay *= SLOW_FACTOR;  // focuserconfig.h: 5 sul myFP2, 2,5 sull'Ardufocus
       break;
     case MED:
       sdelay *= 2;

@@ -45,6 +45,14 @@ async function act(btn, fn, okMsg) {
 
 const num = (id) => Number($(id).value);
 const optNum = (id) => ($(id).value.trim() === "" ? null : Number($(id).value));
+// µm per pixel misurati (Ottica › Scala sul campione): campo di testo, accetta "0,3912" e "0.3912".
+// null se vuoto, NaN se non è un numero maggiore di zero
+function pxMeasured() {
+  const raw = $("o-pxcal").value.trim();
+  if (!raw) return null;
+  const v = /^[0-9]*[.,]?[0-9]+$/.test(raw) ? Number(raw.replace(",", ".")) : NaN;
+  return v > 0 ? v : NaN;
+}
 const fmtInt = (n) => (n == null ? "—" : Number(n).toLocaleString(LOCALE));
 const fmtTime = (s) => {
   if (s == null || !isFinite(s)) return "—";
@@ -65,6 +73,7 @@ const towardSign = () => (S && S.settings.toward_specimen === "increasing" ? 1 :
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
   document.querySelector('meta[name="theme-color"]').content = t === "light" ? "#eef1f5" : "#0d1117";
+  if (window.FSNative) FSNative.theme(t);
 }
 try { applyTheme(localStorage.getItem("fs-theme") || "dark"); } catch { applyTheme("dark"); }
 
@@ -517,6 +526,10 @@ function renderConfig(f) {
   setChip("lim-chip", hi == null ? t("Superiore = max firmware") : `${fmtInt(lo)} – ${fmtInt(hi)}`, hi == null ? "busy" : "ok");
   $$("[data-limit-here], #lim-zero, #lim-fw, #mo-reload").forEach((b) => (b.disabled = !f.connected || running()));
   $("lim-fw-info").textContent = f.connected ? t("Max attuale nel firmware: {n}", { n: fmtInt(f.max_step) }) : "";
+  $("mo-offline").classList.toggle("hidden", !!f.connected);
+  setChip("mo-chip", f.connected ? (f.simulated ? t("simulatore") : t("collegato")) : t("non collegato"), f.connected ? "ok" : "bad");
+  updateLimDirty();
+  renderSettingsSummary();
 
   // motore
   const motor = (f.connected && f.motor) || {};
@@ -736,6 +749,115 @@ function updateMechResult() {
     { u: fmtNum(u, 4), p: fmtNum(1 / u, 2), k: fmtNum(u * 1000, 1) });
 }
 
+// ---------------- schede di impostazioni: barra dei fine corsa, riepilogo, indice e ricerca ----------------
+// I fine corsa si salvano solo con «Salva fine corsa»: la barra compare quando i campi sono diversi da quelli salvati.
+function limDirty() {
+  if (!S) return false;
+  const c = S.settings, max = $("lim-max").value.trim();
+  return String(num("lim-min")) !== String(c.limit_min ?? 0)
+    || (max === "" ? c.limit_max != null : Number(max) !== c.limit_max)
+    || $("lim-dir").value !== c.toward_specimen;
+}
+function updateLimDirty() {
+  const d = limDirty();
+  $("lim-bar").classList.toggle("hidden", !d);
+  $("lim-dot").classList.toggle("hidden", !d);
+}
+
+// riepilogo della Configurazione: i valori che derivano dalle impostazioni, sempre in vista
+function renderSettingsSummary() {
+  if (!S) return;
+  const f = S.focuser || {}, c = S.settings, u = mechUmPerStep();
+  $("sum-res").textContent = u > 0 ? t("{u} µm/passo", { u: fmtNum(u, 4) }) : "—";
+  $("sum-res1k").textContent = u > 0 ? t("1000 passi = {k} µm", { k: fmtNum(u * 1000, 1) }) : t("Inserisci valori validi");
+  const lo = c.limit_min ?? 0, hi = c.limit_max ?? (f.connected ? f.max_step : null);
+  $("sum-run").textContent = hi != null ? t("{a} – {b} passi", { a: fmtInt(lo), b: fmtInt(hi) }) : "—";
+  $("sum-runum").textContent = hi != null && u > 0 ? `= ${fmtNum((hi - lo) * u, 1)} µm` + (c.limit_max == null ? " " + t("(max firmware)") : "") : "";
+  const fw = S.firmware_update || {};
+  $("sum-fw").textContent = !f.connected ? "—" : f.simulated ? t("simulatore") : fw.installed != null ? t("build {b}", { b: fw.installed }) : (f.firmware || "myFocuserPro2");
+  const fwx = $("sum-fwx");
+  fwx.textContent = f.connected ? (fw.available ? t("disponibile build {b}", { b: fw.bundled }) : t("collegato")) : t("non collegato");
+  fwx.className = f.connected ? (fw.available ? "sum-warn" : "sum-ok") : "";
+  const a = S.app || {};
+  $("sum-app").textContent = a.version ?? "—";
+  const appx = $("sum-appx");
+  appx.textContent = a.available ? t("disponibile {v}", { v: a.latest }) : a.latest ? t("aggiornata") : "";
+  appx.className = a.available ? "sum-warn" : "";
+  const r = S.remote || {}, want = !!(c.remote && c.remote.enabled);
+  $("sum-phone").textContent = want && r.running ? t("attivo") : t("spento");
+  let host = "";
+  try { host = want && r.running && r.url ? new URL(r.url).host : ""; } catch { /* indirizzo non valido */ }
+  $("sum-phonex").textContent = host;
+  $("up-dot").classList.toggle("hidden", !a.available && !fw.available);
+}
+
+// indice: clic, sezione corrente durante lo scorrimento, ricerca fra le righe
+function bindSettingsPage(viewId, navId, searchId, noneId) {
+  const view = $(viewId), nav = $(navId), links = [...nav.querySelectorAll("a[href^='#']")];
+  const target = (a) => document.getElementById(a.getAttribute("href").slice(1));
+  const gone = (el) => !el || el.hidden || el.classList.contains("hidden") || getComputedStyle(el).display === "none";
+  let hold = 0;
+  links.forEach((a) => a.addEventListener("click", (e) => {
+    e.preventDefault();
+    const sec = target(a);
+    if (gone(sec)) return;
+    hold = Date.now() + 900;
+    links.forEach((x) => x.classList.toggle("on", x === a));
+    sec.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  }));
+  const spy = () => {
+    if (view.classList.contains("hidden") || Date.now() < hold) return;
+    const top = (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-h")) || 62) + 40;
+    let cur = null;
+    for (const a of links) {
+      if (gone(a) || gone(target(a))) continue;
+      if (target(a).getBoundingClientRect().top <= top) cur = a;
+    }
+    cur = cur || links.find((a) => !gone(a));
+    links.forEach((a) => a.classList.toggle("on", a === cur));
+  };
+  addEventListener("scroll", spy, { passive: true });
+  view._spy = spy;
+  const search = searchId && $(searchId);
+  if (!search) return;
+  search.addEventListener("input", () => {
+    const q = search.value.trim().toLowerCase();
+    let any = false;
+    view.querySelectorAll(".set-sec").forEach((sec) => {
+      sec.hidden = false;
+      if (sec.classList.contains("hidden") || getComputedStyle(sec).display === "none") return;
+      const title = sec.querySelector("h2").textContent.toLowerCase();
+      let n = 0;
+      sec.querySelectorAll(".set-row").forEach((r) => {
+        if (r.id === "jog-chunk-row" || r.id === "opt-coil-seq-row") { if (r.classList.contains("hidden")) return; }
+        const hit = !q || title.includes(q) || r.textContent.toLowerCase().includes(q);
+        r.hidden = !hit; r.classList.toggle("set-hit", !!q && hit); if (hit) n++;
+      });
+      sec.querySelectorAll(".set-box > .result, .set-sub, .set-details, .set-note, .save-bar ~ .set-rows").forEach((h) => (h.hidden = !!q && !h.querySelector(".set-hit")));
+      sec.hidden = !!q && n === 0;
+      if (!sec.hidden) any = true;
+    });
+    // un gruppo senza sezioni trovate sparisce con il suo titolo
+    view.querySelectorAll(".set-card").forEach((card) => {
+      const empty = ![...card.querySelectorAll(".set-sec")].some((x) => !gone(x));
+      card.hidden = empty;
+      if (card.previousElementSibling && card.previousElementSibling.classList.contains("set-group")) card.previousElementSibling.hidden = empty;
+      // la linea sopra la prima sezione visibile non serve
+      let first = true;
+      card.querySelectorAll(".set-sec").forEach((x) => { const vis = !gone(x); x.style.borderTop = vis && first ? "0" : ""; if (vis) first = false; });
+    });
+    $(noneId).classList.toggle("hidden", any);
+    links.forEach((a) => { const sec = target(a); a.hidden = !!sec && !!sec.hidden; });
+    spy();
+  });
+}
+
+// altezza della barra in alto: indice e riepilogo restano appena sotto
+function trackTopbar() {
+  const set = () => document.documentElement.style.setProperty("--topbar-h", `${$$(".topbar")[0]?.offsetHeight || 62}px`);
+  set(); addEventListener("resize", set);
+}
+
 // ---------------- avanzamento da smartphone ----------------
 let remoteUrl = null;
 function renderRemote() {
@@ -762,16 +884,23 @@ function bindRemote() {
 // ---------------- profondità di campo ----------------
 // Formula di Berek/Shillaber: DOF = λ·n/NA² + n·e/(M·NA)
 // Macro: NA equivalente lato soggetto = m / (2 N (1 + m1)), calcolata dal diaframma (vedi macroNumbers)
+let dofLast = null;   // ultimo calcolo della profondità di campo, per il riepilogo di Ottica
 function dof() {
+  dofLast = null;
   const o = opticsForm(), macro = o.kind === "macro";
   const na = macro ? macroNumbers(o).na : num("d-na"), mag = totalMag(o) || 0, px = num("d-px"), ov = num("d-ov") / 100;
-  if (!(na > 0 && mag > 0)) {
+  // pixel sul campione (e/M nella formula): quello misurato se c'è, altrimenti pixel del sensore ÷ ingrandimento
+  const measured = o.pixel_size_um || 0;
+  const pxSample = measured || (mag > 0 ? px / mag : 0);
+  if (!(na > 0 && (mag > 0 || measured))) {
     $("d-result").textContent = macro ? t("Inserisci obiettivo, rapporto di riproduzione e diaframma") : t("Inserisci NA e ingrandimento");
     return 0;
   }
-  const d = (0.55 * 1.0) / (na * na) + (1.0 * px) / (mag * na);
+  const d = (0.55 * 1.0) / (na * na) + (1.0 * pxSample) / na;
   const step = d * (1 - ov), um = umPerStep();
+  dofLast = { d, step, steps: um ? stepsFor(step, um) : null, ov: num("d-ov") };
   let html = t("Profondità di campo ≈ <b>{d} µm</b> · passo consigliato <b>{s} µm</b>", { d: fmtNum(d, 2), s: fmtNum(step, 2) });
+  if (measured) html += " " + t("(con i µm per pixel misurati)");
   if (!um) html += " · " + t("configura la meccanica per convertirlo in passi");
   else {
     const n = stepsFor(step, um);
@@ -833,6 +962,7 @@ const CLOSEUP_PRESETS = { "Raynox DCR-250": 8, "Raynox DCR-150": 4.8, "Canon 500
 function setOpticsKind(kind) {
   opticsKind = kind === "macro" ? "macro" : "microscope";
   $("card-optics").dataset.kind = opticsKind;
+  $("view-optics").dataset.kind = opticsKind;
   $$("#o-kind button").forEach((b) => b.setAttribute("aria-checked", b.dataset.kind === opticsKind));
 }
 
@@ -917,7 +1047,7 @@ function opticsForm() {
     intermediate: { name: $("o-inter-name").value.trim(), factor: optNum("o-inter") },
     relay: { name: $("o-relay-name").value.trim(), factor: optNum("o-relay") },
     na: optNum("d-na"),
-    immersion: $("o-immersion").value, sensor_pixel_um: optNum("d-px"), pixel_size_um: optNum("o-pxcal"),
+    immersion: $("o-immersion").value, sensor_pixel_um: optNum("d-px"), pixel_size_um: Number.isNaN(pxMeasured()) ? null : pxMeasured(),
     dof_overlap: optNum("d-ov") ?? 30, filter_mode: filterMode,
     filter: { name: $("o-fname").value.trim(), type: $("o-ftype").value, center_nm: optNum("o-fcenter"),
       bandwidth_nm: optNum("o-fwidth"), edge_nm: optNum("o-fedge") },
@@ -1002,7 +1132,21 @@ function updateOptics() {
     txt = t("Ingrandimento sul sensore: <b>{m}×</b>", { m: fmtMag(total) })
       + (factors.length > 1 ? ` (${factors.map(fmtMag).join(" × ")})` : "") + "<br>";
   }
-  if (o.pixel_size_um) txt += t("Sul campione: <b>{v} µm/pixel</b> (misurato)", { v: fmtNum(o.pixel_size_um, 4) });
+  const calc = o.sensor_pixel_um && total ? o.sensor_pixel_um / total : 0;
+  if (Number.isNaN(pxMeasured())) {
+    $("o-pxcal").setAttribute("aria-invalid", "true");
+    txt += `<span class="warn-text">${t("I µm per pixel misurati devono essere un numero maggiore di zero, per esempio 0,3912")}</span>`;
+  } else $("o-pxcal").removeAttribute("aria-invalid");
+  if (o.pixel_size_um && calc) {
+    // scarto fra misurato e calcolato: oltre il 2 % (in macro oltre il 15 %, normale per la stima a lenti sottili)
+    // di solito manca o è di troppo un fattore (Optovar, adattatore) o il pixel del sensore è sbagliato
+    const diff = (o.pixel_size_um / calc - 1) * 100, limit = o.kind === "macro" ? 15 : 2;
+    const line = t("Sul campione: calcolato {c} · misurato <b>{m} µm/pixel</b> (scarto {d} %)",
+      { c: fmtNum(calc, 4), m: fmtNum(o.pixel_size_um, 4), d: (diff > 0 ? "+" : "") + fmtNum(diff, 1) });
+    txt += Math.abs(diff) > limit
+      ? `${line}<span class="warn-text">${t("Scarto grande: controlla ingrandimenti, fattori intermedi (Optovar, adattatore) e pixel del sensore. Per i calcoli vale il valore misurato.")}</span>`
+      : line;
+  } else if (o.pixel_size_um) txt += t("Sul campione: <b>{v} µm/pixel</b> (misurato)", { v: fmtNum(o.pixel_size_um, 4) });
   else if (o.sensor_pixel_um && total)
     txt += t("Sul campione: <b>{v} µm/pixel</b> (pixel del sensore ÷ ingrandimento)", { v: fmtNum(o.sensor_pixel_um / total, 4) });
   else if (o.kind !== "macro" || total) txt += t("Indica ingrandimento e pixel del sensore per avere la scala in µm");
@@ -1012,8 +1156,33 @@ function updateOptics() {
   const dirty = JSON.stringify(o) !== opticsSaved;
   setChip("o-chip", editingProfile || t("Nuovo profilo"), editingProfile ? (dirty ? "busy" : "ok") : "");
   $("o-dirty").textContent = dirty ? t("Modifiche non salvate") : "";
+  $("o-bar").classList.toggle("hidden", !dirty);
+  $("o-dot").classList.toggle("hidden", !dirty);
   $("o-profile-del").disabled = !editingProfile;
   renderLensButtons();
+  renderOpticsSummary(o, total, dirty);
+}
+
+// riepilogo di Ottica: profilo, ingrandimento, scala e profondità di campo, sempre in vista
+function renderOpticsSummary(o, total, dirty) {
+  $("osum-name").textContent = editingProfile || t("Nuovo profilo");
+  const st = $("osum-state");
+  st.textContent = dirty ? t("Modifiche non salvate") : editingProfile ? t("salvato") : "";
+  st.className = dirty ? "sum-warn" : editingProfile ? "sum-ok" : "";
+  $("osum-mag").textContent = total ? `${fmtMag(total)}×` : "—";
+  $("osum-magx").textContent = o.kind === "macro" ? (total ? t("stima con lenti sottili") : "") : "";
+  const calc = o.sensor_pixel_um && total ? o.sensor_pixel_um / total : 0, meas = o.pixel_size_um || 0;
+  $("osum-scale").textContent = meas || calc ? t("{v} µm/pixel", { v: fmtNum(meas || calc, 4) }) : "—";
+  const sx = $("osum-scalex");
+  if (meas && calc) {
+    const diff = (meas / calc - 1) * 100, limit = o.kind === "macro" ? 15 : 2;
+    sx.textContent = t("misurata · scarto {d} %", { d: (diff > 0 ? "+" : "") + fmtNum(diff, 1) });
+    sx.className = Math.abs(diff) > limit ? "sum-warn" : "sum-ok";
+  } else { sx.textContent = meas ? t("misurata") : calc ? t("calcolata") : ""; sx.className = ""; }
+  const d = dofLast;
+  $("osum-dof").textContent = d ? `${fmtNum(d.d, 2)} µm` : "—";
+  $("osum-step").textContent = d ? `${fmtNum(d.step, 2)} µm` : "—";
+  $("osum-steps").textContent = d ? (d.steps ? t("{n} passi del motore · sovrapposizione {o} %", { n: d.steps, o: fmtNum(d.ov, 0) }) : t("configura la meccanica per convertirlo in passi")) : "";
 }
 
 // riempie i due menu dei profili (editor e sequenza) solo quando l'elenco cambia
@@ -1034,6 +1203,7 @@ function renderOpticsProfiles() {
 }
 
 async function saveProfile(name) {
+  if (Number.isNaN(pxMeasured())) throw new Error(t("I µm per pixel misurati devono essere un numero maggiore di zero, per esempio 0,3912"));
   const profiles = await api("/api/optics/profiles/save", { name, optics: opticsForm() });
   S.settings.optics_profiles = profiles;
   renderOpticsProfiles();
@@ -1067,6 +1237,7 @@ function bindOptics() {
     }
     editProfile(e.target.value);
   };
+  $("o-undo").onclick = () => editProfile(editingProfile);
   $("o-save").onclick = (e) => {
     const name = editingProfile || (window.prompt(t("Nome del profilo (es. 10× GFP)"), "") || "").trim();
     if (name) act(e.target, () => saveProfile(name), t("Profilo salvato"));
@@ -1293,10 +1464,23 @@ function calibrationSummary() {
   return t("Calibrazione per questa pila: {txt}", { txt: matchText(m) }) + (n ? "" : " · " + t("nessun set adatto nella libreria"));
 }
 
+// riepilogo di Calibrazione: quali set userebbe la prossima pila
+function renderCalibSummary(m) {
+  const one = (key, id) => {
+    const e = m && m[key], b = $(id), x = $(id + "x");
+    b.textContent = !m ? "—" : e ? "✓ " + shortDate(e.created) : t("manca");
+    b.className = !m ? "" : e ? "ok-t" : "warn-t";
+    x.textContent = e ? t("{n} fotogrammi", { n: e.frames }) : !m ? t("connetti la fotocamera") : "";
+  };
+  one("darks", "ksum-dark"); one("flats", "ksum-flat"); one("flat_darks", "ksum-fdark");
+  $("k-dot").classList.toggle("hidden", !m || (!!m.darks && !!m.flats));
+}
+
 function renderLibrary() {
   if (!calibView) return;
   $("k-root").textContent = t("Cartella: {path}", { path: calibView.root });
   $("k-match").innerHTML = t("Per la prossima pila, con le impostazioni attuali: {txt}", { txt: matchText(calibView.match) });
+  renderCalibSummary(calibView.match);
   const tbody = $("k-table").querySelector("tbody");
   const rows = calibView.sets.map((s) => {
     const lv = s.mean_level_pct ? Math.max(...Object.values(s.mean_level_pct)) : null;
@@ -1559,6 +1743,8 @@ function switchTab(name) {
   $$(".view").forEach((v) => v.classList.toggle("hidden", v.id !== `view-${name}`));
   if (name === "log" && S) { renderLog(); $("log").scrollTop = $("log").scrollHeight; }
   if (name === "calib" || name === "session") refreshCalibration(true);
+  const view = $(`view-${name}`);
+  if (view && view._spy) requestAnimationFrame(view._spy);
   $("guide-btn").href = guideUrl(GUIDE_TABS[name] || "");
   try { localStorage.setItem("fs-tab", name); } catch { /* opzionale */ }
 }
@@ -1583,6 +1769,12 @@ function bind() {
     S.settings = await api("/api/settings", { jog_max: Number(b.dataset.max) });
     render();
   }, t("Ampiezze aggiornate"))));
+  if (window.FSNative) {            // solo nell'app per Mac: dove aprire il visualizzatore
+    $("card-viewer").classList.remove("hidden");
+    $("nav-viewer").classList.remove("hidden");
+    FSNative.getPref("viewerOtherScreen").then((v) => { $("v-other-screen").checked = !!v; });
+    $("v-other-screen").onchange = (e) => FSNative.setPref("viewerOtherScreen", e.target.checked);
+  }
   $("jog-hold").onchange = (e) => act(null, async () => {
     S.settings = await api("/api/settings", { jog_hold: e.target.checked });
     render();
@@ -1614,10 +1806,15 @@ function bind() {
   });
   $("c-disconnect").onclick = (e) => act(e.target, () => api("/api/camera/disconnect"));
   for (const [name, id] of Object.entries(CAM_FIELDS)) {
-    $(id).onchange = (e) => act(e.target, async () => {
-      await api("/api/camera/settings", { name, value: e.target.value });
-      camSettingsSig = ""; // ridisegna con il valore effettivamente accettato dalla fotocamera
-    });
+    $(id).onchange = (e) => {
+      // le Sony raggiungono il valore «a scatti»: se dopo 12 s non è arrivato, lo si dice invece di lasciare il menu grigio
+      const value = e.target.value;
+      const slow = setTimeout(() => toast(t("La fotocamera non ha ancora accettato {v}. Se resta bloccata, scollega e ricollega il cavo USB, oppure spegnila e riaccendila.", { v: value }), true), 12000);
+      act(e.target, async () => {
+        await api("/api/camera/settings", { name, value });
+        camSettingsSig = ""; // ridisegna con il valore effettivamente accettato dalla fotocamera
+      }).finally(() => clearTimeout(slow));
+    };
   }
   $("c-reload").onclick = (e) => act(e.target, () => api("/api/camera/settings/reload"));
   $("c-test").onclick = (e) => act(e.target, () => api("/api/camera/test", { bulb_s: num("c-bulb"), mirror_delay_ms: num("c-mirror") }), t("Scatto completato"));
@@ -1661,8 +1858,15 @@ function bind() {
   $("s-stop-btn").onclick = (e) => act(e.target, () => api("/api/sequence/stop"));
   $("s-open").onclick = () => act(null, () => api("/api/open-folder"));
   $("s-root-choose").onclick = (e) => act(e.target, async () => {
-    toast(t("Scegli la cartella nella finestra del Finder…"));
-    const r = await api("/api/choose-folder");
+    let r;
+    if (window.FSNative) {          // app per Mac: finestra nativa attaccata alla finestra di Focus Stack
+      const path = await FSNative.chooseFolder(S.settings.output_root, t("Cartella in cui salvare gli scatti"));
+      if (!path) return;
+      r = await api("/api/output-root", { path });
+    } else {
+      toast(t("Scegli la cartella nella finestra del Finder…"));
+      r = await api("/api/choose-folder");
+    }
     if (r && r.path) { S.settings.output_root = r.path; toast(t("Cartella di salvataggio aggiornata")); }
   });
   $("s-finder").onclick = (e) => act(e.target, () => api("/api/open-stack-folder"));
@@ -1688,10 +1892,16 @@ function bind() {
     linkClear(); syncCount(); updateSummary();
   };
   $("s-preset-save").onclick = () => {
-    const name = window.prompt(t("Nome del preset (es. obiettivo 10×)"), $("s-preset").value || "");
+    const name = (window.prompt(t("Nome del preset (es. obiettivo 10×)"), $("s-preset").value || "") || "").trim();
     if (!name) return;
+    // il nome proposto è quello del preset scelto: confermare prima di sostituirlo
+    if (((S && S.settings.presets) || {})[name] && !window.confirm(t("Esiste già un preset «{name}»: sostituirlo con i valori attuali?", { name }))) return;
     const { output_root, ...data } = formParams();
-    act(null, async () => { const r = await api("/api/presets/save", { name, data }); S.settings.presets = r; presetSig = ""; renderPresets(); }, t("Preset salvato"));
+    act(null, async () => {
+      const r = await api("/api/presets/save", { name, data });
+      S.settings.presets = r; presetSig = ""; renderPresets();
+      $("s-preset").value = name;   // la tendina mostra il preset appena salvato
+    }, t("Preset «{name}» salvato", { name }));
   };
   $("s-preset-del").onclick = () => {
     const name = $("s-preset").value;
@@ -1702,11 +1912,17 @@ function bind() {
   // fine corsa
   $$("[data-limit-here]").forEach((b) => (b.onclick = () => {
     $(b.dataset.limitHere === "min" ? "lim-min" : "lim-max").value = S.focuser.position;
+    updateLimDirty();
     toast(t("Valore copiato: premi Salva fine corsa per applicarlo"));
   }));
-  $("lim-save").onclick = (e) => act(e.target, () => api("/api/limits", {
-    limit_min: num("lim-min"), limit_max: optNum("lim-max"), toward_specimen: $("lim-dir").value,
-  }), t("Fine corsa salvati"));
+  $("lim-save").onclick = (e) => act(e.target, async () => {
+    await api("/api/limits", { limit_min: num("lim-min"), limit_max: optNum("lim-max"), toward_specimen: $("lim-dir").value });
+    const st = await api("/api/state", undefined, "GET");
+    S.settings = st.settings; updateLimDirty(); renderSettingsSummary();
+  }, t("Fine corsa salvati"));
+  $("lim-undo").onclick = () => { loadLimitForm(S.settings); updateLimDirty(); };
+  ["lim-min", "lim-max"].forEach((id) => $(id).addEventListener("input", updateLimDirty));
+  $("lim-dir").addEventListener("change", updateLimDirty);
   $("lim-zero").onclick = (e) => {
     if (!confirm(t("La posizione attuale ({p}) diventerà 0. Fine corsa e sequenza verranno traslati di conseguenza. Continuare?", { p: fmtInt(S.focuser.position) }))) return;
     act(e.target, async () => {
@@ -1729,12 +1945,20 @@ function bind() {
   };
 
   // meccanica
-  $$("#mech-mode button").forEach((b) => (b.onclick = () => setMechMode(b.dataset.mode)));
-  ["m-spr", "m-gear", "m-umrev", "m-umstep"].forEach((id) => $(id).addEventListener("input", updateMechResult));
-  $("m-save").onclick = (e) => act(e.target, () => api("/api/mechanics", {
-    mode: mechMode, motor_steps_per_rev: num("m-spr"), gear_ratio: num("m-gear"), um_per_knob_rev: num("m-umrev"),
-    um_per_step: mechMode === "manual" ? num("m-umstep") : null,
-  }), t("Meccanica salvata"));
+  // si salva da sola a ogni modifica, come le impostazioni del motore; con valori incompleti aspetta
+  // (il risultato mostra già «Inserisci valori validi»)
+  const saveMech = () => {
+    if (!(mechUmPerStep() > 0)) return;
+    act(null, () => api("/api/mechanics", {
+      mode: mechMode, motor_steps_per_rev: num("m-spr"), gear_ratio: num("m-gear"), um_per_knob_rev: num("m-umrev"),
+      um_per_step: mechMode === "manual" ? num("m-umstep") : null,
+    }), t("Meccanica salvata"));
+  };
+  $$("#mech-mode button").forEach((b) => (b.onclick = () => { setMechMode(b.dataset.mode); saveMech(); }));
+  ["m-spr", "m-gear", "m-umrev", "m-umstep"].forEach((id) => {
+    $(id).addEventListener("input", () => { updateMechResult(); renderSettingsSummary(); });
+    $(id).addEventListener("change", saveMech);
+  });
 
   // motore
   $("mo-reload").onclick = (e) => act(e.target, () => api("/api/focuser/motor/reload"));
@@ -1820,6 +2044,10 @@ function renderPresets() {
 
 bind();
 setupGuideLinks();
+trackTopbar();
+bindSettingsPage("view-config", "cfg-nav", "cfg-search", "cfg-none");
+bindSettingsPage("view-optics", "opt-nav", "opt-search", "opt-none");
+bindSettingsPage("view-calib", "cal-nav", null, null);
 try {
   setJogSize(Number(localStorage.getItem("fs-jog")) || 100);
   const hashTab = location.hash.slice(1);

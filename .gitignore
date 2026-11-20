@@ -12,3 +12,6 @@ docs/guida/img/
 docs/guida/guida-*.html
 # guida HTML generata da docs/guida/genera_guida_web.py (anche in build_release.sh)
 web/guide/
+
+# app per Mac (Swift): prodotti di swift build
+packaging/mac/.build/

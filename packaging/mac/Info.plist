@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Info.plist di Focus Stack.app: build_release.sh sostituisce __VERSION__.
+     Il bundle id resta quello dell'applet (fino alla 1.1): l'app installata riconosce la nuova versione
+     come un aggiornamento e lo script di installazione la chiude con «tell application id …». -->
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>it</string>
+		<string>en</string>
+		<string>fr</string>
+		<string>de</string>
+		<string>es</string>
+	</array>
+	<key>CFBundleAllowMixedLocalizations</key>
+	<true/>
+	<key>CFBundleExecutable</key>
+	<string>Focus Stack</string>
+	<key>CFBundleIdentifier</key>
+	<string>local.focusstack.app</string>
+	<key>CFBundleName</key>
+	<string>Focus Stack</string>
+	<key>CFBundleDisplayName</key>
+	<string>Focus Stack</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<!-- icona Liquid Glass in Assets.car (macOS 26+); AppIcon.icns per i macOS precedenti -->
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
+	<key>CFBundleShortVersionString</key>
+	<string>__VERSION__</string>
+	<key>CFBundleVersion</key>
+	<string>__VERSION__</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.photography</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Matteo Beretta · MIT License</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSSupportsAutomaticTermination</key>
+	<false/>
+	<key>NSSupportsSuddenTermination</key>
+	<false/>
+	<!-- serve per il Finder (set di calibrazione nel Cestino da un altro disco): senza questa chiave macOS
+	     rifiuta gli eventi Apple dell'app e dei suoi processi senza chiedere. Tradotta in <lingua>.lproj/InfoPlist.strings -->
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Focus Stack uses the Finder to move calibration sets to the Trash.</string>
+	<!-- la pagina è servita in http dal server locale (127.0.0.1) -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+</dict>
+</plist>

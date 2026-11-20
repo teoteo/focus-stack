@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Permessi del runtime rafforzato per i programmi inclusi (Python, fs-rawstat), solo con la firma
+     Developer ID (build_release.sh con SIGN_ID). ctypes/libffi possono aver bisogno di memoria eseguibile.
+     Se una libreria non si carica, il prossimo da provare è com.apple.security.cs.disable-library-validation.
+     Da verificare alla prima build firmata: fotocamera, focheggiatore, flash del firmware, fs-rawstat. -->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+	<true/>
+</dict>
+</plist>

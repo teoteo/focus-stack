@@ -81,8 +81,9 @@ scatta</b>: decine di foto a fuochi diversi, pronte da fondere in un'unica immag
 <b>Helicon Focus</b> (o un programma simile).</p>
 <h2>Come funziona</h2>
 <p>L'app Focus Stack avvia sul Mac un piccolo programma (il <i>server</i>) che parla con il focheggiatore
-(una scheda Arduino con il firmware myFocuserPro2) e con la fotocamera. L'interfaccia si apre in
-<b>Safari</b>, all'indirizzo <code>http://localhost:8765</code>, ed è raggiungibile solo da questo Mac.</p>
+(una scheda Arduino con il firmware myFocuserPro2) e con la fotocamera. L'interfaccia si apre nella
+<b>finestra dell'app</b>: è una pagina web servita all'indirizzo <code>http://localhost:8765</code>, raggiungibile solo
+da questo Mac (si può aprire anche in un browser).</p>
 <ul>
 <li>Il <b>focheggiatore</b> fa girare la manopola della messa a fuoco con un motore passo-passo. Ogni
   <i>passo</i> del motore sposta il tavolino (o l'obiettivo) di una frazione di micrometro: quanta, lo
@@ -93,7 +94,7 @@ scatta</b>: decine di foto a fuochi diversi, pronte da fondere in un'unica immag
 </ul>
 <h2>Che cosa serve</h2>
 <ul>
-<li>Un Mac con macOS 13 o successivo (Intel) oppure macOS 14 o successivo (Apple Silicon), con Safari.</li>
+<li>Un Mac con macOS 13 o successivo (Intel) oppure macOS 14 o successivo (Apple Silicon).</li>
 <li>Un focheggiatore <b>myFocuserPro2</b> (versione con driver DRV8825) oppure <b>Ardufocus</b> (circuito rev1 con
   DRV8825), collegato con il suo cavo USB e alimentato (12 V).</li>
 <li>Una fotocamera Nikon, Canon o Sony con il cavo USB. In questa guida l'esempio è una <b>Nikon D5600</b>.</li>
@@ -126,12 +127,14 @@ add("""
 <p>L'app contiene già tutto quello che le serve: non bisogna installare altro.</p>
 <h2>Avvio e chiusura</h2>
 <ul>
-<li>All'avvio Focus Stack apre Safari sulla sua pagina e resta nel Dock. Un clic sull'icona nel Dock
-  riporta in primo piano la pagina.</li>
+<li>All'avvio Focus Stack apre la sua finestra e resta nel Dock. Chiudere la finestra (<kbd>⌘W</kbd>) la
+  nasconde soltanto: l'app resta aperta e un clic sull'icona nel Dock la riporta. Il visualizzatore e la guida si
+  aprono in finestre separate; i link a siti esterni si aprono nel browser.</li>
 <li>Per chiudere: <kbd>⌘Q</kbd> sull'app, oppure <span class="ui">Esci</span> dal menu dell'icona nel Dock.
   Se c'è una sequenza in corso l'app chiede conferma, la interrompe e ferma il motore.</li>
-<li>Chiudere Safari <b>non</b> chiude l'app. La pagina, se resta aperta, mostra “Focus Stack è chiuso” e
-  si ricarica da sola quando riapri l'app.</li>
+<li>Durante una pila o una serie di calibrazione l'icona nel Dock mostra una <b>barra di avanzamento</b>. Quando
+  finisce, o si ferma per un errore, mentre stai usando un'altra app arriva una <b>notifica</b>: la prima volta
+  macOS chiede il permesso.</li>
 </ul>
 <h2>Aggiornamenti</h2>
 <p>All'avvio, e poi ogni 6 ore, l'app controlla se c'è una versione nuova. Se c'è, in alto compare una
@@ -264,6 +267,10 @@ add(f"""
     "<b>Rileggi</b> le impostazioni dalla fotocamera. Dopo ogni modifica l'app rilegge il valore che la fotocamera ha accettato davvero.",
     "<b>Scatto di prova</b>: una foto alla posizione attuale, che compare in Ultimo scatto e nel visualizzatore.",
 ])}
+<p>Con le <b>Sony</b> tempo di posa e ISO cambiano a scatti, come girando la ghiera: un valore lontano può richiedere
+qualche secondo. Per la <b>A6400</b> il menu dell'ISO arriva a 102400, il massimo che accetta. Se la fotocamera non
+accetta un valore entro 12 secondi, l'app lo segnala: scollega e ricollega il cavo USB, oppure spegni e riaccendi la
+fotocamera.</p>
 <h2>Ultimo scatto e live view</h2>
 <div class="two">
 {fig("ultimo-scatto", [
@@ -350,7 +357,7 @@ del sensore può dare la mappa di profondità e la vista 3D in micrometri veri. 
 obiettivo 10× con il cambio d'ingrandimento Optovar 1,6× e la fotocamera su un raccordo T2 senza lenti.</p>
 {fig("ottica", [
     "<b>Profilo da modificare</b>: sceglilo per caricarne i valori; <i>— nuovo profilo —</i> parte da un modulo vuoto.",
-    "<b>Salva come nuovo profilo…</b>: chiede un nome e salva una copia, lasciando com'è il profilo di partenza.",
+    "<b>Salva come nuovo profilo…</b>, nella barra che compare in alto: chiede un nome e salva una copia, lasciando com'è il profilo di partenza.",
     "<b>Elimina profilo</b>, dopo una conferma.",
     "<b>Tipo di ottica</b>: <i>Microscopio</i> (obiettivo con ingrandimento e NA incisi) oppure <i>Macro fotografica</i> (obiettivo fotografico, tubi e lenti addizionali, 7.3).",
     "<b>Pixel del sensore</b> (pixel pitch) in µm. Nikon D5600: <b>3,9 µm</b> (23,5 mm ÷ 6000 pixel). Si trova nella scheda tecnica della fotocamera, su <b>digicamdb.com</b> (fotocamere fotografiche) o nel database dei sensori di <b>AstroBin</b> (camere dedicate, cercando per esempio IMX571).",
@@ -367,8 +374,10 @@ obiettivo 10× con il cambio d'ingrandimento Optovar 1,6× e la fotocamera su un
     "<b>Centro</b> e <b>larghezza di banda</b> in nm per un passa banda; per long pass e short pass la lunghezza d'onda di taglio.",
     "<b>Illuminazione</b> (testo libero, con suggerimenti), <b>intensità</b> in % e <b>temperatura di colore</b> in K (per esempio 4000 K per una luce neutra).",
     "<b>Note</b> libere, che finiscono nei dati della pila.",
-    "<b>Salva profilo</b>: sovrascrive il profilo scelto; se è nuovo chiede il nome.",
+    "<b>Salva profilo</b>, nella barra <i>Modifiche non salvate</i> che compare in alto appena cambi un valore, con <b>Annulla</b> (torna al profilo salvato): sovrascrive il profilo scelto; se è nuovo chiede il nome.",
     "Il <b>profilo</b> aperto; in ambra se ci sono modifiche non salvate.",
+    "<b>Indice</b> delle sezioni, con la ricerca: un clic porta alla sezione. Con Microscopio o Macro mostra solo le sezioni di quel tipo.",
+    "<b>Riepilogo</b>, sempre in vista mentre scrivi: ingrandimento sul sensore, scala sul campione (misurata o calcolata, con lo scarto), profondità di campo e passo consigliato.",
 ], layout="full")}
 <p>Un campo vuoto vuol dire «non indicato» e non viene scritto. Se nella sequenza non scegli nessun profilo, la pila
 risulta fatta <b>senza filtro</b> e senza dati ottici. Gli stessi valori di NA, ingrandimento e pixel servono anche al
@@ -464,6 +473,13 @@ fotogrammi.</p>
 adatti: per i dark stessa fotocamera, ISO e tempo; per i flat anche lo stesso profilo ottico. I fotogrammi non vengono
 copiati. È la stessa libreria che usa <b>Focus Fusion</b>, che ci salva accanto i suoi «master».</p>
 
+<p>A destra, il <b>riepilogo</b> resta in vista mentre lavori nella scheda.</p>
+{fig("calibrazione-riepilogo", [
+    "<b>Per la prossima pila</b>: per dark, flat e dark dei flat, ✓ con la data del set che verrebbe usato, oppure <i>manca</i> in arancione. Se manca un set, un pallino arancione compare anche accanto a <i>Libreria</i> nell'indice.",
+    "<b>Temperatura</b> attuale della sonda.",
+    "Andamento degli <b>ultimi 60 minuti</b>: confrontalo con la temperatura dei dark nella tabella.",
+], layout="side narrow")}
+
 <h2>7.7 Avanzamento da smartphone</h2>
 <p>Per seguire una pila lunga lontano dal Mac, in <span class="ui">Configurazione › Avanzamento da smartphone</span> si
 attiva una pagina <b>di sola lettura</b> sulla rete locale.</p>
@@ -489,11 +505,12 @@ bloccato sospende le pagine web e il suono non arriva.</p>
 add(f"""
 <h1><span class="n">8</span>Il visualizzatore</h1>
 <p>Si apre con <span class="ui">Apri visualizzatore ↗</span> o con un clic sull'ultimo scatto, in una finestra
-separata che puoi spostare su un secondo monitor. Mostra le foto a piena risoluzione (anche i RAW, convertiti
+separata. Con due monitor si apre da solo sull'altro, a tutto schermo; si può disattivare in
+<span class="ui">Configurazione › Visualizzatore</span>. Mostra le foto a piena risoluzione (anche i RAW, convertiti
 al volo) con zoom e spostamento, e il live view della fotocamera.</p>
 {fig("visualizzatore", [
     "<b>◀ ▶</b> scatto precedente e successivo (frecce <kbd>←</kbd> <kbd>→</kbd>).",
-    "Nome del file; numero dello scatto, tipo, posizione, temperatura e ora.",
+    "<b>Contatore della pila</b>: durante la sequenza l'ultimo scatto fatto sul totale (per esempio 75/115, <i>in corso</i>), poi <i>completata</i>; con gli scatti di prova, quanti sono. Accanto il nome del file e, sotto, numero dello scatto, posizione, temperatura e ora. Durante la pila una linea azzurra sul bordo superiore della finestra mostra l'avanzamento.",
     "<b>● Live</b> (<kbd>L</kbd>): il live view nella stessa finestra, con zoom e spostamento.",
     "<b>Zoom</b> − e + (<kbd>−</kbd> <kbd>+</kbd>) e livello di ingrandimento.",
     "<b>Adatta</b> (<kbd>0</kbd>), <b>100%</b> (<kbd>1</kbd>: un pixel del sensore = un pixel dello schermo), <b>Reset</b> (<kbd>R</kbd>).",
@@ -504,7 +521,7 @@ al volo) con zoom e spostamento, e il live view della fotocamera.</p>
     "<b>Ispettore</b> (<kbd>I</kbd>): istogrammi, pixel bruciati e neri, valori sotto il puntatore (vedi sotto).",
     "<b>Schermo intero</b> (<kbd>F</kbd>).",
     "<b>?</b>: questa guida, al capitolo del visualizzatore.",
-    "<b>Miniature</b>: un clic apre lo scatto. <i>P</i> = scatto di prova, <i>C</i> = frame di calibrazione, <i>E</i> = foto per l'esposizione, i numeri sono gli scatti della sequenza.",
+    "<b>Miniature</b>: un clic apre lo scatto. <i>P</i> = scatto di prova, <i>C</i> = frame di calibrazione, <i>E</i> = foto per l'esposizione, i numeri sono gli scatti della sequenza. La striscia mostra solo la sequenza in corso o l'ultima: all'avvio di una sequenza si svuota, e il primo scatto di prova fatto dopo ne inizia una nuova. I file restano nella cartella.",
 ], layout="full", anchors={n: "b" for n in range(1, 12)})}
 <p>Con il mouse: trascina per spostare l'immagine, rotella (o pizzico sul trackpad) per lo zoom centrato
 sul cursore, doppio clic per passare da “adatta” al 100% e viceversa. Oltre il 150% i pixel restano netti,
@@ -531,11 +548,22 @@ add(f"""
 <h1><span class="n">9</span>Fine corsa di sicurezza</h1>
 <p class="lead">I fine corsa impediscono che l'obiettivo tocchi il vetrino o che la meccanica arrivi a
 battuta. Vanno impostati prima di tutto, con calma.</p>
+<p>La scheda <b>Configurazione</b> è una pagina unica, divisa nei gruppi Focheggiatore, App e Sistema. Le schede
+Ottica e Calibrazione sono fatte allo stesso modo.</p>
+{fig("configurazione", [
+    "<b>Cerca</b>: scrivi parte di un nome (per esempio «gioco») e restano solo le righe che lo contengono.",
+    "<b>Indice</b>: un clic porta alla sezione; la voce evidenziata segue lo scorrimento. Un pallino segnala modifiche non salvate o un aggiornamento disponibile.",
+    "<b>Titolo della sezione</b>; il <b>?</b> apre la guida in quel punto.",
+    "<b>Dettagli</b>: le spiegazioni più lunghe, chiuse all'inizio.",
+    "<b>Riepilogo</b>, sempre in vista: risoluzione, corsa utile, firmware, versione dell'app e avanzamento da smartphone.",
+], layout="full")}
+<p>Quasi tutto si salva da solo appena cambi un valore: le impostazioni del motore vanno subito al firmware, la
+meccanica e le altre opzioni nelle impostazioni dell'app. Fanno eccezione i fine corsa, qui sotto.</p>
 {fig("fine-corsa", [
     "<b>Fine corsa inferiore</b> in passi; <span class='ui'>⌖ Usa posizione attuale</span> lo prende dalla posizione del focheggiatore.",
     "<b>Fine corsa superiore</b>. Vuoto = il massimo del firmware.",
     "<b>Verso il campione</b>: se avvicinandosi al campione i passi diminuiscono o aumentano. Serve a etichettare giusti Avvicina/Allontana.",
-    "<b>Salva fine corsa</b>.",
+    "<b>Salva fine corsa</b>, nella barra <i>Modifiche non salvate</i> che compare quando cambi un valore; <b>Annulla</b> torna ai valori salvati. È l'unica parte della Configurazione che non si salva da sola.",
     "<b>Imposta qui lo zero</b>: la posizione attuale diventa 0; fine corsa e sequenza vengono traslati di conseguenza.",
     "<b>Scrivi il massimo nel firmware</b>: il fine corsa superiore diventa il limite del firmware.",
 ], layout="full")}
@@ -577,8 +605,7 @@ micrometri vale un passo. Questo numero si chiama <b>risoluzione</b> (µm/passo)
     "<b>Microstep</b>: letto dal firmware, non si modifica qui (vedi Motore).",
     "<b>Rapporto di riduzione</b>: quanti giri fa il motore per un giro della manopola.",
     "<b>Corsa per giro manopola</b>: di quanti µm si sposta il tavolino a ogni giro della manopola micrometrica.",
-    "<b>Risultato</b>: µm per passo, passi per µm, µm ogni 1000 passi.",
-    "<b>Salva meccanica</b>.",
+    "<b>Risultato</b>: µm per passo, passi per µm, µm ogni 1000 passi. Le modifiche si salvano da sole.",
 ])}
 <h2>10.1 La catena della trasmissione</h2>
 <p>Dal motore al tavolino il movimento passa per alcuni stadi, e ognuno moltiplica o divide:</p>
@@ -721,7 +748,7 @@ add(f"""
 <p class="lead">Ogni foto è nitida solo in uno strato sottile del campione, la <b>profondità di campo</b>. Per
 avere tutto a fuoco dopo lo stacking, fra uno scatto e il successivo il fuoco non deve spostarsi più di
 quello strato, con un po' di sovrapposizione.</p>
-<p>Il calcolo è in fondo alla scheda <b>Ottica</b> e usa l'apertura numerica, l'ingrandimento sul sensore (obiettivo ×
+<p>Il calcolo è in fondo alla scheda <b>Ottica</b>, nel gruppo <b>Strumenti</b> (il risultato compare anche nel riepilogo a destra), e usa l'apertura numerica, l'ingrandimento sul sensore (obiettivo ×
 cambio intermedio × adattatore) e il pixel del sensore del profilo aperto (capitolo 7.2).</p>
 {fig("profondita", [
     "<b>Sovrapposizione</b> fra uno strato nitido e il successivo; il 20–30% è un buon valore.",
@@ -782,7 +809,7 @@ add(f"""
 <h2>Motore (firmware)</h2>
 {fig("motore", [
     "<b>Microstep</b>: passo intero, 1/2 … 1/32 (vedi 10.2). Cambiarlo cambia la scala delle posizioni: dopo, ricontrolla i fine corsa.",
-    "<b>Velocità</b> del firmware: lenta, media, veloce.",
+    "<b>Velocità</b> del firmware: lenta, media, veloce. Con il myFocuserPro2 e il firmware build 7 la massima dei movimenti è 80, 200 e 400 passi al secondo; ogni movimento parte a 40 passi al secondo e accelera.",
     "<b>Bobine alimentate a motore fermo</b>: il motore tiene la posizione, ma scalda.",
     "<b>Alimentale comunque durante la sequenza</b> (compare con le bobine spente; attiva in partenza): le bobine si accendono all'avvio della pila e si rispengono dopo il ritorno all'inizio.",
     "<b>Inverti verso di rotazione</b>.",
@@ -811,7 +838,7 @@ invece arrivano sempre a destinazione, anche se il movimento dura molti secondi.
 {fig("aggiornamenti", [
     "Versione dell'<b>app</b> e stato dell'ultimo controllo.",
     "Versione del <b>firmware</b> sul focheggiatore.",
-    "<b>Aggiorna firmware</b>: circa 20 secondi, le impostazioni del focheggiatore restano. Non scollegare il cavo; se qualcosa va storto, basta ripetere. La build 5 rende continuo il movimento con il pulsante tenuto premuto; dalla build 4 c'è l'arresto automatico se il Mac smette di comunicare.",
+    "<b>Aggiorna firmware</b>: circa 20 secondi, le impostazioni del focheggiatore restano. Non scollegare il cavo; se qualcosa va storto, basta ripetere. La build 5 rende continuo il movimento con il pulsante tenuto premuto; dalla build 4 c'è l'arresto automatico se il Mac smette di comunicare. La build 7 fa partire i movimenti più piano (40 passi al secondo) e dimezza la velocità lenta del myFocuserPro2.",
     "<b>Controlla ora</b> se ci sono aggiornamenti dell'app.",
 ], layout="side")}
 <p>L'app sceglie da sola il firmware adatto alla scheda (myFocuserPro2 o Ardufocus). L'<b>Ardufocus</b> non si
@@ -820,10 +847,10 @@ riavvia dal cavo USB: durante l'aggiornamento l'app chiede di premere il <b>tast
 movimento. Per non perdere la posizione, l'app la fa salvare subito ogni volta che chiude la connessione (Disconnetti,
 uscita dall'app, aggiornamento).</p>
 <h2>Temperatura</h2>
-{fig("temperatura", [
-    "Temperatura attuale della sonda.",
-    "Andamento degli ultimi 60 minuti. La temperatura di ogni scatto viene salvata in <code>sequence.json</code> e riassunta in <code>sequence.txt</code>: utile perché il fuoco si sposta con la dilatazione termica.",
-], layout="side")}
+<p>La temperatura attuale della sonda è nella barra in alto. Il grafico degli ultimi 60 minuti sta nel riepilogo della
+scheda <b>Calibrazione</b> (capitolo 7.6), accanto ai dark. La temperatura di ogni scatto viene salvata in
+<code>sequence.json</code> e riassunta in <code>sequence.txt</code>: utile perché il fuoco si sposta con la dilatazione
+termica.</p>
 """)
 
 # 13

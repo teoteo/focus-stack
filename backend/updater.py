@@ -54,6 +54,31 @@ def app_bundle() -> Path | None:
     return Path(p) if p and Path(p, "Contents").is_dir() else None
 
 
+def team_id(app: Path) -> str | None:
+    """Team dello sviluppatore che ha firmato l'app (firma Developer ID); None se la firma è ad hoc."""
+    try:
+        r = subprocess.run(["codesign", "-dv", str(app)], capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    m = re.search(r"^TeamIdentifier=(\S+)$", r.stderr, re.M)
+    return m.group(1) if m and m.group(1) != "not set" else None
+
+
+def check_signature(new_app: Path, team: str) -> None:
+    """L'aggiornamento deve avere la firma dello stesso sviluppatore dell'app installata."""
+    req = f'anchor apple generic and certificate leaf[subject.OU] = "{team}"'
+    r = subprocess.run(["codesign", "--verify", "--deep", "--strict", f"--test-requirement={req}", str(new_app)],
+                       capture_output=True, text=True, timeout=300)
+    if r.returncode != 0:
+        raise RuntimeError(tr("Il pacchetto scaricato non ha la firma dello sviluppatore di Focus Stack"))
+
+
+def release_api_url() -> str:
+    """Release più recente su GitHub. FOCUSSTACK_UPDATE_API serve solo per i test: una release finta
+    servita in locale, per provare l'aggiornamento senza pubblicare."""
+    return os.environ.get("FOCUSSTACK_UPDATE_API") or f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+
+
 def parse_version(v: str) -> tuple[int, ...]:
     nums = re.findall(r"\d+", v)
     return tuple(int(n) for n in nums) if nums else (0,)
@@ -129,7 +154,7 @@ class AppUpdater:
                 "progress": self.progress if self.installing else None}
 
     def check_blocking(self) -> None:
-        req = urllib.request.Request(f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest",
+        req = urllib.request.Request(release_api_url(),
                                      headers={"Accept": "application/vnd.github+json",
                                               "User-Agent": "FocusStack"})
         try:
@@ -181,6 +206,11 @@ class AppUpdater:
             new_app = next((work / "x").glob("*.app"), None)
             if not new_app or not (new_app / "Contents" / "Info.plist").exists():
                 raise RuntimeError(tr("Il pacchetto scaricato non contiene l'app"))
+            # app firmata Developer ID: si installa solo una versione firmata dallo stesso sviluppatore.
+            # Con la firma ad hoc basta il controllo sha256 del download.
+            team = team_id(bundle)
+            if team:
+                check_signature(new_app, team)
             # copia accanto a quella attuale: lo scambio finale è un semplice rename
             shutil.rmtree(staged, ignore_errors=True)
             subprocess.run(["ditto", str(new_app), str(staged)], check=True, capture_output=True)
@@ -191,7 +221,7 @@ class AppUpdater:
                 pass
             script = work / "installa.sh"
             script.write_text(_INSTALL_SCRIPT)
-            subprocess.Popen(["/bin/zsh", str(script), str(bundle), str(staged), str(work)],
+            subprocess.Popen(["/bin/zsh", str(script), str(bundle), str(staged), str(work), str(os.getpid())],
                              stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                              stderr=subprocess.DEVNULL, start_new_session=True)
             launched = True
@@ -271,18 +301,23 @@ def _short(exc: Exception | None) -> str:
     return getattr(exc, "strerror", None) or str(exc)
 
 
-# Eseguito fuori dall'app: la chiude (l'app spegne il server), scambia le cartelle e la riapre.
+# Eseguito fuori dall'app: spegne il server (l'app per Mac si chiude da sola quando il server si spegne),
+# aspetta che app e server siano terminati, scambia le cartelle e riapre l'app.
 _INSTALL_SCRIPT = r"""#!/bin/zsh
-OLD="$1"; NEW="$2"; WORK="$3"
-osascript -e 'tell application id "local.focusstack.app" to quit' >/dev/null 2>&1
-# attende che app e server siano terminati. Si cercano solo i processi il cui comando INIZIA
-# con un eseguibile del pacchetto: un Terminale o uno script che nomina il percorso non conta.
-APPRE="^${OLD//./\\.}/Contents/(MacOS/applet|Resources/python-[a-z0-9_]+/bin/python3)"
+OLD="$1"; NEW="$2"; WORK="$3"; SERVER_PID="$4"
+# SIGTERM: uvicorn si chiude in modo ordinato e chiude focheggiatore e fotocamera. Niente AppleScript
+# («tell application … to quit»): un'app moderna può mandare eventi Apple solo con un permesso dell'utente.
+[ -n "$SERVER_PID" ] && kill -TERM "$SERVER_PID" 2>/dev/null
+# Si cercano solo i processi il cui comando INIZIA con un eseguibile del pacchetto (MacOS/applet fino
+# alla 1.1, poi l'app Swift): un Terminale o uno script che nomina il percorso non conta.
+# -a: conta anche gli «antenati» di questo script (il server che l'ha avviato e l'app sopra di lui),
+# che pgrep e pkill di macOS altrimenti saltano.
+APPRE="^${OLD//./\\.}/Contents/(MacOS/(applet|Focus Stack)|Resources/python-[a-z0-9_]+/bin/python3)"
 for i in {1..120}; do
-  pgrep -f "$APPRE" >/dev/null || break
+  pgrep -a -f "$APPRE" >/dev/null || break
   sleep 0.5
 done
-pkill -f "$APPRE" 2>/dev/null
+pkill -a -f "$APPRE" 2>/dev/null
 sleep 1
 BACKUP="${OLD%.app}-precedente.app"
 rm -rf "$BACKUP"

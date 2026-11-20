@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<!-- icona piatta per .icns (macOS 13-25) e PNG: gli stessi livelli di AppIcon.icon su sfondo, riflesso e bordo.
+     Coordinata con Focus Fusion: stessa griglia, prospettiva, sfocature, riflesso e bordo. -->
+<defs>
+ <filter id="near" x="-40%" y="-80%" width="180%" height="260%"><feGaussianBlur stdDeviation="13"/></filter>
+ <filter id="far" x="-40%" y="-80%" width="180%" height="260%"><feGaussianBlur stdDeviation="32"/></filter>
+</defs>
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#283241"/><stop offset="1" stop-color="#0b0f15"/></linearGradient>
+ <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/><stop offset="0.45" stop-color="#ffffff" stop-opacity="0"/></linearGradient>
+</defs>
+<g transform="translate(100 100) scale(0.8046875)">
+<rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+<ellipse cx="512" cy="792" rx="270" ry="124" fill="none" stroke="#3b82f6" stroke-width="40" filter="url(#far)" opacity="0.45"/>
+<ellipse cx="512" cy="652" rx="270" ry="124" fill="none" stroke="#4f8ff7" stroke-width="40" filter="url(#near)" opacity="0.75"/>
+<ellipse cx="512" cy="512" rx="270" ry="124" fill="none" stroke="#6aaefc" stroke-width="46" opacity="1"/>
+<ellipse cx="512" cy="495" rx="270" ry="124" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="6"/>
+<circle cx="512" cy="512" r="44" fill="#f8fafc"/>
+<ellipse cx="512" cy="372" rx="270" ry="124" fill="none" stroke="#4f8ff7" stroke-width="40" filter="url(#near)" opacity="0.75"/>
+<ellipse cx="512" cy="232" rx="270" ry="124" fill="none" stroke="#3b82f6" stroke-width="40" filter="url(#far)" opacity="0.45"/>
+<rect width="1024" height="1024" rx="228" fill="url(#sheen)"/>
+<rect x="5" y="5" width="1014" height="1014" rx="223" fill="none" stroke="#ffffff" stroke-opacity="0.25" stroke-width="6"/>
+</g>
+</svg>

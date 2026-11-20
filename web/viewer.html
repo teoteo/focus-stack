@@ -10,11 +10,22 @@
 <style>
   html, body { height: 100%; overflow: hidden; }
   body { display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); }
-  .vbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--card);
+  /* se la barra va a capo, i pulsanti della riga sotto restano allineati a destra */
+  .vbar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 10px 14px; background: var(--card);
     border-bottom: 1px solid var(--line); flex-wrap: wrap; }
   .vbar .group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .vbar .sep { width: 1px; height: 26px; background: var(--line); margin: 0 4px; }
   .vtitle { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
+  /* contatore della pila: ultimo scatto fatto / totale, alto quanto le due righe del titolo */
+  .vcount { display: flex; flex-direction: column; justify-content: center; line-height: 1; padding: 0 14px 0 4px;
+    border-right: 1px solid var(--line); min-width: 96px; }
+  .vcount b { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; white-space: nowrap; }
+  .vcount b small { font-size: 19px; font-weight: 600; color: var(--text-2); }
+  .vcount em { font-style: normal; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 5px; white-space: nowrap; }
+  .vcount.live em { color: var(--accent); }
+  /* avanzamento della pila: linea di 2 px lungo il bordo superiore della finestra */
+  .topline { position: fixed; left: 0; top: 0; height: 2px; width: 0; background: var(--accent); z-index: 30; transition: width .4s; pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) { .topline { transition: none; } }
   .vtitle b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .vtitle span { font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; }
   .zoom-val { min-width: 64px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 15px; }
@@ -91,11 +102,13 @@
 </style>
 </head>
 <body>
+<div class="topline hidden" id="v-topline" role="progressbar" aria-label="Avanzamento della pila" aria-valuemin="0" aria-valuemax="100"></div>
 <div class="vbar">
   <div class="group">
     <button class="btn ghost vb" id="prev" title="Scatto precedente (←)">◀</button>
     <button class="btn ghost vb" id="next" title="Scatto successivo (→)">▶</button>
   </div>
+  <div class="vcount hidden" id="v-count"><b id="v-count-num"></b><em id="v-count-lbl"></em></div>
   <div class="vtitle">
     <b id="v-name">Nessuno scatto</b>
     <span id="v-meta"></span>
@@ -214,6 +227,7 @@
 
 <script src="/lang.js"></script>
 <script src="/i18n.js"></script>
+<script src="/native.js"></script>
 <script src="/inspector.js"></script>
 <script src="/viewer.js"></script>
 </body>

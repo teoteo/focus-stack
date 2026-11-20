@@ -6,7 +6,9 @@ const stage = $("stage"), img = $("img");
 
 try { document.documentElement.dataset.theme = localStorage.getItem("fs-theme") || "dark"; } catch { /* opzionale */ }
 
-let shots = [];          // elenco dal server
+let shots = [];          // scatti del gruppo corrente (la sequenza in corso o l'ultima, oppure le prove fatte dopo)
+let allCount = 0;        // tutti gli scatti che il server tiene, anche dei gruppi precedenti (per «Svuota»)
+let lastState = null;    // ultimo stato ricevuto dal WebSocket
 let current = null;      // id dello scatto mostrato
 let currentKey = null;   // chiave unica dello scatto mostrato (gli id ripartono da 0 a ogni riavvio)
 let follow = true;       // segue automaticamente l'ultimo scatto
@@ -189,9 +191,9 @@ function inspectorInfo(shot, el, isFull) {
 function renderMeta(shot) {
   $("v-name").textContent = shot.name;
   const pos = shots.indexOf(shot) + 1;
-  const parts = [`${pos} / ${shots.length}`];
-  parts.push(shot.kind === "sequence" ? t("sequenza · scatto {n}", { n: shot.repeat ? `${shot.index}.${shot.repeat}` : shot.index })
-    : shot.kind === "calibration" ? t("frame di calibrazione") : shot.kind === "exposure" ? t("prova di esposizione") : t("scatto di prova"));
+  const parts = [shot.kind === "sequence" ? t("scatto {n}", { n: shot.repeat ? `${shot.index}.${shot.repeat}` : shot.index })
+    : shot.kind === "calibration" ? t("frame di calibrazione {n}", { n: pos })
+    : shot.kind === "exposure" ? t("prova di esposizione {n}", { n: pos }) : t("prova {n}", { n: pos })];
   if (shot.position != null) parts.push(t("posizione {n}", { n: fmtNum(shot.position) }));
   if (shot.temperature != null) parts.push(`${fmtNum(shot.temperature, 1)} °C`);
   parts.push(shot.time);
@@ -199,6 +201,36 @@ function renderMeta(shot) {
   $("prev").disabled = pos <= 1;
   $("next").disabled = pos >= shots.length;
   document.title = `${shot.name} — ${t("Visualizzatore")}`;
+}
+
+// ---------------- contatore della pila e linea di avanzamento ----------------
+// A sinistra: ultimo scatto fatto / totale della sequenza (non cambia guardando uno scatto più vecchio);
+// per le prove, quante sono. In alto, durante la pila, una linea azzurra di 2 px da 0 a 100 %.
+function renderCounter() {
+  const q = (lastState && lastState.sequence) || {}, box = $("v-count"), line = $("v-topline");
+  const running = ["running", "paused", "stopping"].includes(q.state);
+  const last = shots[shots.length - 1];
+  let num = "", lbl = "";
+  if (running || (last && last.kind === "sequence")) {
+    // lo scatto arriva un attimo prima che la sequenza aggiorni il suo indice: vale il più alto dei due
+    const lastSeq = last && last.kind === "sequence" ? last.index : 0;
+    const total = q.total || lastSeq, done = q.total ? Math.max(q.index, running ? lastSeq : 0) : lastSeq;
+    num = `${done}<small>/${total}</small>`;
+    lbl = { running: t("in corso"), paused: t("in pausa"), stopping: t("arresto…"), done: t("completata") }[q.state]
+      || (q.total && q.index < q.total ? t("interrotta") : t("completata"));
+  } else if (last) {
+    num = String(shots.length);
+    lbl = last.kind === "calibration" ? t("calibrazione") : shots.length === 1 ? t("prova") : t("prove");
+  }
+  box.classList.toggle("hidden", !num);
+  box.classList.toggle("live", running);
+  $("v-count-num").innerHTML = num;
+  $("v-count-lbl").textContent = lbl;
+  const lastSeqIdx = last && last.kind === "sequence" ? last.index : 0;
+  const pct = running && q.total ? Math.round((Math.min(q.total, Math.max(q.index, lastSeqIdx)) / q.total) * 100) : 0;
+  line.classList.toggle("hidden", !running);
+  line.style.width = `${pct}%`;
+  line.setAttribute("aria-valuenow", pct);
 }
 
 // ---------------- striscia miniature ----------------
@@ -236,8 +268,11 @@ function loadShots() {
 async function fetchShots() {
   const r = await fetch("/api/shots");
   const data = await r.json();
-  shots = data.items;
-  $("clear").disabled = !shots.length;
+  allCount = data.count ?? data.items.length;
+  // la striscia ricomincia a ogni sequenza; gli scatti di prova fatti dopo ne aprono una nuova
+  shots = data.group == null ? data.items : data.items.filter((s) => s.group === data.group);
+  $("clear").disabled = !allCount;
+  renderCounter();
   renderStrip();
   // server riavviato: lo scatto mostrato non esiste più
   if (current != null && !shots.some((s) => s.id === current && s.key === currentKey)) {
@@ -274,6 +309,7 @@ function connectWS() {
     bootSignature = st.boot_signature;
     if (st.language && st.language !== LANG) { location.reload(); return; }   // lingua cambiata in Configurazione
     camState = st.camera;
+    lastState = st;
     const wasRunning = seqRunning;
     seqRunning = ["running", "paused", "stopping"].includes(st.sequence.state);
     // sequenza appena partita con il live view acceso: si chiude il live e si seguono gli scatti nuovi
@@ -285,6 +321,7 @@ function connectWS() {
     if (wantLive && camState.connected) setLiveView(true);
     wantLive = false;
     renderLiveView();
+    renderCounter();
     // shots_rev cambia a ogni scatto e a ogni "Svuota" (shot_count: server di versioni precedenti)
     const rev = st.shots_rev ?? st.shot_count;
     if (rev !== lastRev) { lastRev = rev; loadShots().catch(() => {}); }
@@ -430,8 +467,8 @@ if ("BroadcastChannel" in window) {
 $("lock").onclick = () => setLock(!lockView);
 $("guides").onclick = () => setGuides(GUIDE_MODES[(GUIDE_MODES.indexOf(guideMode) + 1) % GUIDE_MODES.length]);
 $("clear").onclick = async () => {
-  if (!shots.length) return;
-  if (!confirm(t("Ricominciare da capo? Gli scatti ({n}) escono dal visualizzatore e la sequenza torna «Pronta».", { n: shots.length }) + "\n\n" +
+  if (!allCount) return;
+  if (!confirm(t("Ricominciare da capo? Gli scatti ({n}) escono dal visualizzatore e la sequenza torna «Pronta».", { n: allCount }) + "\n\n" +
     t("I file già salvati restano nella cartella sul disco. La prossima sequenza avrà una cartella nuova, con i suoi sequence.json e sequence.txt."))) return;
   setFollow(true);
   await fetch("/api/shots/clear", { method: "POST", headers: { "X-FocusStack": "1" } });
@@ -528,6 +565,15 @@ Inspector.bind({
   // aperto o chiuso: lo spazio dell'immagine cambia; sul live view riparte il calcolo periodico
   onToggle: () => { if (view.mode === "fit") requestAnimationFrame(fit); if (liveOn) liveInspect(); },
 });
+// barra che va a capo: un separatore rimasto in fondo alla riga (il gruppo dopo è sceso sotto) si nasconde.
+// visibility e non display: lo spazio resta, così nascondendolo la barra non cambia di nuovo il modo di andare a capo
+function tidySeparators() {
+  for (const sep of document.querySelectorAll(".vbar .sep")) {
+    const next = sep.nextElementSibling;
+    sep.style.visibility = next && next.offsetTop > sep.offsetTop + sep.offsetHeight ? "hidden" : "";
+  }
+}
+new ResizeObserver(tidySeparators).observe(document.querySelector(".vbar"));
 setGuides(guideMode);
 apply();
 connectWS();   // il primo messaggio di stato carica l'elenco degli scatti
