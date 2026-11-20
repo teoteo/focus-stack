@@ -297,12 +297,31 @@ class GPhotoCamera:
     def _preview_blocking(self) -> bytes:
         """Un fotogramma del live view (JPEG). Il primo accende il live view della fotocamera."""
         self._require()
+        if not self.live:
+            self._largest_live_size()
         try:
             cam_file = self._cam.capture_preview()
         except gp.GPhoto2Error as exc:
             raise CameraError(tr("Live view non disponibile su questa fotocamera ({exc})", exc=exc)) from exc
         self.live = True
         return bytes(memoryview(cam_file.get_data_and_size()))
+
+    # dimensioni del live view Nikon (liveviewsize), dalla più grande
+    LIVE_SIZES = ("XGA", "VGA", "QVGA")
+
+    def _largest_live_size(self) -> None:
+        """Nikon: il live view parte spesso in QVGA (320×240), molto sgranato. Prima di accenderlo sceglie la
+        dimensione più grande che la fotocamera offre (VGA 640×480, XGA 1024×768). Le altre marche non hanno
+        l'impostazione: la dimensione la decide la fotocamera."""
+        try:
+            w = self._cam.get_single_config("liveviewsize")
+            choices = [w.get_choice(i) for i in range(w.count_choices())]
+            best = next((c for c in self.LIVE_SIZES if c in choices), None)
+            if best and str(w.get_value()) != best:
+                w.set_value(best)
+                self._cam.set_single_config("liveviewsize", w)
+        except gp.GPhoto2Error:
+            pass
 
     def _end_preview_blocking(self) -> None:
         """Spegne il live view (Canon/Nikon: abbassa lo specchio). Sony non ha il comando."""

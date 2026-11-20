@@ -71,7 +71,12 @@ def macro_lines(optics: dict, add) -> None:
         parts.append(" ".join(x for x in (c.get("name") or tr("lente addizionale"), f"+{num(c.get('diopters'))} D") if x))
     if parts:
         add(" · ".join(parts))
-    if optics.get("magnification"):
+    if optics.get("magnification_measured"):
+        line = f"{tr('Ingrandimento sul sensore')}: {num(optics['magnification_measured'], 2)}× ({tr('misurato')})"
+        if optics.get("magnification"):
+            line += f" · {tr('stima')} {num(optics['magnification'], 2)}×"
+        add(line)
+    elif optics.get("magnification"):
         add(f"{tr('Ingrandimento sul sensore')}: {num(optics['magnification'])}× ({tr('stima')})")
     ap = []
     if optics.get("f_number"):
@@ -177,7 +182,14 @@ def render(m: dict) -> str:
             name, fac = part.get("name") or "", part.get("magnification")
             fac_txt = f"{num(fac)}×" if fac else ""
             chain.append(name if fac_txt and fac_txt in name else " ".join(x for x in (name, fac_txt) if x))
-    if optics.get("magnification") and optics.get("kind") != "macro":
+    if optics.get("kind") != "macro" and optics.get("magnification_measured"):
+        line = f"{tr('Ingrandimento sul sensore')}: {num(optics['magnification_measured'], 2)}× ({tr('misurato')})"
+        if optics.get("magnification"):
+            line += f" · {tr('dalla catena {m}×', m=num(optics['magnification']))}"
+            if len(chain) > 1:
+                line += f" ({' · '.join(chain)})"
+        add(line)
+    elif optics.get("magnification") and optics.get("kind") != "macro":
         line = f"{tr('Ingrandimento sul sensore')}: {num(optics['magnification'])}×"
         if len(chain) > 1:
             line += f" ({' · '.join(chain)})"

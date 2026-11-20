@@ -370,7 +370,7 @@ obiettivo 10× con il cambio d'ingrandimento Optovar 1,6× e la fotocamera su un
     "<b>Apertura numerica (NA)</b>: il secondo numero inciso sull'obiettivo (10×/<b>0,25</b>).",
     "<b>Immersione</b>: aria, acqua, olio, glicerina o silicone.",
     "<b>µm per pixel sul campione, misurati</b> con un micrometro oggetto: se c'è, vale più del calcolo.",
-    "<b>Ingrandimento sul sensore</b> = obiettivo × cambio intermedio × adattatore (qui 10 × 1,6 × 1 = 16×) e <b>scala sul campione</b>: il valore misurato oppure pixel del sensore ÷ ingrandimento.",
+    "<b>Ingrandimento sul sensore</b> = obiettivo × cambio intermedio × adattatore (qui 10 × 1,6 × 1 = 16×) e <b>scala sul campione</b>: il valore misurato oppure pixel del sensore ÷ ingrandimento. Con la misura compare anche l'<b>ingrandimento reale</b> (pixel del sensore ÷ µm per pixel misurati), che comprende ciò che la catena non dice, come la distanza del sensore o il tubo foto; se lo scarto è grande, <i>Ricava il fattore dalla misura</i> corregge l'adattatore.",
     "<b>Filtro</b>: <i>Non indicato</i> (non si sa), <i>Nessun filtro</i> oppure <i>Filtro montato</i>.",
     "<b>Nome</b> e <b>tipo</b> del filtro: passa banda, long pass, short pass, neutro, polarizzatore, altro.",
     "<b>Centro</b> e <b>larghezza di banda</b> in nm per un passa banda; per long pass e short pass la lunghezza d'onda di taglio.",

@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.appearance = Theme.appearance
         NSApp.mainMenu = buildMenu()
         bridge.onTheme = { [weak self] in self?.windows.applyTheme() }
+        bridge.onFocusViewer = { [weak self] in self?.windows.bringViewerToFront() ?? false }
         windows.createMainWindow()
         debug = Debug(windows: windows)
         NSApp.activate(ignoringOtherApps: true)

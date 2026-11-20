@@ -22,6 +22,7 @@ final class WebWindows: NSObject, WKUIDelegate, WKNavigationDelegate, NSWindowDe
     private(set) var mainWebView: WKWebView?
     private var placeholder: NSView?
     private var popups: [NSWindow: NSKeyValueObservation] = [:]
+    private weak var viewerWindow: NSWindow?
     private let navigation = NavigationToolbar()
 
     init(server: Server, bridge: Bridge) {
@@ -165,6 +166,7 @@ final class WebWindows: NSObject, WKUIDelegate, WKNavigationDelegate, NSWindowDe
             w.toolbar = bar
             w.toolbarStyle = .unifiedCompact
         }
+        if kind == "Viewer" { viewerWindow = w }
         if !w.setFrameUsingName("FocusStack\(kind)") { w.cascadeTopLeft(from: mainWindow.frame.origin) }
         w.setFrameAutosaveName("FocusStack\(kind)")
         popups[w] = wv.observe(\.title, options: [.new]) { [weak w] view, _ in
@@ -183,6 +185,26 @@ final class WebWindows: NSObject, WKUIDelegate, WKNavigationDelegate, NSWindowDe
             DispatchQueue.main.async { if !w.styleMask.contains(.fullScreen) { w.toggleFullScreen(nil) } }
         }
         return wv
+    }
+
+    /// «Apri visualizzatore» con il visualizzatore già aperto: lo riporta davanti anche se è ridotto nel Dock o
+    /// su un'altra scrivania (Spaces), dove non si trovava più. Lo sposta sulla scrivania in uso; a tutto schermo
+    /// ha una scrivania sua e macOS passa a quella. false se non è aperto.
+    func bringViewerToFront() -> Bool {
+        guard let w = viewerWindow, w.isVisible || w.isMiniaturized else { return false }
+        if w.isMiniaturized { w.deminiaturize(nil) }
+        if w.styleMask.contains(.fullScreen) {
+            w.makeKeyAndOrderFront(nil)
+        } else {
+            // .moveToActiveSpace solo per questo istante: altrimenti la finestra seguirebbe sempre la scrivania attiva
+            let saved = w.collectionBehavior
+            w.collectionBehavior.remove(.fullScreenPrimary)
+            w.collectionBehavior.insert(.moveToActiveSpace)
+            w.makeKeyAndOrderFront(nil)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { w.collectionBehavior = saved }
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        return true
     }
 
     /// Lo schermo dove non c'è la finestra principale (il più grande, se sono più di uno); nil con uno schermo solo.

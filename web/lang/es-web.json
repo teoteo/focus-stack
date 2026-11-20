@@ -761,5 +761,13 @@
  "prova": "prueba",
  "prove": "pruebas",
  "Esiste già un preset «{name}»: sostituirlo con i valori attuali?": "Ya existe un preajuste «{name}»: ¿sustituirlo por los valores actuales?",
- "Preset «{name}» salvato": "Preajuste «{name}» guardado"
+ "Preset «{name}» salvato": "Preajuste «{name}» guardado",
+ "{m}× sul sensore (misurato)": "{m}× en el sensor (medido)",
+ "Ingrandimento dalla catena: {m}×": "Aumento según la cadena óptica: {m}×",
+ "Ingrandimento reale sul sensore, dalla misura: <b>{m}×</b>": "Aumento real en el sensor, según la medida: <b>{m}×</b>",
+ "Ricava il fattore dalla misura": "Obtener el factor de la medida",
+ "l'adattatore diventa {f}×, così la catena coincide con la misura": "el adaptador pasa a {f}×, así la cadena coincide con la medida",
+ "Adattatore a {f}×: salva il profilo per tenerlo": "Adaptador a {f}×: guarda el perfil para conservarlo",
+ "dalla misura · catena {m}×": "medido · cadena {m}×",
+ "dalla misura": "medido"
 }

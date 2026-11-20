@@ -761,5 +761,13 @@
  "prova": "essai",
  "prove": "essais",
  "Esiste già un preset «{name}»: sostituirlo con i valori attuali?": "Un préréglage « {name} » existe déjà : le remplacer par les valeurs actuelles ?",
- "Preset «{name}» salvato": "Préréglage « {name} » enregistré"
+ "Preset «{name}» salvato": "Préréglage « {name} » enregistré",
+ "{m}× sul sensore (misurato)": "{m}× sur le capteur (mesuré)",
+ "Ingrandimento dalla catena: {m}×": "Grandissement d'après la chaîne optique : {m}×",
+ "Ingrandimento reale sul sensore, dalla misura: <b>{m}×</b>": "Grandissement réel sur le capteur, d'après la mesure : <b>{m}×</b>",
+ "Ricava il fattore dalla misura": "Déduire le facteur de la mesure",
+ "l'adattatore diventa {f}×, così la catena coincide con la misura": "l'adaptateur passe à {f}×, la chaîne correspond alors à la mesure",
+ "Adattatore a {f}×: salva il profilo per tenerlo": "Adaptateur à {f}× : enregistrez le profil pour le conserver",
+ "dalla misura · catena {m}×": "mesuré · chaîne {m}×",
+ "dalla misura": "mesuré"
 }

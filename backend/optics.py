@@ -128,6 +128,9 @@ def manifest_optics(o: dict) -> dict:
     if o.get("pixel_size_um"):
         optics["pixel_size_um"] = o["pixel_size_um"]
         optics["pixel_size_source"] = "calibrated"
+        if o.get("sensor_pixel_um"):
+            # ingrandimento reale: contiene quello che la catena non dice (distanza del sensore, tubo foto)
+            optics["magnification_measured"] = round(o["sensor_pixel_um"] / o["pixel_size_um"], 4)
     elif o.get("sensor_pixel_um") and total:
         optics["pixel_size_um"] = round(o["sensor_pixel_um"] / total, 5)
         optics["pixel_size_source"] = "sensor_pixel / magnification"

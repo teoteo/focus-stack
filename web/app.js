@@ -894,6 +894,7 @@ function bindRemote() {
 let dofLast = null;   // ultimo calcolo della profondità di campo, per il riepilogo di Ottica
 function dof() {
   dofLast = null;
+  $("d-apply").disabled = true;   // senza profondità di campo (manca NA o ingrandimento) non c'è un passo da usare
   const o = opticsForm(), macro = o.kind === "macro";
   const na = macro ? macroNumbers(o).na : num("d-na"), mag = totalMag(o) || 0, px = num("d-px"), ov = num("d-ov") / 100;
   // pixel sul campione (e/M nella formula): quello misurato se c'è, altrimenti pixel del sensore ÷ ingrandimento
@@ -906,6 +907,7 @@ function dof() {
   const d = (0.55 * 1.0) / (na * na) + (1.0 * pxSample) / na;
   const step = d * (1 - ov), um = umPerStep();
   dofLast = { d, step, steps: um ? stepsFor(step, um) : null, ov: num("d-ov") };
+  $("d-apply").disabled = false;
   let html = t("Profondità di campo ≈ <b>{d} µm</b> · passo consigliato <b>{s} µm</b>", { d: fmtNum(d, 2), s: fmtNum(step, 2) });
   if (measured) html += " " + t("(con i µm per pixel misurati)");
   if (!um) html += " · " + t("configura la meccanica per convertirlo in passi");
@@ -1089,19 +1091,34 @@ function totalMag(o) {
   return obj * ((o.intermediate && o.intermediate.factor) || 1) * ((o.relay && o.relay.factor) || 1);
 }
 
+// ingrandimento reale sul sensore, dai µm per pixel misurati: pixel del sensore ÷ pixel sul campione.
+// Contiene tutto quello che la catena non dice (distanza del sensore, tubo foto, tolleranze)
+function measuredMag(o) {
+  return o.pixel_size_um > 0 && o.sensor_pixel_um > 0 ? o.sensor_pixel_um / o.pixel_size_um : null;
+}
+
+// fattore dell'adattatore che fa tornare la catena (obiettivo × intermedio × adattatore) con la misura
+function derivedRelay(o) {
+  const real = measuredMag(o), obj = o.objective_magnification;
+  if (o.kind === "macro" || !real || !obj) return null;
+  return Math.round((real / (obj * ((o.intermediate && o.intermediate.factor) || 1))) * 1000) / 1000;
+}
+
 // testo breve di un profilo: obiettivo · totale sul sensore · NA · filtro
 function opticsText(o) {
-  const parts = [], total = totalMag(o), obj = o.objective_magnification ?? o.magnification;
+  const parts = [], total = totalMag(o), obj = o.objective_magnification ?? o.magnification, real = measuredMag(o);
   if (o.kind === "macro") {
     const lens = (o.macro || {}).lens || {}, mc = o.macro || {};
     const name = lensName(lens);
     parts.push(name || t("macro fotografica"));
-    if (total) parts.push(t("≈ {m}× sul sensore", { m: fmtNum(total, 2) }));
+    if (real) parts.push(t("{m}× sul sensore (misurato)", { m: fmtMag(real) }));
+    else if (total) parts.push(t("≈ {m}× sul sensore", { m: fmtNum(total, 2) }));
     if (mc.f_number) parts.push(`f/${fmtNum(mc.f_number, 1)}`);
   } else {
     if (o.objective) parts.push(o.objective);
     else if (obj) parts.push(`${fmtNum(obj, 1)}×`);
-    if (total && total !== obj) parts.push(t("{m}× sul sensore", { m: fmtMag(total) }));
+    if (real) parts.push(t("{m}× sul sensore (misurato)", { m: fmtMag(real) }));
+    else if (total && total !== obj) parts.push(t("{m}× sul sensore", { m: fmtMag(total) }));
     if (o.na) parts.push(`NA ${fmtNum(o.na, 2)}`);
   }
   const f = o.filter || {};
@@ -1119,8 +1136,10 @@ function opticsSummary() {
 }
 const escapeHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+let pxResultHtml = null;   // ultimo testo di Scala sul campione
 function updateOptics() {
-  const o = opticsForm(), total = totalMag(o);
+  const o = opticsForm(), total = totalMag(o), real = measuredMag(o);
+  const limit = o.kind === "macro" ? 15 : 2;   // scarto accettabile fra misura e calcolo (macro: stima a lenti sottili)
   let txt = "";
   if (o.kind === "macro") {
     const mn = macroNumbers(o), mc = o.macro;
@@ -1136,7 +1155,8 @@ function updateOptics() {
     if (!mn.needFocal && !total) txt += t("Indica il rapporto di riproduzione dell'obiettivo (o tubi e lenti con la focale)") + "<br>";
   } else if (total) {
     const factors = [o.objective_magnification, o.intermediate.factor, o.relay.factor].filter((f) => f);
-    txt = t("Ingrandimento sul sensore: <b>{m}×</b>", { m: fmtMag(total) })
+    // con la misura, il valore della catena è solo un confronto: quello reale è sotto, dalla misura
+    txt = (real ? t("Ingrandimento dalla catena: {m}×", { m: fmtMag(total) }) : t("Ingrandimento sul sensore: <b>{m}×</b>", { m: fmtMag(total) }))
       + (factors.length > 1 ? ` (${factors.map(fmtMag).join(" × ")})` : "") + "<br>";
   }
   const calc = o.sensor_pixel_um && total ? o.sensor_pixel_um / total : 0;
@@ -1147,7 +1167,7 @@ function updateOptics() {
   if (o.pixel_size_um && calc) {
     // scarto fra misurato e calcolato: oltre il 2 % (in macro oltre il 15 %, normale per la stima a lenti sottili)
     // di solito manca o è di troppo un fattore (Optovar, adattatore) o il pixel del sensore è sbagliato
-    const diff = (o.pixel_size_um / calc - 1) * 100, limit = o.kind === "macro" ? 15 : 2;
+    const diff = (o.pixel_size_um / calc - 1) * 100;
     const line = t("Sul campione: calcolato {c} · misurato <b>{m} µm/pixel</b> (scarto {d} %)",
       { c: fmtNum(calc, 4), m: fmtNum(o.pixel_size_um, 4), d: (diff > 0 ? "+" : "") + fmtNum(diff, 1) });
     txt += Math.abs(diff) > limit
@@ -1157,8 +1177,26 @@ function updateOptics() {
   else if (o.sensor_pixel_um && total)
     txt += t("Sul campione: <b>{v} µm/pixel</b> (pixel del sensore ÷ ingrandimento)", { v: fmtNum(o.sensor_pixel_um / total, 4) });
   else if (o.kind !== "macro" || total) txt += t("Indica ingrandimento e pixel del sensore per avere la scala in µm");
+  if (real) {
+    txt += `<span class="result-line">${t("Ingrandimento reale sul sensore, dalla misura: <b>{m}×</b>", { m: fmtMag(real) })}</span>`;
+    // la catena non torna: propone il fattore dell'adattatore che la fa coincidere con la misura
+    const relay = derivedRelay(o);
+    if (relay && calc && Math.abs((o.pixel_size_um / calc - 1) * 100) > limit)
+      txt += `<span class="result-line"><button type="button" class="btn ghost small" id="o-derive">${t("Ricava il fattore dalla misura")}</button>`
+        + `<span class="muted">${t("l'adattatore diventa {f}×, così la catena coincide con la misura", { f: fmtNum(relay, 3) })}</span></span>`;
+  }
   if (o.kind === "macro" && total && !o.pixel_size_um) txt += "<br>" + `<span class="hint">${t("Stima con lenti sottili: per misure esatte fotografa un righello o un micrometro e scrivi qui sotto i µm per pixel misurati.")}</span>`;
-  $("o-pxresult").innerHTML = txt;
+  // si riscrive solo se cambia: uscire dal campo (change) mentre si clicca «Ricava il fattore» non deve
+  // sostituire il pulsante fra la pressione e il rilascio, altrimenti il clic va perso
+  if (txt !== pxResultHtml) { $("o-pxresult").innerHTML = txt; pxResultHtml = txt; }
+  const derive = $("o-derive");
+  if (derive) derive.onclick = () => {
+    const f = derivedRelay(opticsForm());
+    if (!f) return;
+    $("o-relay").value = f;
+    updateOptics();
+    toast(t("Adattatore a {f}×: salva il profilo per tenerlo", { f: fmtNum(f, 3) }));
+  };
   dof();
   const dirty = JSON.stringify(o) !== opticsSaved;
   setChip("o-chip", editingProfile || t("Nuovo profilo"), editingProfile ? (dirty ? "busy" : "ok") : "");
@@ -1176,8 +1214,17 @@ function renderOpticsSummary(o, total, dirty) {
   const st = $("osum-state");
   st.textContent = dirty ? t("Modifiche non salvate") : editingProfile ? t("salvato") : "";
   st.className = dirty ? "sum-warn" : editingProfile ? "sum-ok" : "";
-  $("osum-mag").textContent = total ? `${fmtMag(total)}×` : "—";
-  $("osum-magx").textContent = o.kind === "macro" ? (total ? t("stima con lenti sottili") : "") : "";
+  // ingrandimento reale (dalla misura) se c'è; altrimenti quello della catena
+  const real = measuredMag(o), limit = o.kind === "macro" ? 15 : 2, mx = $("osum-magx");
+  $("osum-mag").textContent = real ? `${fmtMag(real)}×` : total ? `${fmtMag(total)}×` : "—";
+  if (real) {
+    const off = total && Math.abs((real / total - 1) * 100) > limit;
+    mx.textContent = off ? t("dalla misura · catena {m}×", { m: fmtMag(total) }) : t("dalla misura");
+    mx.className = off ? "sum-warn" : "sum-ok";
+  } else {
+    mx.textContent = o.kind === "macro" && total ? t("stima con lenti sottili") : "";
+    mx.className = "";
+  }
   const calc = o.sensor_pixel_um && total ? o.sensor_pixel_um / total : 0, meas = o.pixel_size_um || 0;
   $("osum-scale").textContent = meas || calc ? t("{v} µm/pixel", { v: fmtNum(meas || calc, 4) }) : "—";
   const sx = $("osum-scalex");
@@ -1578,13 +1625,19 @@ function bindCalibration() {
 let viewerWin = null;
 function openViewer(shotId) {
   const url = "/viewer.html" + (shotId != null ? `#${shotId}` : "");
+  // nell'app per Mac focus() non basta: il visualizzatore poteva restare nel Dock o su un'altra scrivania.
+  // Lo riporta l'app (se il comando non c'è, app vecchia, resta focus())
+  const front = () => window.FSNative && FSNative.focusViewer().catch(() => {});
   if (viewerWin && !viewerWin.closed) {
     viewerWin.location.hash = shotId != null ? String(shotId) : "";
     viewerWin.focus();
+    front();
     return;
   }
+  // window.open sincrono (dentro il clic): dopo un await la finestra verrebbe bloccata come popup
   viewerWin = window.open(url, "focusstack-viewer", "width=1280,height=900");
   if (!viewerWin) location.href = url; // finestre popup bloccate
+  else front();   // pagina ricaricata: WebKit riusa il visualizzatore con lo stesso nome, ma non lo porta davanti
 }
 
 // ---------------- eventi ----------------
@@ -2010,8 +2063,10 @@ function bind() {
   bindRemote();
   $("d-apply").onclick = () => {
     if (!umPerStep()) return toast(t("Configura prima la meccanica (µm per passo)"), true);
+    const step = dof();
+    if (!(step > 0)) return toast($("d-result").textContent, true);   // mai 1 passo «per difetto»
     linkBegin("s-step"); linkEdit.closed = true;
-    $("s-step").value = stepsFor(dof(), umPerStep());
+    $("s-step").value = stepsFor(step, umPerStep());
     syncCount(); linkMark(); linkDone(); updateSummary();
     switchTab("session");
     toast(t("Passo della sequenza aggiornato"));

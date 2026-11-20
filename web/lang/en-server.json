@@ -294,5 +294,6 @@
   "Impossibile aprire {path}": "Cannot open {path}",
   "Il pacchetto scaricato non ha la firma dello sviluppatore di Focus Stack": "The downloaded package is not signed by the Focus Stack developer",
   "ISO {v}: questa fotocamera arriva al massimo a {top}.": "ISO {v}: this camera goes up to {top} at most.",
-  "Live view non spento: {exc}": "Live view not turned off: {exc}"
+  "Live view non spento: {exc}": "Live view not turned off: {exc}",
+ "dalla catena {m}×": "from the optical chain {m}×"
 }

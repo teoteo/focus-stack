@@ -384,7 +384,7 @@ ohne Linsen.</p>
     f"<b>{ui('Apertura numerica (NA)')}</b>: die zweite auf dem Objektiv eingravierte Zahl (10×/<b>0,25</b>).",
     f"<b>{ui('Immersione')}</b>: {ui('Aria (a secco)')}, {ui('Acqua')}, {ui('Olio')}, {ui('Glicerina')} oder {ui('Silicone')}.",
     f"<b>{ui('µm per pixel sul campione, misurati (facoltativo)')}</b> mit einem Objektmikrometer: Falls vorhanden, hat dieser Wert Vorrang vor der Berechnung.",
-    f"<b>{ui('Ingrandimento sul sensore')}</b> = Objektiv × Zwischenvergrößerung × Adapter (hier 10 × 1,6 × 1 = 16×) und <b>Maßstab am Präparat</b>: der gemessene Wert oder Sensorpixel ÷ Vergrößerung.",
+    f"<b>{ui('Ingrandimento sul sensore')}</b> = Objektiv × Zwischenvergrößerung × Adapter (hier 10 × 1,6 × 1 = 16×) und <b>Maßstab am Präparat</b>: der gemessene Wert oder Sensorpixel ÷ Vergrößerung. Mit einer Messung erscheint auch die <b>tatsächliche Vergrößerung</b> (Sensorpixel ÷ gemessene µm pro Pixel), die enthält, was die Kette nicht angibt, etwa den Sensorabstand oder den Fototubus; bei großer Abweichung korrigiert <i>{ui('Ricava il fattore dalla misura')}</i> den Adapter.",
     f"<b>{ui('Filtro')}</b>: <i>{ui('Non indicato')}</i> (unbekannt), <i>{ui('Nessun filtro')}</i> oder <i>{ui('Filtro montato')}</i>.",
     f"<b>{ui('Nome')}</b> und <b>{ui('Tipo')}</b> des Filters: {ui('Passa banda')}, {ui('Long pass')}, {ui('Short pass')}, {ui('Neutro (ND)')}, {ui('Polarizzatore')}, {ui('Altro')}.",
     f"<b>{ui('Centro (nm)')}</b> und <b>{ui('Larghezza di banda (nm)')}</b> bei einem Bandpass; bei Lang- und Kurzpass die Kantenwellenlänge.",

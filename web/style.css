@@ -318,6 +318,8 @@ details.more summary { cursor: pointer; padding: 12px 0; font-weight: 600; color
 .lib-table .empty td { color: var(--muted); text-align: center; padding: 14px; white-space: normal; }
 .result .muted, .summary .muted { color: var(--muted); }
 .result .warn-text { color: var(--warn); display: block; margin-top: 8px; }
+.result .result-line { display: block; margin-top: 8px; }
+.result .result-line .btn { margin-right: 10px; }
 .result .warn-text + .muted { display: block; margin-top: 4px; }
 @media (max-width: 480px) { .seq-actions { grid-template-columns: 1fr; } }
 

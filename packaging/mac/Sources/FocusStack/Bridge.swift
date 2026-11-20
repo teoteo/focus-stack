@@ -5,6 +5,7 @@ import WebKit
 /// Messaggi dalla pagina (web/native.js → window.webkit.messageHandlers.focusstack).
 final class Bridge: NSObject, WKScriptMessageHandlerWithReply, UNUserNotificationCenterDelegate {
     var onTheme: (() -> Void)?
+    var onFocusViewer: (() -> Bool)?
     private let dock = DockProgress()
     private var askedNotifications = false
 
@@ -18,6 +19,8 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, UNUserNotificatio
         case "chooseFolder":
             chooseFolder(start: body["start"] as? String, prompt: body["prompt"] as? String,
                          window: message.webView?.window) { replyHandler($0 ?? NSNull(), nil) }
+        case "focusViewer":
+            replyHandler(onFocusViewer?() ?? false, nil)
         case "getPref":
             replyHandler(Prefs.value(body["key"] as? String ?? ""), nil)
         case "setPref":

@@ -10,6 +10,8 @@ window.FSNative = (() => {
   return {
     // finestra "Scegli cartella" nativa: il percorso scelto, oppure null se annullata
     chooseFolder: (start, prompt) => send("chooseFolder", { start, prompt }),
+    // visualizzatore già aperto: davanti, anche se è ridotto nel Dock o su un'altra scrivania (true se c'era)
+    focusViewer: () => send("focusViewer"),
     // tema della pagina → aspetto della barra del titolo
     theme: (theme) => send("theme", { theme }),
     // preferenze dell'app per Mac (le tiene l'app): viewerOtherScreen

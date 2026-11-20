@@ -761,5 +761,13 @@
  "prova": "Test",
  "prove": "Tests",
  "Esiste già un preset «{name}»: sostituirlo con i valori attuali?": "Es gibt bereits ein Preset „{name}“: durch die aktuellen Werte ersetzen?",
- "Preset «{name}» salvato": "Preset „{name}“ gespeichert"
+ "Preset «{name}» salvato": "Preset „{name}“ gespeichert",
+ "{m}× sul sensore (misurato)": "{m}× auf dem Sensor (gemessen)",
+ "Ingrandimento dalla catena: {m}×": "Vergrößerung laut optischer Kette: {m}×",
+ "Ingrandimento reale sul sensore, dalla misura: <b>{m}×</b>": "Tatsächliche Vergrößerung auf dem Sensor, aus der Messung: <b>{m}×</b>",
+ "Ricava il fattore dalla misura": "Faktor aus der Messung ableiten",
+ "l'adattatore diventa {f}×, così la catena coincide con la misura": "der Adapter wird {f}×, damit stimmt die Kette mit der Messung überein",
+ "Adattatore a {f}×: salva il profilo per tenerlo": "Adapter auf {f}×: Profil speichern, um ihn zu behalten",
+ "dalla misura · catena {m}×": "gemessen · Kette {m}×",
+ "dalla misura": "gemessen"
 }

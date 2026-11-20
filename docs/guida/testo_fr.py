@@ -390,7 +390,7 @@ monté sur une bague T2 sans lentille.</p>
     f"<b>{ui('Apertura numerica (NA)')}</b> : le second nombre gravé sur l'objectif (10×/<b>0,25</b>).",
     f"<b>{ui('Immersione')}</b> : air, eau, huile, glycérine ou silicone.",
     "<b>µm par pixel sur l'échantillon, mesurés</b> avec un micromètre objet : s'il est indiqué, il prime sur le calcul.",
-    f"<b>{ui('Ingrandimento sul sensore')}</b> = objectif × changeur intermédiaire × adaptateur (ici 10 × 1,6 × 1 = 16×) et <b>échelle sur l'échantillon</b> : la valeur mesurée, ou bien pixel du capteur ÷ grossissement.",
+    f"<b>{ui('Ingrandimento sul sensore')}</b> = objectif × changeur intermédiaire × adaptateur (ici 10 × 1,6 × 1 = 16×) et <b>échelle sur l'échantillon</b> : la valeur mesurée, ou bien pixel du capteur ÷ grossissement. Avec une mesure s'affiche aussi le <b>grandissement réel</b> (pixel du capteur ÷ µm par pixel mesurés), qui inclut ce que la chaîne ne dit pas, comme la distance du capteur ou le tube photo ; si l'écart est grand, <i>{ui('Ricava il fattore dalla misura')}</i> corrige l'adaptateur.",
     f"<b>{ui('Filtro')}</b> : <i>{ui('Non indicato')}</i> (on ne sait pas), <i>{ui('Nessun filtro')}</i> ou <i>{ui('Filtro montato')}</i>.",
     "<b>Nom</b> et <b>type</b> du filtre : passe-bande, passe-haut (long pass), passe-bas (short pass), densité neutre, polariseur, autre.",
     "<b>Centre</b> et <b>largeur de bande</b> en nm pour un passe-bande ; pour un passe-haut ou un passe-bas, la longueur d'onde de coupure.",

@@ -544,7 +544,7 @@ of type <b>{ui('Microscopio')}</b> or <b>{ui('Macro fotografica')}</b> (7.3). Th
     f"<b>{ui('Apertura numerica (NA)')}</b>: the second number engraved on the objective (10×/<b>0.25</b>).",
     f"<b>{ui('Immersione')}</b>: air, water, oil, glycerol or silicone.",
     "<b>µm per pixel on the specimen, measured</b> with a stage micrometer: if present, it takes precedence over the calculation.",
-    f"<b>{ui('Ingrandimento sul sensore')}</b> = objective × intermediate changer × adapter (here 10 × 1.6 × 1 = 16×) and <b>scale on the specimen</b>: the measured value, or sensor pixel ÷ magnification.",
+    f"<b>{ui('Ingrandimento sul sensore')}</b> = objective × intermediate changer × adapter (here 10 × 1.6 × 1 = 16×) and <b>scale on the specimen</b>: the measured value, or sensor pixel ÷ magnification. With a measurement you also see the <b>real magnification</b> (sensor pixel ÷ measured µm per pixel), which includes what the chain leaves out, such as the sensor distance or the photo tube; if the deviation is large, <i>Derive the factor from the measurement</i> corrects the adapter.",
     f"<b>{ui('Filtro')}</b>: <i>{ui('Non indicato')}</i> (unknown), <i>{ui('Nessun filtro')}</i> or <i>{ui('Filtro montato')}</i>.",
     "Filter <b>name</b> and <b>type</b>: band pass, long pass, short pass, neutral density, polarizer, other.",
     "<b>Centre</b> and <b>bandwidth</b> in nm for a band pass; for long pass and short pass, the cut-off wavelength.",

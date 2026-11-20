@@ -372,7 +372,7 @@ un objetivo 10× con el cambiador de aumento Optovar 1,6× y la cámara en un ad
     f"<b>{ui('Apertura numerica (NA)')}</b>: el segundo número grabado en el objetivo (10×/<b>0,25</b>).",
     f"<b>{ui('Immersione')}</b>: aire, agua, aceite, glicerina o silicona.",
     "<b>µm por píxel en la muestra, medidos</b> con un micrómetro objetivo: si se indican, valen más que el cálculo.",
-    f"<b>{ui('Ingrandimento sul sensore')}</b> = objetivo × cambiador intermedio × adaptador (aquí 10 × 1,6 × 1 = 16×) y <b>escala en la muestra</b>: el valor medido o bien píxel del sensor ÷ aumento.",
+    f"<b>{ui('Ingrandimento sul sensore')}</b> = objetivo × cambiador intermedio × adaptador (aquí 10 × 1,6 × 1 = 16×) y <b>escala en la muestra</b>: el valor medido o bien píxel del sensor ÷ aumento. Con una medida aparece también el <b>aumento real</b> (píxel del sensor ÷ µm por píxel medidos), que incluye lo que la cadena no dice, como la distancia del sensor o el tubo fotográfico; si la desviación es grande, <i>{ui('Ricava il fattore dalla misura')}</i> corrige el adaptador.",
     f"<b>{ui('Filtro')}</b>: <i>{ui('Non indicato')}</i> (no se sabe), <i>{ui('Nessun filtro')}</i> o <i>{ui('Filtro montato')}</i>.",
     "<b>Nombre</b> y <b>tipo</b> del filtro: paso banda, paso largo (long pass), paso corto (short pass), densidad neutra, polarizador, otro.",
     "<b>Centro</b> y <b>ancho de banda</b> en nm para un paso banda; para paso largo y paso corto, la longitud de onda de corte.",

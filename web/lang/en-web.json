@@ -761,5 +761,13 @@
  "prova": "test",
  "prove": "tests",
  "Esiste già un preset «{name}»: sostituirlo con i valori attuali?": "A preset «{name}» already exists: replace it with the current values?",
- "Preset «{name}» salvato": "Preset «{name}» saved"
+ "Preset «{name}» salvato": "Preset «{name}» saved",
+ "{m}× sul sensore (misurato)": "{m}× on the sensor (measured)",
+ "Ingrandimento dalla catena: {m}×": "Magnification from the optical chain: {m}×",
+ "Ingrandimento reale sul sensore, dalla misura: <b>{m}×</b>": "Real magnification on the sensor, from the measurement: <b>{m}×</b>",
+ "Ricava il fattore dalla misura": "Derive the factor from the measurement",
+ "l'adattatore diventa {f}×, così la catena coincide con la misura": "the adapter becomes {f}×, so the chain matches the measurement",
+ "Adattatore a {f}×: salva il profilo per tenerlo": "Adapter set to {f}×: save the profile to keep it",
+ "dalla misura · catena {m}×": "measured · chain {m}×",
+ "dalla misura": "measured"
 }
