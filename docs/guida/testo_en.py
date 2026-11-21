@@ -467,7 +467,9 @@ while the focuser goes back to the start position, so you can watch it; once the
 down and the camera has to shoot normally) and it closes at the first shot: the frame goes back to showing the latest
 shot, in the viewer too. When the stack is done, turn it back on with <span class="ui">{ui('● Live')}</span>. On DSLRs
 the mirror stays up while live view is on. Live view turned on from the main window also starts in the viewer, if it
-is open; <span class="ui">{ui('■ Ferma live')}</span> turns it off in both windows.</p>
+is open; <span class="ui">{ui('■ Ferma live')}</span> turns it off in both windows. With <span class="ui">{ui('◉ Scatto di prova')}</span>
+while live view is on, the frame shows the shot and live view restarts by itself as soon as you move the focuser, from the
+app or with its own buttons.</p>
 <div class="box tip"><span class="t">For precise focusing</span>Open live view in the <b>viewer</b>: you can zoom
 to 100% and beyond and pan to the detail you care about (chapter 8).</div>
 """)

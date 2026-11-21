@@ -76,6 +76,9 @@ class App:
         # live view: pagine collegate allo stream e ultimo errore (es. fotocamera senza live view)
         self.live_clients = 0
         self.live_stop_rev = 0               # cresce a ogni «Ferma live»: tutte le finestre chiudono la loro live
+        # scatto di prova con il live view acceso: le finestre lo chiudono per mostrare lo scatto e lo riaprono
+        # al primo movimento del focheggiatore (posizione diversa da pos)
+        self.live_park = {"rev": 0, "pos": None}
         self.live_error = ""
         self.runner = SequenceRunner(lambda: self.focuser if self.focuser and self.focuser.connected else None,
                                      lambda: self.camera if self.camera and self.camera.connected else None,
@@ -247,6 +250,7 @@ class App:
             "shot_count": len(self.shots),
             "shots_rev": self.shots_rev,
             "live_stop_rev": self.live_stop_rev,
+            "live_park": self.live_park,
             "shot_group": self.shot_group,
             "log": list(self.log_lines)[-200:],
             "boot_signature": BOOT_SIGNATURE,
@@ -1145,8 +1149,13 @@ async def live_frames(cam: GPhotoCamera):
     global live_frame
     app_state.live_clients += 1
     seq = 0
+    park = app_state.live_park["rev"]
     try:
         while cam.connected and app_state.camera is cam:
+            if app_state.live_park["rev"] != park:
+                # scatto di prova: lo stream finisce qui (le finestre mostrano lo scatto e lo riaprono al primo
+                # movimento); riprendere subito il live dopo lo scatto, con la Sony, può dare errore -52
+                return
             if app_state.live_paused():
                 # sequenza e calibrazione scattano come senza live view (specchio, ritardi): live view spento
                 if cam.live:
@@ -1230,9 +1239,13 @@ async def camera_test(body: TestShot):
     for p in old[:-20]:
         p.unlink(missing_ok=True)
     app_state.log(tr("Scatto di prova…"))
+    live = app_state.live_clients > 0     # qualcuno guardava il live view: dopo lo scatto lo mette da parte
     files = await cam.capture(mode="download", dest_base=test_dir / f"prova_{time.strftime('%H%M%S')}",
                               bulb_s=body.bulb_s, mirror_s=body.mirror_delay_ms / 1000)
     f = app_state.focuser
+    if live:
+        app_state.live_park = {"rev": app_state.live_park["rev"] + 1,
+                               "pos": f.position if f and f.connected else None}
     app_state.add_shot(files, "test", f.position if f and f.connected else None,
                        f.temperature if f and f.connected else None)
     app_state.log(tr("Scatto di prova completato ({n} file)", n=len(files)))

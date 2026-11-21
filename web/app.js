@@ -89,6 +89,14 @@ function connectWS() {
     // «Ferma live» premuto in un'altra finestra
     if (liveStopRev != null && data.live_stop_rev > liveStopRev && liveOn) setLive(false);
     liveStopRev = data.live_stop_rev ?? liveStopRev;
+    // scatto di prova con il live acceso: si mostra lo scatto; il live riparte quando si muove il focheggiatore
+    const park = data.live_park || {};
+    if (liveParkRev != null && park.rev > liveParkRev && liveOn) {
+      setLive(false);
+      liveResume = { pos: park.pos };
+      toast(t("Scatto di prova: il live view riparte quando muovi il focheggiatore"));
+    }
+    liveParkRev = park.rev ?? liveParkRev;
     render();
   };
   ws.onopen = () => { wsConn = ws; setDot("st-link", "on"); };
@@ -471,12 +479,15 @@ function renderLastShot() {
 // ---------------- live view (stream MJPEG del server in un <img>) ----------------
 let liveOn = false, liveStartedAt = 0;
 let liveStopRev = null;   // ultimo valore visto di live_stop_rev (null fino al primo stato)
+// live view messo da parte da uno scatto di prova: {pos} finché il focheggiatore non si muove, poi riparte
+let liveParkRev = null, liveResume = null;
 
 // canale fra la finestra principale e il visualizzatore (Safari 15.4+; senza, semplicemente non si parlano)
 const windowLink = "BroadcastChannel" in window ? new BroadcastChannel("focus-stack") : null;
 
 function setLive(on) {
   liveOn = on;
+  liveResume = null;   // acceso o spento in qualsiasi altro modo: niente ripresa automatica
   liveStartedAt = Date.now();
   const img = $("live-img");
   // togliere src chiude la connessione: il server spegne il live view della fotocamera
@@ -502,6 +513,12 @@ function renderLive(c, run) {
   const firstShot = shots > 0 && liveShotsPrev === 0;
   liveShotsPrev = shots;
   if (firstShot && liveOn) { setLive(false); toast(t("Primo scatto della sequenza: live view chiuso, ora segue l'ultimo scatto")); return; }
+  if (liveResume && !liveOn) {
+    // dopo lo scatto di prova: il live riparte al primo movimento (pulsanti dell'app, tastiera o del focheggiatore)
+    const f = S.focuser || {};
+    if (!c.connected || run) liveResume = null;
+    else if (f.connected && (f.moving || (liveResume.pos != null && f.position !== liveResume.pos))) setLive(true);
+  }
   if (!liveOn) return;
   if (!c.connected) { setLive(false); return; }
   // l'errore di uno stream precedente può arrivare ancora per un attimo dopo il riavvio
@@ -1882,7 +1899,12 @@ function bind() {
     };
   }
   $("c-reload").onclick = (e) => act(e.target, () => api("/api/camera/settings/reload"));
-  $("c-test").onclick = (e) => act(e.target, () => api("/api/camera/test", { bulb_s: num("c-bulb"), mirror_delay_ms: num("c-mirror") }), t("Scatto completato"));
+  $("c-test").onclick = async (e) => {
+    const wasLive = liveOn;
+    await act(e.target, () => api("/api/camera/test", { bulb_s: num("c-bulb"), mirror_delay_ms: num("c-mirror") }), t("Scatto completato"));
+    // l'avviso del live messo da parte può arrivare (via WebSocket) prima di «Scatto completato», che lo coprirebbe
+    if (wasLive && liveResume) toast(t("Scatto di prova: il live view riparte quando muovi il focheggiatore"));
+  };
 
   // ultimo scatto / visualizzatore
   $("last-thumb").onclick = () => S && S.last_shot && openViewer(S.last_shot.id);

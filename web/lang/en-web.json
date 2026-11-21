@@ -769,5 +769,6 @@
  "l'adattatore diventa {f}×, così la catena coincide con la misura": "the adapter becomes {f}×, so the chain matches the measurement",
  "Adattatore a {f}×: salva il profilo per tenerlo": "Adapter set to {f}×: save the profile to keep it",
  "dalla misura · catena {m}×": "measured · chain {m}×",
- "dalla misura": "measured"
+ "dalla misura": "measured",
+ "Scatto di prova: il live view riparte quando muovi il focheggiatore": "Test shot: live view restarts when you move the focuser"
 }

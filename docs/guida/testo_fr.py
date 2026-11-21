@@ -298,7 +298,9 @@ se met en pause (le miroir doit redescendre et l'appareil doit déclencher norma
 photo : le cadre affiche de nouveau la dernière photo, dans la visionneuse aussi. Une fois la pile terminée, rallumez-la
 avec <span class="ui">{ui('● Live')}</span>. Sur les reflex, le miroir reste levé tant que la visée en direct est
 active. La visée en direct allumée depuis la fenêtre principale démarre aussi dans la visionneuse, si elle est
-ouverte ; <span class="ui">{ui('■ Ferma live')}</span> l'éteint dans les deux fenêtres.</p>
+ouverte ; <span class="ui">{ui('■ Ferma live')}</span> l'éteint dans les deux fenêtres. Avec <span class="ui">{ui('◉ Scatto di prova')}</span>
+pendant la visée en direct, le cadre montre la photo et la visée en direct reprend toute seule dès que vous déplacez le
+focuser, depuis l'app ou avec ses boutons.</p>
 <div class="box tip"><span class="t">Pour une mise au point précise</span>Ouvrez la visée en direct dans la
 <b>visionneuse</b> : vous pouvez zoomer à 100 % et au-delà et vous déplacer sur le détail qui vous intéresse
 (chapitre 8).</div>

@@ -298,7 +298,9 @@ während der Fokussierer zur Startposition zurückfährt, damit Sie ihn beobacht
 zeigt wieder die letzte Aufnahme, auch im Betrachter. Nach dem Stapel schalten Sie es mit
 <span class="ui">{ui('● Live')}</span> wieder ein. Bei Spiegelreflexkameras bleibt der Spiegel hochgeklappt, solange
 das Live-View eingeschaltet ist. Ein im Hauptfenster eingeschaltetes Live-View startet auch im Betrachter, wenn dieser
-geöffnet ist; <span class="ui">{ui('■ Ferma live')}</span> schaltet es in beiden Fenstern aus.</p>
+geöffnet ist; <span class="ui">{ui('■ Ferma live')}</span> schaltet es in beiden Fenstern aus. Mit <span class="ui">{ui('◉ Scatto di prova')}</span>
+bei eingeschaltetem Live-View zeigt das Feld die Aufnahme, und das Live-View startet von selbst wieder, sobald Sie den
+Fokussierer bewegen, in der App oder mit seinen Tasten.</p>
 <div class="box tip"><span class="t">Für präzises Fokussieren</span>Öffnen Sie das Live-View im <b>Betrachter</b>: Dort
 können Sie auf 100 % und mehr vergrößern und zum gewünschten Detail verschieben (Kapitel 8).</div>
 """)

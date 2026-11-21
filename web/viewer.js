@@ -325,6 +325,21 @@ function connectWS() {
       notice(t("Primo scatto della sequenza: live view chiuso, ora segue l'ultimo scatto"));
     }
     seqShotsPrev = seqShots;
+    // scatto di prova con il live acceso: si mostra lo scatto; il live riparte quando si muove il focheggiatore
+    const park = st.live_park || {};
+    if (liveParkRev != null && park.rev > liveParkRev && liveOn) {
+      setFollow(true);
+      setLiveView(false, { restore: false });
+      liveResume = { pos: park.pos };
+      if (shots.length) show(shots[shots.length - 1].id, { keepView: false });   // poi loadShots porta quello nuovo
+      notice(t("Scatto di prova: il live view riparte quando muovi il focheggiatore"));
+    }
+    liveParkRev = park.rev ?? liveParkRev;
+    if (liveResume && !liveOn) {
+      const f = st.focuser || {};
+      if (!camState.connected || seqRunning) liveResume = null;
+      else if (f.connected && (f.moving || (liveResume.pos != null && f.position !== liveResume.pos))) setLiveView(true);
+    }
     if (wantLive && camState.connected) setLiveView(true);
     wantLive = false;
     renderLiveView();
@@ -339,6 +354,8 @@ function connectWS() {
 // ---------------- live view (stream MJPEG del server nella stessa <img>, con zoom e pan) ----------------
 let liveOn = false, liveStartedAt = 0, liveTimer = 0;
 let camState = { connected: false }, seqRunning = false, seqLivePaused = false, seqShotsPrev = 0;
+// live view messo da parte da uno scatto di prova: {pos} finché il focheggiatore non si muove, poi riparte
+let liveParkRev = null, liveResume = null;
 let wantLive = location.hash === "#live";   // aperto dalla finestra principale con il live view acceso
 let noticeTimer = 0;
 
@@ -351,6 +368,7 @@ function notice(text) {
 
 // restore: all'uscita torna allo scatto mostrato prima (all'ultimo con "segui ultimo")
 function setLiveView(on, { restore = true } = {}) {
+  liveResume = null;   // acceso o spento in qualsiasi altro modo: niente ripresa automatica
   if (on === liveOn) return;
   liveOn = on;
   liveStartedAt = Date.now();

@@ -295,7 +295,9 @@ espejo tiene que bajar y la cámara tiene que disparar con normalidad) y se cier
 vuelve a mostrar la última foto, también en el visor. Terminada la pila, vuelve a activarla con
 <span class="ui">{ui('● Live')}</span>. En las réflex el espejo permanece subido mientras la vista en vivo está activa.
 La vista en vivo activada desde la ventana principal arranca también en el visor, si está abierto;
-<span class="ui">{ui('■ Ferma live')}</span> la apaga en las dos ventanas.</p>
+<span class="ui">{ui('■ Ferma live')}</span> la apaga en las dos ventanas. Con <span class="ui">{ui('◉ Scatto di prova')}</span>
+y la vista en vivo activa, el recuadro muestra la foto y la vista en vivo vuelve sola en cuanto mueves el enfocador,
+desde la app o con sus botones.</p>
 <div class="box tip"><span class="t">Para enfocar con precisión</span>Abre la vista en vivo en el <b>visor</b>: puedes
 ampliar al 100% y más, y desplazarte hasta el detalle que te interesa (capítulo 8).</div>
 """)

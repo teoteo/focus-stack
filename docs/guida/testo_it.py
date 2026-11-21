@@ -292,7 +292,8 @@ pausa (lo specchio deve scendere e la fotocamera deve scattare come al solito) e
 riquadro torna a mostrare l'ultimo scatto, anche nel visualizzatore. Finita la pila lo riaccendi con
 <span class="ui">● Live</span>. Sulle reflex lo specchio resta sollevato finché il live è acceso. Il live acceso dalla
 finestra principale parte anche nel visualizzatore, se è aperto; <span class="ui">■ Ferma live</span> lo spegne in
-tutte e due le finestre.</p>
+tutte e due le finestre. Con <span class="ui">◉ Scatto di prova</span> a live acceso, il riquadro mostra lo scatto e il
+live riparte da solo appena muovi il focheggiatore, dall'app o dai suoi pulsanti.</p>
 <div class="box tip"><span class="t">Per mettere a fuoco con precisione</span>Apri il live nel
 <b>visualizzatore</b>: puoi ingrandire al 100% e oltre e spostarti sul dettaglio che ti interessa
 (capitolo 8).</div>
