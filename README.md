@@ -223,6 +223,7 @@ second monitor. If the live view is on, the viewer opens straight on the live vi
 | **Follow latest** | U | show every new shot automatically |
 | **Lock view** | K | keep zoom and position when changing shot, to compare focus at the same spot |
 | **Inspector** | I | side panel, read only: R, G, B and brightness histograms, burnt (channels at 255) and black (channels at 0) pixels under a chosen rule, red/blue marks on the image, values under the pointer and min/max/mean/median of the whole image. It also works on the live view (updated twice a second) |
+| **⌖ Autofocus** | A, [ ], Esc | autofocus on a point: click the detail, then Start. The focuser scans in the direction of the stack, the sharpness curve (Sobel gradient in the area) fills in shot by shot, and the focuser returns to the sharpest position from the same side (backlash overshoot) and takes a check shot. Live view frames (default, faster) or real shots (more certain); wide search when everything is blurred; settings in Configuration › Autofocus |
 | Full screen | F | — |
 
 The Inspector measures the 8-bit image on screen: for a RAW shot that is the conversion for the screen,
@@ -396,6 +397,7 @@ NEMA 17 with a 27:1 gearbox.
 backend/focuser.py     myFocuserPro2 serial driver + simulator
 backend/camera.py      camera control (python-gphoto2, persistent session) + simulator
 backend/sequence.py    sequence engine
+backend/autofocus.py   autofocus on a point (scan, peak fit, check shot)
 backend/main.py        REST API + status WebSocket
 backend/settings.py    settings in ~/Library/Application Support/MyFocuserStack/
 backend/updater.py     version, updates from GitHub, bundled firmware
@@ -411,10 +413,11 @@ backend/optics.py      magnification (microscope, macro) and the manifest's opti
 web/data/              lens database (Lensfun, CC BY-SA 3.0) and extra macro lenses
 tools/lensfun_import.py rebuilds web/data/lenses-lensfun.json from a Lensfun checkout
 backend/calibration.py calibration library, darks/flats capture, automatic exposure
-backend/rawstat.py     runs fs-rawstat (RAW levels)
+backend/rawstat.py     runs fs-rawstat (RAW levels, sharpness of an area)
 backend/remote.py      read-only progress page for the local network (smartphone)
 tools/rawstat/         fs-rawstat source and build script (LibRaw)
 third_party/LibRaw     LibRaw 0.22.3 (git submodule)
+third_party/stb        stb_image.h (JPEG/PNG decoding for the autofocus)
 web/i18n.js, web/lang/ interface and message translations
 docs/guida/            PDF and HTML guide generator (testo_<lang>.py)
 tools/i18n_check.py    translation check
@@ -432,3 +435,4 @@ database and, like it, is licensed under **Creative Commons Attribution-Share Al
 `fs-rawstat` is statically linked with [LibRaw](https://www.libraw.org/) 0.22.3 (git submodule in
 `third_party/LibRaw`, unmodified), used under the **CDDL 1.0** (LibRaw is dual-licensed LGPL 2.1 / CDDL 1.0);
 LibRaw's source is in the submodule, © LibRaw LLC.
+It also includes `stb_image.h` by Sean Barrett (`third_party/stb`, public domain or MIT, at your choice).

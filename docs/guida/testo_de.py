@@ -62,11 +62,11 @@ add("""
 <li><span>6</span>Kamera, Testaufnahme und Live-View</li>
 <li><span>7</span>Die Stacking-Serie<em>Optikprofile, Makrofotografie, mehrere Aufnahmen pro Position, die Dateien des Stapels,
 Kalibrierung (Darks, Flats, Belichtung), Fortschritt auf dem Smartphone</em></li>
-<li><span>8</span>Der Betrachter<em>Zoom, Live-View, Inspektor</em></li>
+<li><span>8</span>Der Betrachter<em>Zoom, Live-View, Autofokus auf einen Punkt, Inspektor</em></li>
 <li><span>9</span>Sicherheitsgrenzen</li>
 <li><span>10</span>Mechanik einrichten: die Berechnungen<em>Auflösung in µm pro Schritt, Kontrollmessung, Verfahrweg, Geschwindigkeit, Spiel</em></li>
 <li><span>11</span>Die Schrittweite der Serie wählen<em>Schärfentiefe, Anzahl der Aufnahmen, Dauer</em></li>
-<li><span>12</span>Motor, manuelle Steuerung, Updates, Temperatur</li>
+<li><span>12</span>Motor, manuelle Steuerung, Autofokus, Updates, Temperatur</li>
 <li><span>13</span>Eine typische Sitzung, Schritt für Schritt</li>
 <li><span>14</span>Wenn etwas nicht funktioniert</li>
 <li><span>15</span>Tastaturkurzbefehle</li>
@@ -376,7 +376,7 @@ ohne Linsen.</p>
 {fig("ottica", [
     f"<b>{ui('Profilo da modificare')}</b>: Wählen Sie es, um seine Werte zu laden; <i>{ui('— nuovo profilo —')}</i> beginnt mit einem leeren Formular.",
     f"<b>{ui('Salva come nuovo profilo…')}</b>, in der Leiste, die oben erscheint: fragt nach einem Namen und speichert eine Kopie; das Ausgangsprofil bleibt unverändert.",
-    f"<b>{ui('Elimina profilo')}</b>, nach einer Rückfrage.",
+    f"<b>{ui('Elimina profilo')}</b>, nach einer Rückfrage. <b>{ui('Rinomina…')}</b> ändert den Namen auch in der Serie und in den Flats der Kalibrierungsbibliothek.",
     f"<b>{ui('Tipo di ottica')}</b>: <i>{ui('Microscopio')}</i> (Objektiv mit eingravierter Vergrößerung und NA) oder <i>{ui('Macro fotografica')}</i> (Fotoobjektiv, Zwischenringe und Nahlinsen, 7.3).",
     f"<b>{ui('Pixel del sensore (pixel pitch in µm)')}</b>. Nikon D5600: <b>3,9 µm</b> (23,5 mm ÷ 6.000 Pixel). Er steht im Datenblatt der Kamera, auf <b>digicamdb.com</b> (Fotokameras) oder in der Sensordatenbank von <b>AstroBin</b> (dedizierte Kameras, zum Beispiel nach IMX571 suchen).",
     f"<b>{ui('Adattatore / oculare di proiezione')}</b> zwischen Mikroskop und Kamera: Name und Faktor, zum Beispiel ein C-Mount-Adapter 0,5× oder 0,63×, ein Fotookular 2,5×, ein T2-Adapter ohne Linsen 1×. Leer = 1×.",
@@ -543,7 +543,7 @@ Auflösung (auch RAW-Dateien, die direkt umgewandelt werden) mit Zoom und Versch
     f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>): Histogramme, ausgebrannte und schwarze Pixel, Werte unter dem Zeiger (siehe unten).",
     "<b>Vollbild</b> (<kbd>F</kbd>).",
     "<b>?</b>: diese Anleitung, beim Kapitel über den Betrachter.",
-    f"<b>Miniaturen</b>: Ein Klick öffnet die Aufnahme. <i>{ui('P')}</i> = Testaufnahme, <i>{ui('C')}</i> = Kalibrierungsbild, <i>{ui('E')}</i> = Foto für die Belichtung, die Zahlen sind die Aufnahmen der Serie. Der Streifen zeigt nur die laufende oder die letzte Serie: Er leert sich beim Start einer Serie, und die erste Testaufnahme danach beginnt einen neuen. Die Dateien bleiben im Ordner.",
+    f"<b>Miniaturen</b>: Ein Klick öffnet die Aufnahme. <i>{ui('P')}</i> = Testaufnahme, <i>{ui('C')}</i> = Kalibrierungsbild, <i>{ui('E')}</i> = Foto für die Belichtung, <i>AF</i> = Autofokus-Aufnahmen, die Zahlen sind die Aufnahmen der Serie. Der Streifen zeigt nur die laufende oder die letzte Serie: Er leert sich beim Start einer Serie, und die erste Testaufnahme danach beginnt einen neuen. Die Dateien bleiben im Ordner.",
 ], layout="full", anchors={n: "b" for n in range(1, 12)})}
 <p>Mit der Maus: Ziehen verschiebt das Bild, das Scrollrad (oder Aufziehen auf dem Trackpad) zoomt um den Zeiger herum,
 ein Doppelklick wechselt zwischen „Einpassen“ und 100 %. Über 150 % bleiben die Pixel scharf, ohne Weichzeichnung.</p>
@@ -551,6 +551,51 @@ ein Doppelklick wechselt zwischen „Einpassen“ und 100 %. Über 150 % bleiben
     f"<b>{ui('■ Ferma live')}</b> kehrt zu den Fotos zurück; auch ◀ ▶ oder ein Klick auf eine Miniatur verlassen das Live-View.",
     f"Live-Status: {ui('LIVE')}, {ui('SCATTO…')}, {ui('IN PAUSA')} während der Serie.",
 ], layout="full", anchors={1: "b"}, caption="Das Live-View im Betrachter, hier mit dem Simulator im Fokus (das Schachbrett ist scharf). Bei 100 % hat das Live-View die Auflösung der Kameravorschau, also weniger als die Fotos.")}
+<h2>Autofokus auf einen Punkt</h2>
+<p>Der Autofokus findet selbst die Position des Fokussierers, an der ein gewähltes Detail am schärfsten ist: eine
+Markierung, ein Haar, der Rand einer Struktur. Damit lassen sich zum Beispiel Anfang oder Ende des Stapels genau
+festlegen.</p>
+<ol class="steps">
+<li><span class="ui">⌖ Autofokus</span> drücken (Taste <kbd>A</kbd>) und auf das Detail klicken: Ein blaues Quadrat
+  erscheint, der gemessene Bereich. Die Seitenlänge ändert sich mit dem Regler <b>Bereich</b> oder mit <kbd>[</kbd>
+  <kbd>]</kbd>; ein weiterer Klick verschiebt das Quadrat. Ziehen und Zoom funktionieren wie immer.</li>
+<li><span class="ui">Starten</span> drücken. Der Fokussierer fährt in dieselbe Richtung wie der Stapel und misst an
+  jeder Position: Die Schärfekurve wächst Punkt für Punkt.</li>
+<li>Am Ende kehrt der Fokussierer zur schärfsten Position zurück: Er fährt zuerst um den <b>Überfahrweg</b> darüber
+  hinaus und kommt in derselben Richtung wie der Durchlauf an, damit das Spiel der Mechanik den Fokus nicht verschiebt.
+  Dann macht er eine <b>Kontrollaufnahme</b>, die grüne Raute im Diagramm. <span class="ui">Als Stapelanfang
+  verwenden</span> und <span class="ui">Als Stapelende verwenden</span> tragen die Position im Hauptfenster in die
+  Sequenz ein.</li>
+</ol>
+{fig("visualizzatore-autofocus", [
+    "<b>⌖ Autofokus</b> (<kbd>A</kbd>): öffnet das Feld; ein Klick ins Bild wählt den Bereich. <kbd>Esc</kbd> schließt es.",
+    "<b>Gemessener Bereich</b>: gestrichelt, solange der Autofokus läuft. Er bleibt an derselben Stelle, wenn man die Aufnahme wechselt oder zum Live-View geht.",
+    "<b>Bilder</b>: <i>Live</i>-View-Bilder (Standard): der Autofokus ist <b>schneller</b>; oder echte <i>Aufnahmen</i>: das Ergebnis ist <b>sicherer</b>, weil das Foto in voller Qualität gemessen wird, aber jede Aufnahme dauert einige Sekunden. <b>Bereich</b>: Seitenlänge des Quadrats in Sensorpixeln.",
+    "<b>Schärfekurve</b>: ein Punkt pro Messung, waagerecht die Position des Fokussierers; darunter die Schrittweite. Die grüne Linie ist die gewählte Position, die grüne Raute die Kontrollaufnahme. Mit dem Mauszeiger auf einem Punkt liest man Position und Schärfe (in % des Maximums).",
+    "<b>Status</b>: Durchlauf, laufende Aufnahme und Position, dann das Ergebnis mit Kontrolle und Spitzenbreite oder der Grund, warum kein Fokus gefunden wurde.",
+    "<b>Als Stapelanfang verwenden</b> / <b>Als Stapelende verwenden</b>, solange der Fokussierer auf der gefundenen Position bleibt. <b>Wiederholen</b> startet den Autofokus erneut; ein Klick auf einen anderen Punkt verschiebt den Bereich, ohne das Feld zu schließen. Während der Messung gibt es <b>Stopp</b>.",
+], layout="full")}
+<p>Bei jeder Aufnahme misst die App, wie scharf die Kanten im Bereich sind (der Helligkeitsgradient, geteilt durch die
+mittlere Helligkeit, damit die Belichtung keine Rolle spielt). Weit vom Fokus ist die Kurve flach, in seiner Nähe steigt
+sie zu einer schmalen Spitze an. Die App legt eine Kurve durch die Punkte um das Maximum, die gefundene Position kann
+also auch zwischen zwei Aufnahmen liegen. Der Durchlauf endet von selbst, sobald die Spitze überschritten ist; liegt die
+Spitze hinter der letzten Aufnahme, läuft er weiter, liegt sie vor der ersten, beginnt er weiter hinten neu. Bei RAW
+misst sie die JPEG-Vorschau in der Datei: In Tests mit echten Stapeln ergibt sie denselben Fokus wie das entwickelte
+RAW.</p>
+<div class="box tip"><span class="t">Den Bereich wählen</span>Ein kontrastreiches Detail, alles in derselben Tiefe.
+Liegen im Bereich zwei Dinge in unterschiedlicher Schärfeebene (Bein und Körper eines Insekts), hat die Kurve zwei
+Spitzen und die App meldet es in Orange: den Bereich auf das gewünschte Detail verkleinern. Auf einem gleichmäßigen
+Hintergrund gibt es nichts zu messen, und der Autofokus endet mit einer Meldung.</div>
+<div class="box tip"><span class="t">Live-View oder echte Aufnahmen?</span><b>Live-View</b> ist schneller: gut, um den Fokus
+zu suchen, und für Versuche. Das Live-Bild ist aber klein und komprimiert und bei wenig Licht verrauscht. <b>Echte
+Aufnahmen</b> messen das Foto so, wie es im Stapel sein wird: Um Anfang oder Ende eines wichtigen Stapels sicher
+festzulegen, den Autofokus mit <i>Aufnahmen</i> wiederholen.</div>
+<div class="box warn"><span class="t">Niedrige Kontrolle: Spiel</span>Ist die Kontrollaufnahme deutlich weniger scharf
+als das Maximum der Kurve (unter 80 %), meldet die App es in Orange: Meist ist das Spiel der Mechanik größer als der
+Überfahrweg. Erhöhen Sie ihn unter <span class="ui">Konfiguration › Autofokus</span>; anfangs gilt der Spielausgleich
+der Sequenz, mindestens aber eine Spitzenbreite.</div>
+<p>Die Werte (Schrittweite, Zahl der Aufnahmen, weite Suche, wenn alles unscharf ist) stehen unter
+<span class="ui">Konfiguration › Autofokus</span>, Kapitel 12.</p>
 <h2>{ui('Ispettore')}</h2>
 <p>Das Feld <span class="ui">{ui('Ispettore')}</span> (Taste <kbd>I</kbd>) prüft die Belichtung eines Fotos nach denselben
 Regeln wie Focus Fusion. Es ist schreibgeschützt: Die Fotos werden nicht verändert. Es funktioniert auch mit dem
@@ -830,7 +875,7 @@ Spiegelreflexkameras die Spiegelverzögerung, bevor Sie nach anderen Ursachen su
 
 # 12
 add(f"""
-<h1><span class="n">12</span>Motor, manuelle Steuerung, Updates, Temperatur</h1>
+<h1><span class="n">12</span>Motor, manuelle Steuerung, Autofokus, Updates, Temperatur</h1>
 <h2>{ui('Motore (firmware)')}</h2>
 {fig("motore", [
     f"<b>{ui('Microstep')}</b>: {ui('Passo intero')}, 1/2 … 1/32 (siehe 10.2). Eine Änderung ändert den Maßstab der Positionen: Prüfen Sie danach die Grenzen erneut.",
@@ -861,6 +906,27 @@ Schutz: Während der Dauerbewegung hält der Fokussierer selbstständig an, wenn
 erhält. <span class="ui">{ui('Vai')}</span>, die
 Tasten mit einem einzelnen Klick und die Serie fahren dagegen immer bis zum Ziel, auch wenn die Bewegung viele Sekunden
 dauert.</p>
+<h2>Autofokus</h2>
+<p>Die Einstellungen des Autofokus auf einen Punkt (Kapitel 8). Leere Felder verwenden den berechneten Wert, der grau im
+Feld steht: Er wird aus der <b>Spitzenbreite</b> berechnet, also dem Schrittbereich, in dem die Schärfe über der Hälfte
+des Maximums bleibt.</p>
+{fig("autofocus-config", [
+    "<b>Zu messende Bilder</b>: Live-View (Standard) oder echte Aufnahmen. Lässt sich auch im Feld des Betrachters wählen.",
+    "<b>Seitenlänge des Bereichs</b> in Sensorpixeln, dieselbe wie der Regler im Betrachter.",
+    "<b>Schrittweite des feinen Durchlaufs</b>: etwa ein Viertel der Spitzenbreite, damit mindestens 4–5 Aufnahmen auf die Spitze fallen.",
+    "<b>Weite Suche, wenn das ganze Bild unscharf ist</b>: vor dem feinen Durchlauf einige weit auseinanderliegende Aufnahmen (eine Spitzenbreite, einstellbar mit <b>Schrittweite der weiten Suche</b>), um den Fokusbereich zu finden.",
+    "<b>Suchen im Bereich ±</b> Schritte ab der aktuellen Position, immer innerhalb der Grenzen; daneben der Umfang in mm und die Zahl der nötigen Aufnahmen.",
+    "<b>Spitzenbreite</b>, die für die Berechnungen verwendet wird, und ihre Herkunft. <b>Messung vergessen</b> kehrt zur Schätzung zurück.",
+], layout="side", anchors={2: "r", 4: "r"})}
+<p>Beim ersten Mal wird die Spitzenbreite aus der Schärfentiefe des in der Sequenz gewählten Optikprofils und aus der
+Mechanik (µm pro Schritt) geschätzt, ohne Profil aus dem Verfahrweg zwischen den Grenzen. Nach jedem erfolgreichen
+Autofokus speichert die App die gemessene Breite für dieses Profil und verwendet sie danach. Die erste Schätzung ist grob:
+Ist die Spitze breiter als erwartet, verlängert sich der Durchlauf von selbst; ist sie schmaler, wiederholt er die
+Messung mit feinerer Schrittweite. Mit 2 oder 3 <b>Durchläufen</b> wiederholt der Autofokus die Messung um den
+gefundenen Fokus, jedes Mal mit halber Schrittweite. Der <b>Überfahrweg gegen Spiel</b> ist die Strecke, um die der
+Fokussierer über eine Position hinausfährt, bevor er zu ihr zurückkehrt: Er muss größer als das Spiel der Mechanik sein.
+<span class="ui">Berechnete Werte wiederherstellen</span> leert die von Hand eingetragenen Felder. Ist die weite Suche aus und der Fokus weit weg, endet der Autofokus und schlägt vor, sie
+einzuschalten.</p>
 <h2>{ui('Aggiornamenti')}</h2>
 {fig("aggiornamenti", [
     "Version der <b>App</b> und Ergebnis der letzten Prüfung.",
@@ -955,6 +1021,9 @@ add(f"""<h1><span class="n">15</span>Tastaturkurzbefehle</h1>
 <tr><td><kbd>K</kbd></td><td>Ansicht sperren</td></tr>
 <tr><td><kbd>I</kbd></td><td>{ui('Ispettore')}</td></tr>
 <tr><td><kbd>G</kbd></td><td>Kompositionshilfen</td></tr>
+<tr><td><kbd>A</kbd></td><td>Autofokus: öffnet das Feld, dann auf das Detail klicken</td></tr>
+<tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>Autofokus-Bereich kleiner / größer</td></tr>
+<tr><td><kbd>Esc</kbd></td><td>schließt den Autofokus</td></tr>
 <tr><td><kbd>F</kbd></td><td>Vollbild</td></tr>
 </tbody></table></div>
 </div>

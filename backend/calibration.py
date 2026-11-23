@@ -421,6 +421,25 @@ def list_library(output_root: str) -> list[dict]:
     return out
 
 
+def rename_profile(output_root: str, old: str, new: str) -> int:
+    """Profilo ottico rinominato: i flat fatti con quel profilo prendono il nome nuovo, così si abbinano ancora
+    alla sequenza. Restituisce quanti set sono stati aggiornati."""
+    n = 0
+    root = library_root(output_root)
+    if not root.is_dir():
+        return 0
+    for meta_file in root.glob("*/calibration.json"):
+        try:
+            m = json.loads(meta_file.read_text(encoding="utf-8"))
+            if m.get("format") == FORMAT and m.get("optics_profile") == old:
+                m["optics_profile"] = new
+                write_atomic(meta_file, m)
+                n += 1
+        except (OSError, json.JSONDecodeError):
+            continue
+    return n
+
+
 def _usable(s: dict) -> bool:
     return s.get("state") == "completed" and s.get("frames", 0) > 0
 

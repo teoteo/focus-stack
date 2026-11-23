@@ -225,6 +225,7 @@ spostare su un secondo monitor. Se il live view è acceso, il visualizzatore si 
 | **Segui ultimo** | U | mostra automaticamente ogni nuovo scatto |
 | **Blocca vista** | K | mantiene zoom e posizione cambiando scatto, utile per confrontare la messa a fuoco nello stesso punto |
 | **Ispettore** | I | pannello laterale in sola lettura: istogrammi R, G, B e luminosità, pixel bruciati (canali a 255) e neri (canali a 0) secondo una regola a scelta, segni rossi/blu sull'immagine, valori sotto il puntatore e min/max/media/mediana dell'immagine intera. Funziona anche sul live view (aggiornato due volte al secondo) |
+| **⌖ Autofocus** | A, [ ], Esc | autofocus su un punto: clic sul dettaglio, poi Avvia. Il focheggiatore scorre nella direzione della pila, la curva della nitidezza (gradiente di Sobel nell'area) si riempie scatto per scatto e il focheggiatore torna sulla posizione più nitida dalla stessa parte (sovracorsa per il gioco), con uno scatto di verifica. Fotogrammi del live view (predefinito, più veloce) o scatti veri (più sicuri); ricerca ampia quando tutto è sfocato; impostazioni in Configurazione › Autofocus |
 | Schermo intero | F | — |
 
 L'Ispettore misura l'immagine a 8 bit mostrata a schermo: per uno scatto RAW è la conversione per lo schermo,
@@ -403,6 +404,7 @@ pensate per un NEMA 17 con riduttore 27:1.
 backend/focuser.py   driver seriale myFocuserPro2 + simulatore
 backend/camera.py    controllo fotocamera (python-gphoto2, sessione persistente) + simulatore
 backend/sequence.py  motore delle sequenze
+backend/autofocus.py autofocus su un punto (scansione, adattamento del picco, scatto di verifica)
 backend/main.py      API REST + WebSocket di stato
 backend/settings.py  impostazioni in ~/Library/Application Support/MyFocuserStack/
 backend/updater.py   versione, aggiornamenti da GitHub, firmware incluso
@@ -417,10 +419,11 @@ backend/optics.py    ingrandimento (microscopio, macro) e ottica del manifesto
 web/data/            database obiettivi (Lensfun, CC BY-SA 3.0) e ottiche macro aggiuntive
 tools/lensfun_import.py rigenera web/data/lenses-lensfun.json da una copia di Lensfun
 backend/calibration.py libreria di calibrazione, scatti di dark/flat, esposizione automatica
-backend/rawstat.py   lancia fs-rawstat (livelli dei RAW)
+backend/rawstat.py   lancia fs-rawstat (livelli dei RAW, nitidezza di un'area)
 backend/remote.py    pagina di avanzamento in sola lettura per la rete locale (smartphone)
 tools/rawstat/       sorgente e compilazione di fs-rawstat (LibRaw)
 third_party/LibRaw   LibRaw 0.22.3 (sottomodulo git)
+third_party/stb      stb_image.h (lettura di JPEG e PNG per l'autofocus)
 web/i18n.js, web/lang/ traduzioni dell'interfaccia e dei messaggi
 backend/i18n.py      lingua corrente e traduzioni lato server
 docs/guida/          generatore della guida in PDF e HTML (testo_<lingua>.py)
@@ -439,3 +442,4 @@ e, come quello, ha licenza **Creative Commons Attribuzione - Condividi allo stes
 `fs-rawstat` è collegato staticamente a [LibRaw](https://www.libraw.org/) 0.22.3 (sottomodulo in
 `third_party/LibRaw`, non modificato), usata con licenza **CDDL 1.0** (LibRaw ha doppia licenza LGPL 2.1 / CDDL 1.0);
 il sorgente di LibRaw è nel sottomodulo, © LibRaw LLC.
+Include anche `stb_image.h` di Sean Barrett (`third_party/stb`, pubblico dominio o MIT, a scelta).

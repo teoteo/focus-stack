@@ -238,11 +238,11 @@ add("""
 <li><span>6</span>Camera, test shot and live view</li>
 <li><span>7</span>The stacking sequence<em>optics profiles, photographic macro, several shots per position, the stack files,
 calibration (darks, flats, exposure), smartphone progress</em></li>
-<li><span>8</span>The viewer<em>zoom, live view, Inspector</em></li>
+<li><span>8</span>The viewer<em>zoom, live view, autofocus on a point, Inspector</em></li>
 <li><span>9</span>Safety limits</li>
 <li><span>10</span>Mechanical setup: the calculations<em>resolution in µm per step, verification, travel, speed, backlash</em></li>
 <li><span>11</span>Choosing the sequence step<em>depth of field, number of shots, duration</em></li>
-<li><span>12</span>Motor, manual controls, updates, temperature</li>
+<li><span>12</span>Motor, manual controls, autofocus, updates, temperature</li>
 <li><span>13</span>A typical session, step by step</li>
 <li><span>14</span>Troubleshooting</li>
 <li><span>15</span>Keyboard shortcuts</li>
@@ -536,7 +536,7 @@ of type <b>{ui('Microscopio')}</b> or <b>{ui('Macro fotografica')}</b> (7.3). Th
 {fig("ottica", [
     f"<b>{ui('Profilo da modificare')}</b>: choose one to load its values; <i>{ui('— nuovo profilo —')}</i> starts from an empty form.",
     "<b>Save as new profile…</b>, in the bar that appears at the top: asks for a name and saves a copy, leaving the original profile as it was.",
-    f"<b>{ui('Elimina profilo')}</b>, after a confirmation.",
+    f"<b>{ui('Elimina profilo')}</b>, after a confirmation. <b>Rename…</b> changes the name also in the sequence and in the flats of the calibration library.",
     f"<b>{ui('Tipo di ottica')}</b>: <i>{ui('Microscopio')}</i> (objective with engraved magnification and NA) or <i>{ui('Macro fotografica')}</i> (photographic lens, tubes and close-up lenses, 7.3).",
     "<b>Sensor pixel</b> (pixel pitch) in µm. Nikon D5600: <b>3.9 µm</b> (23.5 mm ÷ 6,000 pixels). It is in the camera's specifications, on <b>digicamdb.com</b> (photo cameras) or in the sensor database of <b>AstroBin</b> (dedicated cameras, searching for example IMX571).",
     f"<b>{ui('Adattatore / oculare di proiezione')}</b> between the microscope and the camera: name and factor, for example a 0.5× or 0.63× C-mount adapter, a 2.5× photo eyepiece, a T2 adapter with no lens 1×. Empty = 1×.",
@@ -700,7 +700,7 @@ fly) with zoom and pan, and the camera's live view.</p>
     f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>): histograms, burnt-out and black pixels, values under the pointer (see below).",
     "<b>Full screen</b> (<kbd>F</kbd>).",
     "<b>?</b>: this guide, at the viewer chapter.",
-    "<b>Thumbnails</b>: click to open a shot. <i>P</i> = test shot, <i>C</i> = calibration frame, <i>E</i> = exposure photo, numbers are the sequence shots. The strip shows only the current or last sequence: it empties when a sequence starts, and the first test shot taken afterwards starts a new one. The files stay in the folder.",
+    "<b>Thumbnails</b>: click to open a shot. <i>P</i> = test shot, <i>C</i> = calibration frame, <i>E</i> = exposure photo, <i>AF</i> = autofocus shots, numbers are the sequence shots. The strip shows only the current or last sequence: it empties when a sequence starts, and the first test shot taken afterwards starts a new one. The files stay in the folder.",
 ], layout="full", anchors={n: "b" for n in range(1, 12)})}
 <p>With the mouse: drag to pan, scroll wheel (or pinch on the trackpad) to zoom around the pointer, double-click to
 switch between “fit” and 100%. Above 150% the pixels stay crisp, without blurring.</p>
@@ -708,6 +708,48 @@ switch between “fit” and 100%. Above 150% the pixels stay crisp, without blu
     f"<b>{ui('■ Ferma live')}</b> goes back to the photos; ◀ ▶ or clicking a thumbnail also leaves live view.",
     "Live status: LIVE, SHOOTING…, PAUSED during the sequence.",
 ], layout="full", anchors={1: "b"}, caption="Live view in the viewer, here with the simulator in focus (the checkerboard is sharp). At 100% the live view has the resolution of the camera's preview, lower than that of the photos.")}
+<h2>Autofocus on a point</h2>
+<p>The autofocus finds by itself the focuser position where a chosen detail is sharpest: a marker, a hair, the edge of
+a structure. It is useful, for example, to set the start or the end of the stack precisely.</p>
+<ol class="steps">
+<li>Press <span class="ui">⌖ Autofocus</span> (<kbd>A</kbd> key) and click the detail: a blue square appears, the
+  measured area. Change its side with the <b>Area</b> slider or with <kbd>[</kbd> <kbd>]</kbd>; another click moves the
+  square. Dragging and zoom work as usual.</li>
+<li>Press <span class="ui">Start</span>. The focuser moves in the same direction as the stack and measures at every
+  position: the sharpness curve grows one point at a time.</li>
+<li>At the end the focuser goes back to the sharpest position: it first goes past it by the <b>overshoot</b> and
+  arrives in the same direction as the scan, so the backlash of the mechanics does not shift the focus. Then it takes a
+  <b>check shot</b>, the green diamond on the chart. <span class="ui">Use as stack start</span> and
+  <span class="ui">Use as stack end</span> write the position into the sequence, in the main window.</li>
+</ol>
+{fig("visualizzatore-autofocus", [
+    "<b>⌖ Autofocus</b> (<kbd>A</kbd>): opens the panel; clicking the image chooses the area. <kbd>Esc</kbd> closes it.",
+    "<b>Measured area</b>: dashed while the autofocus runs. It stays on the same spot when you change shot or switch to live view.",
+    "<b>Images</b>: <i>Live</i> view frames (default): the autofocus is <b>faster</b>; or real <i>Shots</i>: the result is <b>more certain</b>, because it measures the full-quality photo, but each shot takes a few seconds. <b>Area</b>: side of the square in sensor pixels.",
+    "<b>Sharpness curve</b>: one point per measurement, the focuser position across; below, the step. The green line is the chosen position, the green diamond the check shot. Hover over a point to read its position and sharpness (in % of the maximum).",
+    "<b>Status</b>: pass, current shot and position, then the result with the check and the peak width, or the reason why no focus was found.",
+    "<b>Use as stack start</b> / <b>Use as stack end</b>, as long as the focuser stays on the position found. <b>Run again</b> repeats the autofocus; clicking another point moves the area without closing the panel. While measuring there is <b>Stop</b>.",
+], layout="full")}
+<p>At every shot the app measures how sharp the edges inside the area are (the brightness gradient, divided by the
+mean brightness, so the exposure does not count). Far from focus the curve is flat; close to it, it rises into a narrow
+peak. The app fits a curve to the points around the maximum, so the position found can also fall between two shots.
+The pass stops by itself as soon as the peak is passed; if the peak lies beyond the last shot it goes on, if it lies
+before the first it restarts further back. With RAW files it measures the JPEG preview inside the file: in tests on
+real stacks it gives the same focus as the developed RAW.</p>
+<div class="box tip"><span class="t">Choosing the area</span>A contrasty detail, all at the same depth. If the area holds
+two things at different focus (the leg and the body of an insect) the curve has two peaks and the app says so in
+orange: make the area smaller, on the detail you care about. On a uniform background there is nothing to measure and
+the autofocus stops with a message.</div>
+<div class="box tip"><span class="t">Live view or real shots?</span><b>Live view</b> is faster: it is fine for finding the
+focus and for trials. The live frame, though, is small and compressed, and noisy in low light. <b>Real shots</b>
+measure the photo as it will be in the stack: to set the start or end of an important stack with certainty, run the
+autofocus again with <i>Shots</i>.</div>
+<div class="box warn"><span class="t">Low check: backlash</span>If the check shot is much less sharp than the peak of the
+curve (below 80 %), the app says so in orange: usually the backlash of the mechanics is larger than the overshoot.
+Increase it in <span class="ui">Configuration › Autofocus</span>; it starts from the sequence's backlash compensation,
+but at least one peak width.</div>
+<p>The values (step, number of shots, wide search when everything is blurred) are in <span class="ui">Configuration ›
+Autofocus</span>, chapter 12.</p>
 <h2>{ui('Ispettore')}</h2>
 <p>The <span class="ui">{ui('Ispettore')}</span> panel (<kbd>I</kbd> key) checks the exposure of a photo with the same
 rules as Focus Fusion. It is read-only: it does not modify the photos. It also works on live view, updated every half
@@ -980,7 +1022,7 @@ before looking for other causes.</div>
 
 # 12
 add(f"""
-<h1><span class="n">12</span>Motor, manual controls, updates, temperature</h1>
+<h1><span class="n">12</span>Motor, manual controls, autofocus, updates, temperature</h1>
 <h2>{ui('Motore (firmware)')}</h2>
 {fig("motore", [
     "<b>Microstep</b>: full step, 1/2 … 1/32 (see 10.2). Changing it changes the scale of the positions: check the limits again afterwards.",
@@ -1009,6 +1051,26 @@ motor never stops; with older firmware it advances one segment at a time, with a
 next (short segments are safer but jerkier). From <b>build 4</b> there is extra protection: during continuous movement
 the focuser stops by itself if it receives no commands from the Mac for 1.5 s. <span class="ui">{ui('Vai')}</span>, single-click buttons and the sequence, on the other hand,
 always reach their destination, even if the move takes many seconds.</p>
+<h2>Autofocus</h2>
+<p>Settings of the autofocus on a point (chapter 8). Empty fields use the calculated value, shown in grey inside the
+field: it is calculated from the <b>peak width</b>, the range of steps over which sharpness stays above half its
+maximum.</p>
+{fig("autofocus-config", [
+    "<b>Images to measure</b>: live view (default) or real shots. It can also be chosen in the viewer's panel.",
+    "<b>Area side</b> in sensor pixels, the same as the slider in the viewer.",
+    "<b>Fine pass step</b>: about a quarter of the peak width, so that at least 4–5 shots fall on the peak.",
+    "<b>Wide search if the whole image is blurred</b>: before the fine pass, a few widely spaced shots (one peak width, adjustable with <b>Wide search step</b>) to find where the focus is.",
+    "<b>Search within ±</b> steps from the current position, always within the limits; next to it, the range in mm and how many shots it takes.",
+    "<b>Peak width</b> used for the calculations and where it comes from. <b>Forget the measurement</b> goes back to the estimate.",
+], layout="side", anchors={2: "r", 4: "r"})}
+<p>The first time, the peak width is estimated from the depth of field of the optics profile chosen in the sequence and
+from the mechanics (µm per step); without a profile, from the travel between the limits. After each successful
+autofocus the app saves the measured width for that profile and uses it from then on. The first estimate is rough: if
+the peak is wider than expected the pass extends by itself, if it is narrower it repeats the measurement with a finer
+step. With 2 or 3 <b>Passes</b> the autofocus repeats the measurement around the focus found, each time with half the
+step. The <b>backlash overshoot</b> is how far the focuser goes past a position before returning to it: it must exceed
+the backlash of the mechanics. <span class="ui">Restore calculated values</span> clears the fields typed by hand. If the wide search is off and
+the focus is far away, the autofocus stops and suggests turning it on.</p>
 <h2>{ui('Aggiornamenti')}</h2>
 {fig("aggiornamenti", [
     "<b>App</b> version and the result of the last check.",
@@ -1102,6 +1164,9 @@ add(f"""<h1><span class="n">15</span>Keyboard shortcuts</h1>
 <tr><td><kbd>K</kbd></td><td>lock view</td></tr>
 <tr><td><kbd>I</kbd></td><td>{ui('Ispettore')}</td></tr>
 <tr><td><kbd>G</kbd></td><td>composition guides</td></tr>
+<tr><td><kbd>A</kbd></td><td>autofocus: opens the panel, then click the detail</td></tr>
+<tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>smaller / larger autofocus area</td></tr>
+<tr><td><kbd>Esc</kbd></td><td>closes the autofocus</td></tr>
 <tr><td><kbd>F</kbd></td><td>full screen</td></tr>
 </tbody></table></div>
 </div>

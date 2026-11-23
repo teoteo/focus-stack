@@ -62,11 +62,11 @@ add("""
 <li><span>6</span>Appareil photo, photo test et visée en direct</li>
 <li><span>7</span>La séquence de stacking<em>profils optiques, macro photographique, plusieurs prises par position, les fichiers de la pile,
 calibration (darks, flats, exposition), suivi sur smartphone</em></li>
-<li><span>8</span>La visionneuse<em>zoom, visée en direct, Inspecteur</em></li>
+<li><span>8</span>La visionneuse<em>zoom, visée en direct, autofocus sur un point, Inspecteur</em></li>
 <li><span>9</span>Limites de sécurité</li>
 <li><span>10</span>Configuration mécanique : les calculs<em>résolution en µm par pas, mesure de contrôle, course, vitesse, jeu</em></li>
 <li><span>11</span>Choisir le pas de la séquence<em>profondeur de champ, nombre de photos, durée</em></li>
-<li><span>12</span>Moteur, commandes manuelles, mises à jour, température</li>
+<li><span>12</span>Moteur, commandes manuelles, autofocus, mises à jour, température</li>
 <li><span>13</span>Une session type, étape par étape</li>
 <li><span>14</span>En cas de problème</li>
 <li><span>15</span>Raccourcis clavier</li>
@@ -382,7 +382,7 @@ monté sur une bague T2 sans lentille.</p>
 {fig("ottica", [
     f"<b>{ui('Profilo da modificare')}</b> : choisissez-le pour charger ses valeurs ; <i>{ui('— nuovo profilo —')}</i> part d'un formulaire vide.",
     f"<b>{ui('Salva come nuovo profilo…')}</b>, dans la barre qui apparaît en haut : demande un nom et enregistre une copie, sans modifier le profil de départ.",
-    f"<b>{ui('Elimina profilo')}</b>, après confirmation.",
+    f"<b>{ui('Elimina profilo')}</b>, après confirmation. <b>{ui('Rinomina…')}</b> change le nom aussi dans la séquence et dans les flats de la bibliothèque de calibration.",
     f"<b>{ui('Tipo di ottica')}</b> : <i>{ui('Microscopio')}</i> (objectif avec grossissement et ON gravés) ou <i>{ui('Macro fotografica')}</i> (objectif photo, tubes et bonnettes, 7.3).",
     f"<b>{ui('Pixel del sensore (pixel pitch in µm)')}</b>. Nikon D5600 : <b>3,9 µm</b> (23,5 mm ÷ 6000 pixels). On le trouve dans la fiche technique de l’appareil, sur <b>digicamdb.com</b> (appareils photo) ou dans la base de capteurs d’<b>AstroBin</b> (caméras dédiées, en cherchant par exemple IMX571).",
     f"<b>{ui('Adattatore / oculare di proiezione')}</b> entre le microscope et l'appareil photo : nom et facteur, par exemple un adaptateur monture C 0,5× ou 0,63×, un photo-oculaire 2,5×, une bague T2 sans lentille 1×. Vide = 1×.",
@@ -548,7 +548,7 @@ les RAW, convertis à la volée) avec zoom et déplacement, ainsi que la visée 
     f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>) : histogrammes, pixels brûlés et noirs, valeurs sous le pointeur (voir ci-dessous).",
     "<b>Plein écran</b> (<kbd>F</kbd>).",
     "<b>?</b> : ce guide, au chapitre de la visionneuse.",
-    f"<b>Vignettes</b> : un clic ouvre la photo. <i>{ui('P')}</i> = photo test, <i>{ui('C')}</i> = image de calibration, <i>{ui('E')}</i> = photo pour l'exposition, les numéros sont les photos de la séquence. La bande montre seulement la séquence en cours ou la dernière : elle se vide au démarrage d'une séquence, et la première photo test prise ensuite en commence une nouvelle. Les fichiers restent dans le dossier.",
+    f"<b>Vignettes</b> : un clic ouvre la photo. <i>{ui('P')}</i> = photo test, <i>{ui('C')}</i> = image de calibration, <i>{ui('E')}</i> = photo pour l'exposition, <i>AF</i> = prises de l'autofocus, les numéros sont les photos de la séquence. La bande montre seulement la séquence en cours ou la dernière : elle se vide au démarrage d'une séquence, et la première photo test prise ensuite en commence une nouvelle. Les fichiers restent dans le dossier.",
 ], layout="full", anchors={n: "b" for n in range(1, 12)})}
 <p>À la souris : faites glisser pour déplacer l'image, molette (ou pincement sur le trackpad) pour zoomer autour du
 pointeur, double-clic pour passer de « ajuster » à 100 % et inversement. Au-delà de 150 %, les pixels restent nets,
@@ -557,6 +557,48 @@ sans flou.</p>
     f"<b>{ui('■ Ferma live')}</b> revient aux photos ; ◀ ▶ ou un clic sur une vignette quittent aussi la visée en direct.",
     f"État de la visée en direct : {ui('LIVE')}, {ui('SCATTO…')}, {ui('IN PAUSA')} pendant la séquence.",
 ], layout="full", anchors={1: "b"}, caption="La visée en direct dans la visionneuse, ici avec le simulateur au point (le damier est net). À 100 %, la visée en direct a la résolution de l'aperçu de l'appareil photo, inférieure à celle des photos.")}
+<h2>Autofocus sur un point</h2>
+<p>L'autofocus trouve tout seul la position du focuser où un détail choisi est le plus net : un repère, un poil, le bord
+d'une structure. Il sert par exemple à fixer avec précision le début ou la fin de la pile.</p>
+<ol class="steps">
+<li>Appuyez sur <span class="ui">⌖ Autofocus</span> (touche <kbd>A</kbd>) et cliquez sur le détail : un carré bleu
+  apparaît, la zone mesurée. Son côté se règle avec le curseur <b>Zone</b> ou avec <kbd>[</kbd> <kbd>]</kbd> ; un autre
+  clic déplace le carré. Le glissement et le zoom fonctionnent comme d'habitude.</li>
+<li>Appuyez sur <span class="ui">Démarrer</span>. Le focuser se déplace dans le même sens que la pile et mesure à
+  chaque position : la courbe de netteté s'allonge d'un point à la fois.</li>
+<li>À la fin, le focuser revient à la position la plus nette : il la dépasse d'abord du <b>dépassement</b> et y arrive
+  dans le même sens que le balayage, pour que le jeu de la mécanique ne déplace pas la mise au point. Puis il fait une
+  <b>prise de vérification</b>, le losange vert du graphique. <span class="ui">Utiliser comme début de pile</span> et
+  <span class="ui">Utiliser comme fin de pile</span> écrivent la position dans la séquence, dans la fenêtre principale.</li>
+</ol>
+{fig("visualizzatore-autofocus", [
+    "<b>⌖ Autofocus</b> (<kbd>A</kbd>) : ouvre le panneau ; un clic sur l'image choisit la zone. <kbd>Échap</kbd> le ferme.",
+    "<b>Zone mesurée</b> : en pointillés pendant l'autofocus. Elle reste au même endroit si l'on change de prise ou si l'on passe à la visée en direct.",
+    "<b>Images</b> : images de la visée en <i>Direct</i> (par défaut) : l'autofocus est <b>plus rapide</b> ; ou vraies <i>Prises</i> : le résultat est <b>plus sûr</b>, car il mesure la photo en pleine qualité, mais chaque prise demande quelques secondes. <b>Zone</b> : côté du carré en pixels du capteur.",
+    "<b>Courbe de netteté</b> : un point par mesure, la position du focuser en horizontal ; en dessous, le pas. La ligne verte est la position choisie, le losange vert la prise de vérification. En survolant un point on lit sa position et sa netteté (en % du maximum).",
+    "<b>État</b> : passe, prise en cours et position, puis le résultat avec la vérification et la largeur du pic, ou la raison pour laquelle la mise au point n'a pas été trouvée.",
+    "<b>Utiliser comme début de pile</b> / <b>Utiliser comme fin de pile</b>, tant que le focuser reste sur la position trouvée. <b>Recommencer</b> relance l'autofocus ; un clic sur un autre point déplace la zone sans fermer le panneau. Pendant la mesure il y a <b>Arrêter</b>.",
+], layout="full")}
+<p>À chaque prise, l'app mesure la netteté des bords dans la zone (le gradient de luminosité, divisé par la luminosité
+moyenne, pour que l'exposition ne compte pas). Loin de la mise au point la courbe est plate ; près d'elle, elle monte en
+un pic étroit. L'app ajuste une courbe sur les points autour du maximum : la position trouvée peut donc tomber entre
+deux prises. La passe s'arrête toute seule dès que le pic est dépassé ; si le pic est au-delà de la dernière prise elle
+continue, s'il est avant la première elle repart plus en arrière. Avec les RAW, elle mesure l'aperçu JPEG contenu dans
+le fichier : lors des essais sur de vraies piles, il donne la même mise au point que le RAW développé.</p>
+<div class="box tip"><span class="t">Choisir la zone</span>Un détail contrasté, tout à la même profondeur. Si la zone
+contient deux éléments à des mises au point différentes (la patte et le corps d'un insecte), la courbe a deux pics et
+l'app le signale en orange : réduisez la zone sur le détail qui vous intéresse. Sur un fond uniforme il n'y a rien à
+mesurer et l'autofocus s'arrête avec un message.</div>
+<div class="box tip"><span class="t">Visée en direct ou vraies prises ?</span>La <b>visée en direct</b> est plus rapide :
+elle convient pour chercher la mise au point et pour les essais. L'image du direct est toutefois petite et compressée,
+et bruitée en faible lumière. Les <b>vraies prises</b> mesurent la photo telle qu'elle sera dans la pile : pour fixer
+avec certitude le début ou la fin d'une pile importante, relancez l'autofocus avec <i>Prises</i>.</div>
+<div class="box warn"><span class="t">Vérification basse : le jeu</span>Si la prise de vérification est bien moins nette
+que le maximum de la courbe (moins de 80 %), l'app le signale en orange : en général le jeu de la mécanique est plus
+grand que le dépassement. Augmentez-le dans <span class="ui">Configuration › Autofocus</span> ; au départ il vaut la
+compensation du jeu de la séquence, mais au moins une largeur du pic.</div>
+<p>Les valeurs (pas, nombre de prises, recherche large quand tout est flou) sont dans <span class="ui">Configuration ›
+Autofocus</span>, chapitre 12.</p>
 <h2>{ui('Ispettore')}</h2>
 <p>Le panneau <span class="ui">{ui('Ispettore')}</span> (touche <kbd>I</kbd>) contrôle l'exposition d'une photo avec les
 mêmes règles que Focus Fusion. Il est en lecture seule : il ne modifie pas les photos. Il fonctionne aussi sur la visée
@@ -841,7 +883,7 @@ temporisation du miroir, avant de chercher d'autres causes.</div>
 # 12
 TRATTO = ui("Tratto massimo per comando (passi)").split(" (")[0]
 add(f"""
-<h1><span class="n">12</span>Moteur, commandes manuelles, mises à jour, température</h1>
+<h1><span class="n">12</span>Moteur, commandes manuelles, autofocus, mises à jour, température</h1>
 <h2>{ui('Motore (firmware)')}</h2>
 {fig("motore", [
     f"<b>{ui('Microstep')}</b> : {ui('passo intero')}, 1/2 … 1/32 (voir 10.2). Le modifier change l'échelle des positions : vérifiez ensuite à nouveau les limites.",
@@ -872,6 +914,27 @@ protection supplémentaire : pendant le mouvement continu, le focuser s'arrête
 du Mac pendant 1,5 s. <span class="ui">{ui('Vai')}</span>, les
 boutons en un seul clic et la séquence arrivent en revanche toujours à destination, même si le mouvement dure de
 nombreuses secondes.</p>
+<h2>Autofocus</h2>
+<p>Les réglages de l'autofocus sur un point (chapitre 8). Les champs vides utilisent la valeur calculée, écrite en gris
+dans le champ : elle se calcule à partir de la <b>largeur du pic</b>, c'est-à-dire l'intervalle de pas où la netteté
+reste au-dessus de la moitié du maximum.</p>
+{fig("autofocus-config", [
+    "<b>Images à mesurer</b> : visée en direct (par défaut) ou vraies prises. Se choisit aussi dans le panneau de la visionneuse.",
+    "<b>Côté de la zone</b> en pixels du capteur, le même que le curseur de la visionneuse.",
+    "<b>Pas de la passe fine</b> : environ un quart de la largeur du pic, pour qu'au moins 4 à 5 prises tombent sur le pic.",
+    "<b>Recherche large si l'image est entièrement floue</b> : avant la passe fine, quelques prises espacées (une largeur du pic, réglable avec <b>Pas de la recherche large</b>) pour trouver la zone de mise au point.",
+    "<b>Chercher à ±</b> pas de la position actuelle, toujours dans les limites ; à côté, l'amplitude en mm et le nombre de prises nécessaires.",
+    "<b>Largeur du pic</b> utilisée pour les calculs et son origine. <b>Oublier la mesure</b> revient à l'estimation.",
+], layout="side", anchors={2: "r", 4: "r"})}
+<p>La première fois, la largeur du pic est estimée d'après la profondeur de champ du profil optique choisi dans la
+séquence et la mécanique (µm par pas) ; sans profil, d'après la course entre les limites. Après chaque autofocus réussi,
+l'app enregistre la largeur mesurée pour ce profil et l'utilise ensuite. La première estimation est approximative : si
+le pic est plus large que prévu la passe s'allonge toute seule, s'il est plus étroit elle répète la mesure avec un pas
+plus fin. Avec 2 ou 3 <b>Passes</b>, l'autofocus répète la mesure autour de la mise au point trouvée, à chaque fois
+avec un pas deux fois plus petit. Le <b>dépassement pour le jeu</b> est la distance dont le focuser dépasse une position
+avant d'y revenir : il doit être supérieur au jeu de la mécanique. <span class="ui">Rétablir les valeurs
+calculées</span> vide les champs saisis à la main. Si la recherche
+large est désactivée et que la mise au point est loin, l'autofocus s'arrête et propose de l'activer.</p>
 <h2>{ui('Aggiornamenti')}</h2>
 {fig("aggiornamenti", [
     "Version de l'<b>app</b> et résultat de la dernière vérification.",
@@ -966,6 +1029,9 @@ add(f"""<h1><span class="n">15</span>Raccourcis clavier</h1>
 <tr><td><kbd>K</kbd></td><td>figer la vue</td></tr>
 <tr><td><kbd>I</kbd></td><td>{ui('Ispettore')}</td></tr>
 <tr><td><kbd>G</kbd></td><td>guides de composition</td></tr>
+<tr><td><kbd>A</kbd></td><td>autofocus : ouvre le panneau, puis clic sur le détail</td></tr>
+<tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>zone de l'autofocus plus petite / plus grande</td></tr>
+<tr><td><kbd>Échap</kbd></td><td>ferme l'autofocus</td></tr>
 <tr><td><kbd>F</kbd></td><td>plein écran</td></tr>
 </tbody></table></div>
 </div>

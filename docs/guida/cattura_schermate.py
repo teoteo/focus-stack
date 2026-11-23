@@ -107,7 +107,8 @@ SAMPLE_DIR = Path(__file__).parent / "campione"
 SAMPLES = sorted(f for f in SAMPLE_DIR.glob("calluna_*.jpg") if f.stem[-4:].isdigit())
 SAMPLE_LIVE = SAMPLE_DIR / "calluna_live.jpg"
 # figure con una foto dentro: in JPEG (le foto in PNG pesano 5-10 volte tanto); le altre restano PNG, più nitide sul testo
-PHOTO_FIGS = {"sessione", "ultimo-scatto", "live", "visualizzatore", "ispettore", "visualizzatore-live", "smartphone-pagina"}
+PHOTO_FIGS = {"sessione", "ultimo-scatto", "live", "visualizzatore", "ispettore", "visualizzatore-live", "smartphone-pagina",
+              "visualizzatore-autofocus"}
 
 
 def save_shot(page, name: str, **kw) -> None:
@@ -401,6 +402,12 @@ with sync_playwright() as p:
     shot(page, "meccanica-manuale", "#card-mech", m((1, "#mech-mode", "l"), (2, "#m-umstep", "r"), (3, "#m-result", "l")))
     page.click("#mech-mode button[data-mode=computed]")
     shot(page, "comandi-manuali", "#card-jog", m((1, "#jog-max", "l"), (2, "#jog-hold", "r"), (3, "#jog-chunk", "l")))
+    # autofocus: ricerca ampia accesa, così si vede anche la riga «Cerca entro ±»
+    post("/api/autofocus/settings", {"source": "shot", "roi_px": 256, "coarse": True, "forget_width": True})
+    page.wait_for_timeout(1200)
+    shot(page, "autofocus-config", "#card-af", m(
+        (1, "#af-src", "l"), (2, "#af-roi", "l"), (3, "#af-fine-step", "l"), (4, "#af-coarse", "l"),
+        (5, "#af-coarse-range", "l"), (6, "#af-width", "l")))
     # bobine spente a motore fermo: compare l'opzione "Alimentale comunque durante la sequenza"
     post("/api/focuser/motor", {"name": "coil_power", "value": False})
     page.wait_for_timeout(1500)
@@ -445,6 +452,33 @@ with sync_playwright() as p:
     vw.click("#liveview")
     vw.wait_for_timeout(2000)
     shot(vw, "visualizzatore-live", "body", m((1, "#liveview", "l"), (2, "#live-badge", "r")))
+    # autofocus su un punto, con il live view (predefinito): il live del simulatore è una scacchiera uniforme, a fuoco a
+    # 25 000, quindi la curva è pulita in qualsiasi punto dell'immagine (che nella figura è la foto vera del live)
+    post("/api/autofocus/settings", {"source": "live", "roi_px": 256, "coarse": False, "settle_ms": 100,
+                                     "passes": 1, "forget_width": True})
+    post("/api/focuser/move", {"position": 24000})
+    for _ in range(120):
+        f = state()["focuser"]
+        if f["position"] == 24000 and not f["moving"]:
+            break
+        time.sleep(0.5)
+    vw.wait_for_timeout(1500)
+    vw.keyboard.press("a")
+    vw.wait_for_timeout(300)
+    box = vw.locator("#stage").bounding_box() or {"x": 300, "y": 300, "width": 400, "height": 300}
+    vw.mouse.click(box["x"] + box["width"] * 0.42, box["y"] + box["height"] * 0.45)
+    vw.wait_for_timeout(300)
+    vw.click("#af-start")
+    time.sleep(2)
+    for _ in range(400):
+        if not state()["autofocus"]["busy"]:
+            break
+        time.sleep(0.5)
+    vw.wait_for_timeout(2500)
+    shot(vw, "visualizzatore-autofocus", "body", m(
+        (1, "#af-btn", "r"), (2, "#af-roi", "t"), (3, ".af-src", "r"), (4, "#af-chart", "l"), (5, "#af-status", "l"),
+        (6, "#af-use-start", "l")))
+    post("/api/autofocus/settings", {"source": "live", "roi_px": 256, "coarse": False})
     vw.close()
 
     # ---- sequenza in corso ----

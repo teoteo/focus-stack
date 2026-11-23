@@ -310,6 +310,7 @@ function renderFocuser(f, run) {
   renderRail(f, lo, hi);
 
   renderJogSizes();
+  renderAfSettings();
   const away = towardSign() < 0 ? "+" : "−", toward = towardSign() < 0 ? "−" : "+";
   // riscritte solo se cambiano: in WebKit cambiare il testo di un pulsante mentre è premuto può far perdere
   // il rilascio (e il movimento continuo non si fermava più)
@@ -1220,7 +1221,7 @@ function updateOptics() {
   $("o-dirty").textContent = dirty ? t("Modifiche non salvate") : "";
   $("o-bar").classList.toggle("hidden", !dirty);
   $("o-dot").classList.toggle("hidden", !dirty);
-  $("o-profile-del").disabled = !editingProfile;
+  $("o-profile-del").disabled = $("o-profile-ren").disabled = !editingProfile;
   renderLensButtons();
   renderOpticsSummary(o, total, dirty);
 }
@@ -1316,6 +1317,26 @@ function bindOptics() {
   $("o-profile-save").onclick = (e) => {
     const name = (window.prompt(t("Nome del nuovo profilo"), editingProfile) || "").trim();
     if (name) act(e.target, () => saveProfile(name), t("Profilo salvato"));
+  };
+  $("o-profile-ren").onclick = (e) => {
+    const old = editingProfile;
+    const name = old && (window.prompt(t("Nuovo nome del profilo «{name}»", { name: old }), old) || "").trim();
+    if (!name || name === old) return;
+    act(e.target, async () => {
+      const profiles = await api("/api/optics/profiles/rename", { name: old, new_name: name });
+      const seq = $("s-optics").value;
+      S.settings.optics_profiles = profiles;
+      if (S.settings.sequence && S.settings.sequence.optics_profile === old) S.settings.sequence.optics_profile = name;
+      // il menu si riempie di nuovo: la sequenza resta sullo stesso profilo, ora col nome nuovo
+      profileSig = "";
+      renderOpticsProfiles();
+      $("s-optics").value = seq === old ? name : seq;
+      // le modifiche non salvate restano nel modulo: cambia solo il nome del profilo in modifica
+      editingProfile = name;
+      $("o-profile").value = name;
+      updateOptics();
+      updateSummary();
+    }, t("Profilo rinominato"));
   };
   $("o-profile-del").onclick = (e) => {
     const name = editingProfile;
@@ -1687,6 +1708,52 @@ function jogSizes() {
   return out;
 }
 
+// Configurazione › Autofocus: campo vuoto = valore calcolato (mostrato come segnaposto)
+const AF_FIELDS = { "af-fine-step": "fine_step", "af-fine-points": "fine_points", "af-passes": "passes",
+  "af-coarse-range": "coarse_range", "af-coarse-step": "coarse_step", "af-settle": "settle_ms", "af-overscan": "overscan" };
+function renderAfSettings() {
+  const a = S.settings.autofocus || {}, v = S.autofocus || {}, calc = v.computed || {}, used = v.used || {};
+  $$("#af-src button").forEach((b) => b.setAttribute("aria-checked", b.dataset.src === (a.source || "live")));
+  const setVal = (id, val) => { if (document.activeElement !== $(id)) $(id).value = val == null ? "" : val; };
+  setVal("af-roi", a.roi_px || 256);
+  for (const [id, key] of Object.entries(AF_FIELDS)) {
+    setVal(id, a[key]);
+    const ph = calc[key] != null ? fmtInt(calc[key]) : "";
+    if ($(id).placeholder !== ph) $(id).placeholder = ph;
+  }
+  $("af-coarse").checked = !!a.coarse;
+  $("af-coarse-row").classList.toggle("hidden", !a.coarse);
+  $("af-coarse-step-row").classList.toggle("hidden", !a.coarse);
+  const um = v.um_per_step || 0;
+  $("af-fine-um").innerHTML = um && used.fine_step ? t("= {um}", { um: fmtUm(used.fine_step) }) : "&nbsp;";
+  $("af-overscan-um").innerHTML = um && used.overscan ? t("= {um}", { um: fmtUm(used.overscan) }) : "&nbsp;";
+  $("af-coarse-step-um").innerHTML = um && used.coarse_step ? t("= {um}", { um: fmtUm(used.coarse_step) }) : "&nbsp;";
+  const n = used.coarse_range && used.coarse_step ? 2 * Math.floor(used.coarse_range / used.coarse_step) + 1 : null;
+  let info = "&nbsp;";
+  if (n) {
+    info = (um ? t("± {mm} mm", { mm: fmtNum((used.coarse_range * um) / 1000, 2) }) + " · " : "")
+      + t("{n} scatti", { n });
+  }
+  if ($("af-coarse-info").innerHTML !== info) $("af-coarse-info").innerHTML = info;
+  const src = { learned: t("misurata dall'autofocus"), dof: t("stimata dalla profondità di campo"),
+    travel: t("stimata dall'escursione"), default: t("valore iniziale") }[v.width_source] || "";
+  const prof = v.profile ? t("profilo «{p}»", { p: v.profile }) : t("nessun profilo ottico");
+  $("af-width").textContent = v.width ? t("≈ {w} passi, {src} ({prof})", { w: fmtInt(v.width), src, prof }) : "—";
+  $("af-forget").classList.toggle("hidden", v.width_source !== "learned");
+}
+
+async function saveAf(change, okMsg) {
+  const a = S.settings.autofocus || {};
+  const keys = ["source", "roi_px", "fine_step", "fine_points", "passes", "coarse", "coarse_range", "coarse_step", "settle_ms", "overscan"];
+  const body = Object.fromEntries(keys.filter((k) => k in a).map((k) => [k, a[k]]));
+  return act(null, async () => {
+    await api("/api/autofocus/settings", { ...body, ...change });
+    const st = await api("/api/state", undefined, "GET");
+    S.settings = st.settings; S.autofocus = st.autofocus;
+    renderAfSettings();
+  }, okMsg);
+}
+
 function renderJogSizes() {
   const sizes = jogSizes(), hold = !!(S && S.settings.jog_hold);
   // tratto del movimento continuo: aggiornato sempre (non dipende dalle ampiezze)
@@ -1852,6 +1919,16 @@ function bind() {
     FSNative.getPref("viewerOtherScreen").then((v) => { $("v-other-screen").checked = !!v; });
     $("v-other-screen").onchange = (e) => FSNative.setPref("viewerOtherScreen", e.target.checked);
   }
+  // autofocus
+  $$("#af-src button").forEach((b) => (b.onclick = () => saveAf({ source: b.dataset.src })));
+  $("af-roi").onchange = (e) => saveAf({ roi_px: Math.round(Number(e.target.value)) || 256 });
+  for (const [id, key] of Object.entries(AF_FIELDS)) {
+    $(id).onchange = (e) => saveAf({ [key]: e.target.value.trim() === "" ? null : Math.round(Number(e.target.value)) });
+  }
+  $("af-coarse").onchange = (e) => saveAf({ coarse: e.target.checked });
+  $("af-reset").onclick = () => saveAf({ fine_step: null, fine_points: null, passes: null, coarse_range: null, coarse_step: null, settle_ms: null, overscan: null },
+    t("Valori calcolati ripristinati"));
+  $("af-forget").onclick = () => saveAf({ forget_width: true }, t("Larghezza del picco dimenticata: torna la stima"));
   $("jog-hold").onchange = (e) => act(null, async () => {
     S.settings = await api("/api/settings", { jog_hold: e.target.checked });
     render();
@@ -1920,12 +1997,24 @@ function bind() {
   $("live-box").ondblclick = toggleLiveFullscreen;
 
   // sequenza
-  $$("[data-mark]").forEach((b) => (b.onclick = () => {
-    const id = b.dataset.mark === "start" ? "s-start" : "s-end";
+  // inizio o fine della pila = una posizione (quella attuale, o quella trovata dall'autofocus nel visualizzatore)
+  const markAt = (mark, position) => {
+    const id = mark === "start" ? "s-start" : "s-end";
     linkBegin(id); linkEdit.closed = true;
-    $(id).value = S.focuser.position;
+    $(id).value = position;
     syncCount(); linkMark(); linkDone(); updateSummary();
-  }));
+  };
+  $$("[data-mark]").forEach((b) => (b.onclick = () => markAt(b.dataset.mark, S.focuser.position)));
+  if (windowLink) {
+    windowLink.addEventListener("message", (ev) => {
+      const d = ev.data || {};
+      if ((d.mark === "start" || d.mark === "end") && Number.isFinite(d.position)) {
+        markAt(d.mark, d.position);
+        toast(d.mark === "start" ? t("Inizio della pila dall'autofocus: {pos}", { pos: fmtInt(d.position) })
+          : t("Fine della pila dall'autofocus: {pos}", { pos: fmtInt(d.position) }));
+      }
+    });
+  }
   ["s-start", "s-end", "s-step"].forEach((id) => $(id).addEventListener("input", () => {
     linkBegin(id); syncCount(); linkMark(); linkDone(); updateSummary();
   }));

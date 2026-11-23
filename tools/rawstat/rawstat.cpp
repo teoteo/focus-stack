@@ -13,13 +13,22 @@
 // Statistiche per canale R, G, B e su tutti i pixel ("all"): media, mediana, percentili 0,5 e 99,5, minimo,
 // massimo (in %), quota di pixel bruciati (≥ bianco) e neri (≤ nero), più la media del riquadro centrale (metà
 // larghezza × metà altezza), utile per i flat.
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <vector>
 
 #include "libraw/libraw.h"
+
+// stb_image (pubblico dominio / MIT, third_party/stb): JPEG e PNG per la misura della nitidezza, su ogni sistema
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_ONLY_JPEG
+#define STBI_ONLY_PNG
+#define STBI_NO_STDIO_FAILURE_STRINGS
+#include "stb_image.h"
 
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
@@ -232,9 +241,186 @@ int stat_image(const char *path) {
 }
 #endif
 
+// ---------------- nitidezza di un'area (autofocus) ----------------
+//
+//   fs-rawstat --focus <x0> <y0> <x1> <y1> [--source auto|preview|raw] <file>
+//
+// L'area è in frazioni (0–1) dell'immagine come la si vede (già ruotata). Misura: Tenengrad, cioè la media del
+// gradiente di Sobel al quadrato sulla luminosità, diviso per la luminosità media al quadrato (così non dipende
+// dall'esposizione). Più è alto, più l'area è a fuoco.
+// RAW: di solito l'anteprima JPEG incorporata (veloce, già sviluppata dalla fotocamera; nelle prove sulle pile
+// vere dà gli stessi picchi del RAW con meno rumore). Se l'area nell'anteprima è più piccola di MIN_FOCUS_PX
+// pixel, si usa il RAW a metà risoluzione (somma di ogni cella 2×2 del mosaico, senza demosaicizzare).
+// JPEG, PNG…: l'immagine stessa (stb_image). L'orientamento EXIF dei JPEG non si applica.
+const int MIN_FOCUS_PX = 32;
+
+struct Gray {
+  int w = 0, h = 0;
+  std::vector<double> v;
+};
+
+// Tenengrad normalizzato sull'intera immagine g (che è già l'area ritagliata)
+bool tenengrad(const Gray &g, double &focus, double &mean) {
+  if (g.w < 3 || g.h < 3) return false;
+  double sum = 0;
+  for (double x : g.v) sum += x;
+  mean = sum / g.v.size();
+  double acc = 0;
+  for (int y = 1; y < g.h - 1; y++) {
+    const double *a = &g.v[(size_t)(y - 1) * g.w], *b = &g.v[(size_t)y * g.w], *c = &g.v[(size_t)(y + 1) * g.w];
+    for (int x = 1; x < g.w - 1; x++) {
+      double gx = (a[x + 1] + 2 * b[x + 1] + c[x + 1]) - (a[x - 1] + 2 * b[x - 1] + c[x - 1]);
+      double gy = (c[x - 1] + 2 * c[x] + c[x + 1]) - (a[x - 1] + 2 * a[x] + a[x + 1]);
+      acc += gx * gx + gy * gy;
+    }
+  }
+  double n = (double)(g.w - 2) * (g.h - 2);
+  focus = mean > 1e-9 ? acc / n / (mean * mean) : 0;
+  return true;
+}
+
+// rettangolo in pixel di un'immagine W×H dalle frazioni (almeno 3×3, dentro l'immagine)
+void roi_px(const double f[4], int W, int H, int &x0, int &y0, int &x1, int &y1) {
+  x0 = (int)std::floor(f[0] * W); y0 = (int)std::floor(f[1] * H);
+  x1 = (int)std::ceil(f[2] * W); y1 = (int)std::ceil(f[3] * H);
+  if (x0 < 0) x0 = 0;
+  if (y0 < 0) y0 = 0;
+  if (x1 > W) x1 = W;
+  if (y1 > H) y1 = H;
+  if (x1 - x0 < 3) { x0 = std::max(0, std::min(W - 3, (x0 + x1) / 2 - 1)); x1 = std::min(W, x0 + 3); }
+  if (y1 - y0 < 3) { y0 = std::max(0, std::min(H - 3, (y0 + y1) / 2 - 1)); y1 = std::min(H, y0 + 3); }
+}
+
+// area da un'immagine RGB a 8 bit (stessa luminosità dell'Ispettore: 0,21 R + 0,72 G + 0,07 B)
+Gray crop_rgb(const unsigned char *px, int W, int H, int comp, const double f[4]) {
+  int x0, y0, x1, y1;
+  roi_px(f, W, H, x0, y0, x1, y1);
+  Gray g;
+  g.w = x1 - x0; g.h = y1 - y0;
+  g.v.resize((size_t)g.w * g.h);
+  for (int y = y0; y < y1; y++)
+    for (int x = x0; x < x1; x++) {
+      const unsigned char *p = px + ((size_t)y * W + x) * comp;
+      double l = comp >= 3 ? (54.0 * p[0] + 183.0 * p[1] + 19.0 * p[2]) / 256.0 : p[0];
+      g.v[(size_t)(y - y0) * g.w + (x - x0)] = l;
+    }
+  return g;
+}
+
+// frazioni dell'immagine vista → frazioni del sensore (LibRaw sizes.flip: 3 = 180°, 5 = 90° antiorario, 6 = orario)
+void unflip(int flip, const double in[4], double out[4]) {
+  double u[2] = {in[0], in[2]}, v[2] = {in[1], in[3]};
+  double xs[4], ys[4];
+  for (int i = 0; i < 4; i++) {
+    double a = u[i & 1], b = v[i >> 1];
+    if (flip == 3) { xs[i] = 1 - a; ys[i] = 1 - b; }
+    else if (flip == 6) { xs[i] = b; ys[i] = 1 - a; }
+    else if (flip == 5) { xs[i] = 1 - b; ys[i] = a; }
+    else { xs[i] = a; ys[i] = b; }
+  }
+  out[0] = *std::min_element(xs, xs + 4); out[2] = *std::max_element(xs, xs + 4);
+  out[1] = *std::min_element(ys, ys + 4); out[3] = *std::max_element(ys, ys + 4);
+}
+
+void print_focus(const char *source, double focus, double mean, const Gray &g, int W, int H) {
+  printf("{\"focus\":%s,\"mean\":%s,\"source\":\"%s\",\"roi_px\":[%d,%d],\"image\":[%d,%d]}\n",
+         num(focus, 8).c_str(), num(mean, 3).c_str(), source, g.w, g.h, W, H);
+}
+
+// RAW a metà risoluzione: ogni cella 2×2 del mosaico sommata, meno il nero (valori lineari)
+int focus_raw_cells(LibRaw *rp, const double s[4]) {
+  int r = rp->unpack();
+  if (r != LIBRAW_SUCCESS) return fail(libraw_strerror(r));
+  auto &d = rp->imgdata;
+  const auto &sz = d.sizes;
+  if (!d.rawdata.raw_image) return fail("RAW senza mosaico: usa l'anteprima");
+  int W = sz.width / 2, H = sz.height / 2, x0, y0, x1, y1;
+  roi_px(s, W, H, x0, y0, x1, y1);
+  double black = d.rawdata.color.black + (d.rawdata.color.cblack[0] + d.rawdata.color.cblack[1] +
+                 d.rawdata.color.cblack[2] + d.rawdata.color.cblack[3]) / 4.0;
+  int pitch = sz.raw_pitch / 2;
+  Gray g;
+  g.w = x1 - x0; g.h = y1 - y0;
+  g.v.resize((size_t)g.w * g.h);
+  for (int y = y0; y < y1; y++) {
+    const unsigned short *l0 = d.rawdata.raw_image + (size_t)(2 * y + sz.top_margin) * pitch + sz.left_margin;
+    const unsigned short *l1 = l0 + pitch;
+    for (int x = x0; x < x1; x++) {
+      double v = (double)l0[2 * x] + l0[2 * x + 1] + l1[2 * x] + l1[2 * x + 1] - 4 * black;
+      g.v[(size_t)(y - y0) * g.w + (x - x0)] = v > 0 ? v : 0;
+    }
+  }
+  double focus, mean;
+  if (!tenengrad(g, focus, mean)) return fail("area troppo piccola");
+  print_focus("raw", focus, mean, g, W, H);
+  return 0;
+}
+
+int focus_file(const char *path, const double f[4], const std::string &want) {
+  LibRaw *rp = new LibRaw;
+  int r = rp->open_file(path);
+  if (r == LIBRAW_SUCCESS) {
+    double s[4];
+    unflip(rp->imgdata.sizes.flip, f, s);
+    if (want != "raw" && rp->unpack_thumb() == LIBRAW_SUCCESS) {
+      const auto &th = rp->imgdata.thumbnail;
+      int W = 0, H = 0, comp = 0;
+      unsigned char *px = nullptr;
+      bool owned = false;
+      if (th.tformat == LIBRAW_THUMBNAIL_JPEG) {
+        px = stbi_load_from_memory((const unsigned char *)th.thumb, (int)th.tlength, &W, &H, &comp, 3);
+        comp = 3; owned = px != nullptr;
+      } else if (th.tformat == LIBRAW_THUMBNAIL_BITMAP && th.tcolors == 3) {
+        px = (unsigned char *)th.thumb; W = th.twidth; H = th.theight; comp = 3;
+      }
+      int x0, y0, x1, y1;
+      if (px) roi_px(s, W, H, x0, y0, x1, y1);
+      bool big = px && std::min(x1 - x0, y1 - y0) >= MIN_FOCUS_PX;
+      if (px && (big || want == "preview")) {
+        Gray g = crop_rgb(px, W, H, comp, s);
+        if (owned) stbi_image_free(px);
+        double focus, mean;
+        delete rp;
+        if (!tenengrad(g, focus, mean)) return fail("area troppo piccola");
+        print_focus("preview", focus, mean, g, W, H);
+        return 0;
+      }
+      if (owned) stbi_image_free(px);
+      if (want == "preview") { delete rp; return fail("anteprima incorporata non leggibile"); }
+    }
+    int out = focus_raw_cells(rp, s);
+    delete rp;
+    return out;
+  }
+  delete rp;
+  int W, H, comp;
+  unsigned char *px = stbi_load(path, &W, &H, &comp, 3);
+  if (!px) return fail(r == LIBRAW_FILE_UNSUPPORTED ? "formato non riconosciuto" : libraw_strerror(r));
+  Gray g = crop_rgb(px, W, H, 3, f);
+  stbi_image_free(px);
+  double focus, mean;
+  if (!tenengrad(g, focus, mean)) return fail("area troppo piccola");
+  print_focus("image", focus, mean, g, W, H);
+  return 0;
+}
+
 }  // namespace
 
 int main(int argc, char **argv) {
+  if (argc >= 2 && !strcmp(argv[1], "--focus")) {
+    // --focus x0 y0 x1 y1 [--source auto|preview|raw] file
+    if (argc != 7 && argc != 9) return fail("uso: --focus x0 y0 x1 y1 [--source auto|preview|raw] file");
+    double f[4];
+    for (int i = 0; i < 4; i++) f[i] = atof(argv[2 + i]);
+    if (!(f[0] >= 0 && f[1] >= 0 && f[2] <= 1 && f[3] <= 1 && f[2] > f[0] && f[3] > f[1])) return fail("area non valida");
+    std::string want = "auto";
+    if (argc == 9) {
+      if (strcmp(argv[6], "--source")) return fail("opzione sconosciuta");
+      want = argv[7];
+      if (want != "auto" && want != "preview" && want != "raw") return fail("sorgente non valida");
+    }
+    return focus_file(argv[argc - 1], f, want);
+  }
   if (argc != 2 || !strcmp(argv[1], "--version")) {
     printf("{\"tool\":\"fs-rawstat\",\"libraw\":\"%s\"}\n", LibRaw::version());
     return argc == 2 ? 0 : 2;

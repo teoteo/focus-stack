@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compila fs-rawstat (tools/rawstat/rawstat.cpp + LibRaw da third_party/LibRaw) come binario universale
+"""Compila fs-rawstat (tools/rawstat/rawstat.cpp + LibRaw da third_party/LibRaw + stb_image da third_party/stb) come binario universale
 arm64 + x86_64 per macOS 13 o successivi.
 
     python3 tools/rawstat/build.py            → build/rawstat/fs-rawstat
@@ -21,8 +21,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 LIBRAW = ROOT / "third_party" / "LibRaw"
 TOOL = Path(__file__).resolve().parent / "rawstat.cpp"
+STB = ROOT / "third_party" / "stb" / "stb_image.h"   # pubblico dominio / MIT, versione in third_party/stb/COMMIT
 FLAGS = ["-O2", "-w", "-std=c++11", "-arch", "arm64", "-arch", "x86_64", "-mmacosx-version-min=13.0",
-         "-DLIBRAW_NOTHREADS", "-DLIBRAW_NODLL", f"-I{LIBRAW}"]
+         "-DLIBRAW_NOTHREADS", "-DLIBRAW_NODLL", f"-I{LIBRAW}", f"-I{ROOT / 'third_party' / 'stb'}"]
 
 
 def libraw_sources() -> list[Path]:
@@ -51,7 +52,9 @@ def libraw_sources() -> list[Path]:
 
 
 def compile_one(src: Path, obj: Path) -> None:
-    if obj.exists() and obj.stat().st_mtime >= src.stat().st_mtime:
+    # rawstat.cpp include anche stb_image.h: si ricompila se cambia uno dei due
+    newest = max(src.stat().st_mtime, STB.stat().st_mtime) if src == TOOL else src.stat().st_mtime
+    if obj.exists() and obj.stat().st_mtime >= newest:
         return
     obj.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(["clang++", *FLAGS, "-c", str(src), "-o", str(obj)], check=True)

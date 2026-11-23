@@ -530,9 +530,11 @@ def _gain_lut(gain: float) -> bytes:
     return bytes(enc(lin(v) * gain) for v in range(256))
 
 
-def _sim_png(path: str, n: int, gain: float = 1.0, scene: str | None = None) -> None:
+def _sim_png(path: str, n: int, gain: float = 1.0, scene: str | None = None, position: int | None = None) -> None:
     """Scrive un PNG 1800×1200 di prova: sfondo sfumato e una fascia "a fuoco" con
     scacchiera di 2 px che si sposta a ogni scatto (utile per provare zoom al 100%).
+    Al centro un riquadro fisso a scacchiera di 6 px, tanto più contrastato quanto più il focheggiatore simulato
+    è vicino a SIM_FOCUS (per provare l'autofocus con gli scatti veri).
     gain = luce rispetto all'esposizione di riferimento (1/60, ISO 100, f/8).
     scene: "dark" (tappo: quasi nero, qualche pixel caldo) o "flat" (campo uniforme con vignettatura, 600×400)."""
     w, h = (600, 400) if scene in ("dark", "flat") else (1800, 1200)
@@ -560,12 +562,22 @@ def _sim_png(path: str, n: int, gain: float = 1.0, scene: str | None = None) -> 
         band_y = (n * 97) % (h - 160)
         checker = [bytes(b"\x00" + b"".join(bytes((lut[0xf0],) * 3) if ((x // 2) + k) % 2 else bytes((lut[0x20], lut[0x24], lut[0x2a]))
                                             for x in range(w))) for k in (0, 1)]
+        sharp = 0.0 if position is None else 2.0 ** (-((position - SIM_FOCUS) / SIM_DOF) ** 2)
+        hi_v, lo_v = lut[int(128 + 100 * sharp)], lut[int(128 - 100 * sharp)]
+        px0, px1, py0, py1 = w // 2 - 180, w // 2 + 180, h // 2 - 180, h // 2 + 180
         for y in range(h):
             if band_y <= y < band_y + 160:
-                rows.append(checker[(y // 2) % 2])
+                row = checker[(y // 2) % 2][1:]
             else:
                 g = 40 + (y * 120) // h
-                rows.append(b"\x00" + bytes((lut[g], lut[g // 2 + 30], lut[160 - g // 2])) * w)
+                row = bytes((lut[g], lut[g // 2 + 30], lut[160 - g // 2])) * w
+            if py0 <= y < py1:   # riquadro dell'autofocus, fermo (la fascia che scorre gli passa dietro)
+                # con un po' di rumore, come un sensore vero: lontano dal fuoco la nitidezza non è zero
+                patch = b"".join(bytes((min(255, max(0, (hi_v if ((x // 6) + (y // 6)) % 2 else lo_v)
+                                                     + ((x * 7919 + y * 104729 + n * 31) % 7) - 3)),) * 3)
+                                 for x in range(px0, px1))
+                row = row[:px0 * 3] + patch + row[px1 * 3:]
+            rows.append(b"\x00" + row)
     png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) \
         + chunk(b"IDAT", zlib.compress(b"".join(rows), 6)) + chunk(b"IEND", b"")
     Path(path).write_bytes(png)
@@ -686,7 +698,7 @@ class SimulatedCamera(GPhotoCamera):
             self._n += 1
             if mode == "download" and dest_base:
                 target = f"{dest_base}.png"
-                await asyncio.to_thread(_sim_png, target, self._n, self._gain(bulb_s), self.scene)
+                await asyncio.to_thread(_sim_png, target, self._n, self._gain(bulb_s), self.scene, self.focus_position())
                 self.last_file = target
                 return [target]
             return []

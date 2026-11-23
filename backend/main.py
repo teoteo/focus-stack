@@ -21,6 +21,7 @@ from . import i18n
 from .i18n import tr
 from .optics import manifest_optics
 from . import calibration, desktop, rawstat, remote
+from .autofocus import AFParams, AutofocusRunner, computed_defaults, expected_width
 from .camera import GPHOTO_AVAILABLE, CameraError, GPhotoCamera, SimulatedCamera
 from .focuser import FocuserError, LimitError, MyFocuserPro2, SimulatedFocuser, list_serial_ports
 from .sequence import SequenceParams, SequenceRunner
@@ -90,6 +91,9 @@ class App:
             self.log, self.add_calibration_shot, Path(store.CONFIG_DIR) / "test-shots")
         # pagina di sola lettura sulla rete locale (avanzamento da smartphone)
         self.remote = remote.RemoteServer(self.remote_status, self.remote_preview, CACHE_DIR)
+        # autofocus su un punto (visualizzatore): scatti o fotogrammi del live view, vedi autofocus.py
+        self.af = AutofocusRunner(lambda: self.focuser if self.focuser and self.focuser.connected else None,
+                                  self.af_grab, self.log, self.af_learn)
 
     def log(self, msg: str) -> None:
         self.log_lines.append(f"{time.strftime('%H:%M:%S')}  {msg}")
@@ -167,13 +171,83 @@ class App:
         self.add_shot(files, kind, f.position if f else None, f.temperature if f else None)
 
     def busy(self) -> bool:
-        """Sequenza o calibrazione in corso: la fotocamera è occupata."""
-        return self.runner.busy or self.calib.busy
+        """Sequenza, calibrazione o autofocus in corso: la fotocamera è occupata."""
+        return self.runner.busy or self.calib.busy or self.af.busy
 
     def live_paused(self) -> bool:
-        """Live view in pausa: durante la calibrazione e durante la sequenza, tranne mentre la slitta
-        raggiunge il primo piano (si può guardare il ritorno all'inizio)."""
-        return self.calib.busy or (self.runner.busy and not self.runner.status.live_ok)
+        """Live view in pausa: durante la calibrazione, durante l'autofocus con gli scatti veri e durante la
+        sequenza, tranne mentre la slitta raggiunge il primo piano (si può guardare il ritorno all'inizio)."""
+        return (self.calib.busy or (self.af.busy and self.af.status.source == "shot")
+                or (self.runner.busy and not self.runner.status.live_ok))
+
+    # ---------- autofocus ----------
+    def af_profile(self) -> str:
+        return self.cfg["sequence"].get("optics_profile") or ""
+
+    def af_view(self) -> dict:
+        """Impostazioni dell'autofocus con i valori calcolati (quelli usati quando un campo è vuoto)."""
+        a = self.cfg["autofocus"]
+        f = self.focuser if self.focuser and self.focuser.connected else None
+        lo, hi = f.bounds() if f else (int(self.cfg.get("limit_min") or 0), self.cfg.get("limit_max"))
+        travel = hi - lo if hi is not None else None
+        width, source = expected_width(self.cfg, self.um_per_step(), self.af_profile(), travel)
+        calc = computed_defaults(width, travel, int(self.cfg["sequence"].get("backlash") or 0))
+        calc["settle_ms"] = int(self.cfg["sequence"].get("settle_ms") or 0)
+        used = {k: (a.get(k) if a.get(k) is not None else v) for k, v in calc.items()}
+        return {"width": width, "width_source": source, "um_per_step": self.um_per_step(), "computed": calc,
+                "used": used, "profile": self.af_profile()}
+
+    def af_learn(self, profile: str, width: float) -> None:
+        """Larghezza del picco misurata da un autofocus riuscito: media con quella già salvata per il profilo."""
+        widths = self.cfg["autofocus"].setdefault("widths", {})
+        old = widths.get(profile or "")
+        widths[profile or ""] = round((old + width) / 2 if old else width, 1)
+        store.save(self.cfg)
+        self.log(tr("Autofocus: larghezza del picco {w} passi, salvata per i prossimi autofocus", w=round(width)))
+
+    async def af_grab(self, source: str, position: int) -> str:
+        """Immagine da misurare a questa posizione: uno scatto vero (nel visualizzatore come prova) oppure un
+        fotogramma del live view letto dopo l'attesa anti-vibrazione."""
+        cam = self.camera if self.camera and self.camera.connected else None
+        if cam is None:
+            raise RuntimeError(tr("Fotocamera non connessa"))
+        if source == "live":
+            ready = time.monotonic()
+            seq = 0
+            for _ in range(60):
+                frame = await next_live_frame(cam, seq)
+                seq = frame["seq"]
+                if frame["t"] >= ready:   # fotogramma cominciato a leggere dopo che la slitta si è fermata
+                    break
+            data = frame["data"]
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            out = CACHE_DIR / ("af-live.png" if data[:4] == b"\x89PNG" else "af-live.jpg")
+            out.write_bytes(data)
+            return str(out)
+        test_dir = Path(store.CONFIG_DIR) / "test-shots"
+        test_dir.mkdir(parents=True, exist_ok=True)
+        for old in sorted(test_dir.glob("af_*"), key=lambda q: q.stat().st_mtime)[:-80]:
+            old.unlink(missing_ok=True)
+        seq = self.cfg["sequence"]
+        base = test_dir / f"af_{time.strftime('%H%M%S')}_{int(time.time() * 1000) % 1000:03d}"
+        files: list[str] = []
+        for attempt in range(2):
+            try:
+                files = await cam.capture(mode="download", dest_base=base, bulb_s=seq.get("bulb_s") or 0,
+                                          mirror_s=(seq.get("mirror_delay_ms") or 0) / 1000)
+                break
+            except Exception as exc:  # noqa: BLE001
+                if attempt:
+                    raise RuntimeError(tr("La fotocamera non ha scattato ({exc})", exc=exc)) from exc
+                self.log(tr("Scatto non riuscito ({exc}): nuovo tentativo fra {s} s ({a} di {n})", exc=exc, s=3, a=1, n=1))
+                await asyncio.sleep(3)
+        if not files:
+            raise RuntimeError(tr("La fotocamera non ha restituito il file: imposta la destinazione sul computer o RAM"))
+        f = self.focuser
+        self.add_shot(files, "autofocus", position, f.temperature if f and f.connected else None)
+        await asyncio.sleep(max(0.3, (seq.get("post_shot_ms") or 0) / 1000))
+        # il JPEG della fotocamera se c'è (piena risoluzione), altrimenti il RAW (con la sua anteprima)
+        return next((x for x in files if x.lower().endswith((".jpg", ".jpeg"))), rawstat.pick_file(files) or files[0])
 
     def manifest_context(self, profile: str | None = None) -> dict:
         """Dati per il manifesto sequence.json (vedi sequence.build_manifest)."""
@@ -242,6 +316,7 @@ class App:
             "sequence": {**st.__dict__, "files": st.files[-3:], "file_count": len(st.files)},
             "calibration": {**self.calib.status.__dict__, "busy": self.calib.busy,
                             "tool": rawstat.tool_path() is not None},
+            "autofocus": {**self.af.status.__dict__, "busy": self.af.busy, **self.af_view()},
             "settings": self.cfg,
             "um_per_step": self.um_per_step(),
             "alarm": self.alarm,
@@ -584,6 +659,8 @@ def not_running():
         raise HTTPException(409, tr("Sequenza in corso"))
     if app_state.calib.busy:
         raise HTTPException(409, tr("Calibrazione in corso"))
+    if app_state.af.busy:
+        raise HTTPException(409, tr("Autofocus in corso"))
 
 
 # ---------------- stato ----------------
@@ -1369,6 +1446,8 @@ async def sequence_start(body: SequenceBody):
     profile = data.pop("optics_profile")
     if app_state.calib.busy:
         raise ValueError(tr("Calibrazione in corso"))
+    if app_state.af.busy:
+        raise ValueError(tr("Autofocus in corso"))
     ctx = app_state.manifest_context(profile)
     # set di calibrazione adatti (stessa fotocamera, ISO, tempo, profilo ottico): solo riferimenti, niente copie
     if body.capture_mode == "download":
@@ -1411,6 +1490,89 @@ async def sequence_reset():
     if not app_state.runner.reset():
         raise ValueError(tr("Sequenza in corso"))
     return {"ok": True}
+
+
+# ---------------- autofocus su un punto ----------------
+class AutofocusStart(BaseModel):
+    roi: list[float]                # x0, y0, x1, y1 in frazioni dell'immagine vista
+    source: str | None = None       # shot | live (None = quella della Configurazione)
+
+
+class AutofocusSettings(BaseModel):
+    source: str = "live"
+    roi_px: int = 256
+    fine_step: int | None = None    # None = calcolato
+    fine_points: int | None = None
+    passes: int | None = None       # passate fini (1–3)
+    overscan: int | None = None     # sovracorsa per il gioco (passi)
+    coarse: bool = False
+    coarse_range: int | None = None
+    coarse_step: int | None = None  # passo della ricerca ampia (passi)
+    settle_ms: int | None = None
+    forget_width: bool = False      # dimentica la larghezza del picco imparata per il profilo della sequenza
+
+
+AF_SOURCES = ("shot", "live")
+
+
+@api.post("/api/autofocus/start")
+@guard
+async def autofocus_start(body: AutofocusStart):
+    not_running()
+    need_focuser()
+    need_camera()
+    if len(body.roi) != 4:
+        raise ValueError(tr("Area non valida"))
+    x0, y0, x1, y1 = (min(1.0, max(0.0, float(v))) for v in body.roi)
+    if not (x1 > x0 and y1 > y0):
+        raise ValueError(tr("Area non valida"))
+    f = need_focuser()
+    await f.poll()
+    if f.moving:
+        raise ValueError(tr("Il focheggiatore si sta muovendo: aspetta che si fermi"))
+    source = body.source or app_state.cfg["autofocus"].get("source") or "live"
+    if source not in AF_SOURCES:
+        raise ValueError(tr("Origine non valida"))
+    seq = app_state.cfg["sequence"]
+    used = app_state.af_view()["used"]
+    p = AFParams(roi=(x0, y0, x1, y1), source=source, fine_step=int(used["fine_step"]),
+                 fine_points=int(used["fine_points"]), coarse=bool(app_state.cfg["autofocus"].get("coarse")),
+                 coarse_range=int(used["coarse_range"]), coarse_step=int(used["coarse_step"]),
+                 settle_ms=int(used["settle_ms"]), overscan=int(used["overscan"]), passes=int(used["passes"]),
+                 direction=1 if int(seq.get("end") or 0) >= int(seq.get("start") or 0) else -1,
+                 profile=app_state.af_profile())
+    app_state.af.start(p)
+    return {"ok": True}
+
+
+@api.post("/api/autofocus/stop")
+async def autofocus_stop():
+    await app_state.af.stop()
+    return {"ok": True}
+
+
+@api.post("/api/autofocus/settings")
+@guard
+async def autofocus_settings(body: AutofocusSettings):
+    if body.source not in AF_SOURCES:
+        raise ValueError(tr("Origine non valida"))
+    checks = (("fine_step", tr("Passo"), 1, 100000), ("fine_points", tr("Scatti della passata fine"), 5, 41),
+              ("coarse_range", tr("Ampiezza della ricerca ampia"), 1, 1000000),
+              ("coarse_step", tr("Passo della ricerca ampia"), 1, 1000000),
+              ("passes", tr("Passate"), 1, 3), ("overscan", tr("Sovracorsa per il gioco"), 0, 1000000),
+              ("settle_ms", tr("Attesa dopo il movimento"), 0, 30000))
+    for key, label, lo, hi in checks:
+        v = getattr(body, key)
+        if v is not None and not lo <= v <= hi:
+            raise ValueError(tr("{name}: da {lo} a {hi}", name=label, lo=lo, hi=hi))
+    if not 16 <= body.roi_px <= 4000:
+        raise ValueError(tr("Lato dell'area: da 16 a 4000 pixel"))
+    a = app_state.cfg["autofocus"]
+    a.update(body.model_dump(exclude={"forget_width"}))
+    if body.forget_width:
+        (a.get("widths") or {}).pop(app_state.af_profile(), None)
+    store.save(app_state.cfg)
+    return app_state.af_view()
 
 
 # ---------------- calibrazione ed esposizione automatica ----------------
@@ -1750,10 +1912,43 @@ async def delete_custom_lens(body: CustomLensBody):
     return app_state.cfg["custom_lenses"]
 
 
+class RenameProfileBody(BaseModel):
+    name: str
+    new_name: str
+
+
+@api.post("/api/optics/profiles/rename")
+@guard
+async def rename_optics_profile(body: RenameProfileBody):
+    """Rinomina un profilo: anche nella sequenza che lo usa e nei flat della libreria di calibrazione."""
+    old, new = body.name, body.new_name.strip()
+    profiles = app_state.cfg["optics_profiles"]
+    if old not in profiles:
+        raise ValueError(tr("Il profilo ottico «{name}» non esiste più: scegline un altro", name=old))
+    if not new:
+        raise ValueError(tr("Nome e dati obbligatori"))
+    if new != old and new in profiles:
+        raise ValueError(tr("Esiste già un profilo «{name}»", name=new))
+    if new != old:
+        # stesso ordine di prima, con il nome nuovo al posto del vecchio
+        app_state.cfg["optics_profiles"] = {(new if k == old else k): v for k, v in profiles.items()}
+        if app_state.cfg["sequence"].get("optics_profile") == old:
+            app_state.cfg["sequence"]["optics_profile"] = new
+        widths = app_state.cfg["autofocus"].get("widths") or {}
+        if old in widths:   # larghezza del picco imparata dall'autofocus
+            widths[new] = widths.pop(old)
+        store.save(app_state.cfg)
+        flats = calibration.rename_profile(app_state.cfg.get("output_root") or "", old, new)
+        app_state.log(tr("Profilo ottico rinominato: «{old}» → «{new}»", old=old, new=new)
+                      + (" " + tr("({n} set di calibrazione aggiornati)", n=flats) if flats else ""))
+    return app_state.cfg["optics_profiles"]
+
+
 @api.post("/api/optics/profiles/delete")
 @guard
 async def delete_optics_profile(body: OpticsProfileBody):
     app_state.cfg["optics_profiles"].pop(body.name, None)
+    (app_state.cfg["autofocus"].get("widths") or {}).pop(body.name, None)
     if app_state.cfg["sequence"].get("optics_profile") == body.name:
         app_state.cfg["sequence"]["optics_profile"] = ""
     store.save(app_state.cfg)
