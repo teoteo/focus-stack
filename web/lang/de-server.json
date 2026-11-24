@@ -339,5 +339,12 @@
   "Lo scatto di verifica ha solo il {pct} % della nitidezza massima della curva: probabile gioco della meccanica. Aumenta la sovracorsa in Configurazione › Autofocus e rifai": "Die Kontrollaufnahme hat nur {pct} % der höchsten Schärfe der Kurve: vermutlich Spiel in der Mechanik. Überfahrweg unter Konfiguration › Autofokus erhöhen und wiederholen",
   "verifica {pct} %": "Kontrolle {pct} %",
   "Passate": "Durchläufe",
-  "Sovracorsa per il gioco": "Überfahrweg gegen Spiel"
+  "Sovracorsa per il gioco": "Überfahrweg gegen Spiel",
+  "L'autofocus dovrebbe andare a {pos}, oltre l'escursione massima (± {m} passi da {start}): fermato. Avvicina il fuoco a mano o allarga l'escursione in Configurazione › Autofocus": "Der Autofokus müsste nach {pos}, über den maximalen Verfahrweg hinaus (± {m} Schritte ab {start}): angehalten. Fokus von Hand annähern oder den Verfahrweg unter Konfiguration › Autofokus erweitern",
+  "Conferma con scatti veri": "Bestätigung mit echten Aufnahmen",
+  "Conferma con {n} scatti veri attorno a {pos}, passo {s}": "Bestätigung mit {n} echten Aufnahmen um {pos}, Schrittweite {s}",
+  "Conferma: fuoco a {pos} (col live view era {live})": "Bestätigung: Fokus bei {pos} (mit Live-View {live})",
+  "Modo non valido": "Ungültiger Modus",
+  "Escursione massima": "Maximaler Verfahrweg",
+  "Scatti di conferma": "Bestätigungsaufnahmen"
 }

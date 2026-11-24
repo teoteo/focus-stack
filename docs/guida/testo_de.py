@@ -536,15 +536,15 @@ Auflösung (auch RAW-Dateien, die direkt umgewandelt werden) mit Zoom und Versch
     f"<b>{ui('● Live')}</b> (<kbd>L</kbd>): das Live-View im selben Fenster, mit Zoom und Verschieben.",
     "<b>Zoom</b> − und + (<kbd>−</kbd> <kbd>+</kbd>) und die Vergrößerungsstufe.",
     f"<b>{ui('Adatta')}</b> (<kbd>0</kbd>), <b>100 %</b> (<kbd>1</kbd>: ein Sensorpixel = ein Bildschirmpixel), <b>{ui('Reset')}</b> (<kbd>R</kbd>).",
-    f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>): zeigt jede neue Aufnahme automatisch an.",
-    f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>): behält Zoom und Position beim Wechsel der Aufnahme bei, um die Schärfe an derselben Stelle zu vergleichen.",
+    f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>): zeigt jede neue Aufnahme automatisch an. Wie die beiden folgenden Schaltflächen ist es ein Symbol, hervorgehoben, wenn es aktiv ist; beim Öffnen ist es aktiv.",
+    f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>): behält Zoom und Position beim Wechsel der Aufnahme bei, um die Schärfe an derselben Stelle zu vergleichen. Beim Öffnen aktiv.",
     "<b>Kompositionshilfen</b> (<kbd>G</kbd>): jeder Klick wechselt zwischen Drittel, Kreuz in der Mitte, Drittel und Mitte, keine. Linien von 1 Pixel, die Zoom und Verschieben folgen; sie funktionieren auch im Live-View.",
-    f"<b>{ui('Svuota')}</b>: neu beginnen. Die Aufnahmen verschwinden aus dem Betrachter und die Serie ist wieder {ui('Pronta')}; die Dateien bleiben im Ordner.",
-    f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>): Histogramme, ausgebrannte und schwarze Pixel, Werte unter dem Zeiger (siehe unten).",
+    f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>): Histogramme, ausgebrannte und schwarze Pixel, Werte unter dem Zeiger (siehe unten). Beim Öffnen des Betrachters geöffnet.",
     "<b>Vollbild</b> (<kbd>F</kbd>).",
     "<b>?</b>: diese Anleitung, beim Kapitel über den Betrachter.",
     f"<b>Miniaturen</b>: Ein Klick öffnet die Aufnahme. <i>{ui('P')}</i> = Testaufnahme, <i>{ui('C')}</i> = Kalibrierungsbild, <i>{ui('E')}</i> = Foto für die Belichtung, <i>AF</i> = Autofokus-Aufnahmen, die Zahlen sind die Aufnahmen der Serie. Der Streifen zeigt nur die laufende oder die letzte Serie: Er leert sich beim Start einer Serie, und die erste Testaufnahme danach beginnt einen neuen. Die Dateien bleiben im Ordner.",
-], layout="full", anchors={n: "b" for n in range(1, 12)})}
+    f"<b>{ui('Svuota')}</b>, unten rechts im Miniaturstreifen, wenn Aufnahmen vorhanden sind: neu beginnen. Die Aufnahmen verschwinden aus dem Betrachter und die Serie ist wieder {ui('Pronta')}; die Dateien bleiben im Ordner.",
+], layout="full", anchors={n: "bb" if n in (7, 9, 11) else "b" for n in range(1, 12)})}
 <p>Mit der Maus: Ziehen verschiebt das Bild, das Scrollrad (oder Aufziehen auf dem Trackpad) zoomt um den Zeiger herum,
 ein Doppelklick wechselt zwischen „Einpassen“ und 100 %. Über 150 % bleiben die Pixel scharf, ohne Weichzeichnung.</p>
 {fig("visualizzatore-live", [
@@ -559,22 +559,22 @@ festlegen.</p>
 <li><span class="ui">⌖ Autofokus</span> drücken (Taste <kbd>A</kbd>) und auf das Detail klicken: Ein blaues Quadrat
   erscheint, der gemessene Bereich. Die Seitenlänge ändert sich mit dem Regler <b>Bereich</b> oder mit <kbd>[</kbd>
   <kbd>]</kbd>; ein weiterer Klick verschiebt das Quadrat. Ziehen und Zoom funktionieren wie immer.</li>
-<li><span class="ui">Starten</span> drücken. Der Fokussierer fährt in dieselbe Richtung wie der Stapel und misst an
-  jeder Position: Die Schärfekurve wächst Punkt für Punkt.</li>
+<li>Den <b>Modus</b> wählen (Schnell, Präzise oder Echte Aufnahmen) und den <b>Weg</b> prüfen: Balken und Zeile darunter
+  zeigen, wie weit sich der Fokussierer bewegt und wie nahe er dem Objekt kommt. Dann <span class="ui">Starten</span>
+  drücken: Der Fokussierer fährt in dieselbe Richtung wie der Stapel, und die Schärfekurve wächst Punkt für Punkt.</li>
 <li>Am Ende kehrt der Fokussierer zur schärfsten Position zurück: Er fährt zuerst um den <b>Überfahrweg</b> darüber
   hinaus und kommt in derselben Richtung wie der Durchlauf an, damit das Spiel der Mechanik den Fokus nicht verschiebt.
-  Dann macht er eine <b>Kontrollaufnahme</b>, die grüne Raute im Diagramm. <span class="ui">Als Stapelanfang
-  verwenden</span> und <span class="ui">Als Stapelende verwenden</span> tragen die Position im Hauptfenster in die
-  Sequenz ein.</li>
+  Dann macht er eine <b>Kontrollaufnahme</b>, die grüne Raute im Diagramm. In der Zeile darunter trägt <span class="ui">Fokus verwenden als</span>
+  <span class="ui">Stapelanfang</span> oder <span class="ui">Stapelende</span> die Position im Hauptfenster in die Sequenz ein.</li>
 </ol>
 {fig("visualizzatore-autofocus", [
     "<b>⌖ Autofokus</b> (<kbd>A</kbd>): öffnet das Feld; ein Klick ins Bild wählt den Bereich. <kbd>Esc</kbd> schließt es.",
     "<b>Gemessener Bereich</b>: gestrichelt, solange der Autofokus läuft. Er bleibt an derselben Stelle, wenn man die Aufnahme wechselt oder zum Live-View geht.",
-    "<b>Bilder</b>: <i>Live</i>-View-Bilder (Standard): der Autofokus ist <b>schneller</b>; oder echte <i>Aufnahmen</i>: das Ergebnis ist <b>sicherer</b>, weil das Foto in voller Qualität gemessen wird, aber jede Aufnahme dauert einige Sekunden. <b>Bereich</b>: Seitenlänge des Quadrats in Sensorpixeln.",
-    "<b>Schärfekurve</b>: ein Punkt pro Messung, waagerecht die Position des Fokussierers; darunter die Schrittweite. Die grüne Linie ist die gewählte Position, die grüne Raute die Kontrollaufnahme. Mit dem Mauszeiger auf einem Punkt liest man Position und Schärfe (in % des Maximums).",
+    "<b>Modus</b>: <i>Schnell</i>, <i>Präzise</i> (Standard) oder <i>Echte Aufnahmen</i>; darunter, was er tun wird. <b>Weite Suche</b> schaltet sie ein, wenn das ganze Bild unscharf ist. <b>Bereich</b>: Seitenlänge des Quadrats in Sensorpixeln. Der <b>Wegbalken</b> reicht von − bis + zum maximalen Verfahrweg um den Start: hell der geplante Weg, dunkler der schon zurückgelegte, der Strich ist die aktuelle Position.",
+    "<b>Schärfekurve</b>: ein Punkt pro Messung, waagerecht die Position des Fokussierers; darunter die Schrittweite. Frühere Durchläufe bleiben blasser unter dem laufenden, und das Diagramm zoomt auf den Bereich des feinen Durchlaufs. Die orangen Quadrate sind die echten Bestätigungsaufnahmen, die grüne Linie die gewählte Position, die grüne Raute die Kontrollaufnahme. Mit dem Mauszeiger auf einem Punkt liest man Position und Schärfe (in % des Maximums).",
     "<b>Status</b>: Durchlauf, laufende Aufnahme und Position, dann das Ergebnis mit Kontrolle und Spitzenbreite oder der Grund, warum kein Fokus gefunden wurde.",
-    "<b>Als Stapelanfang verwenden</b> / <b>Als Stapelende verwenden</b>, solange der Fokussierer auf der gefundenen Position bleibt. <b>Wiederholen</b> startet den Autofokus erneut; ein Klick auf einen anderen Punkt verschiebt den Bereich, ohne das Feld zu schließen. Während der Messung gibt es <b>Stopp</b>.",
-], layout="full")}
+    "<b>Wiederholen</b> und darunter <b>Fokus verwenden als Stapelanfang / Stapelende</b>, solange der Fokussierer auf der gefundenen Position bleibt. <b>Wiederholen</b> startet den Autofokus erneut; ein Klick auf einen anderen Punkt verschiebt den Bereich, ohne das Feld zu schließen. Während der Messung gibt es <b>Stopp</b>.",
+], layout="full", anchors={6: "r"})}
 <p>Bei jeder Aufnahme misst die App, wie scharf die Kanten im Bereich sind (der Helligkeitsgradient, geteilt durch die
 mittlere Helligkeit, damit die Belichtung keine Rolle spielt). Weit vom Fokus ist die Kurve flach, in seiner Nähe steigt
 sie zu einer schmalen Spitze an. Die App legt eine Kurve durch die Punkte um das Maximum, die gefundene Position kann
@@ -586,16 +586,35 @@ RAW.</p>
 Liegen im Bereich zwei Dinge in unterschiedlicher Schärfeebene (Bein und Körper eines Insekts), hat die Kurve zwei
 Spitzen und die App meldet es in Orange: den Bereich auf das gewünschte Detail verkleinern. Auf einem gleichmäßigen
 Hintergrund gibt es nichts zu messen, und der Autofokus endet mit einer Meldung.</div>
-<div class="box tip"><span class="t">Live-View oder echte Aufnahmen?</span><b>Live-View</b> ist schneller: gut, um den Fokus
-zu suchen, und für Versuche. Das Live-Bild ist aber klein und komprimiert und bei wenig Licht verrauscht. <b>Echte
-Aufnahmen</b> messen das Foto so, wie es im Stapel sein wird: Um Anfang oder Ende eines wichtigen Stapels sicher
-festzulegen, den Autofokus mit <i>Aufnahmen</i> wiederholen.</div>
+<h3>Die Modi</h3>
+<p><b>Live-View</b> ist schneller, aber sein Bild ist klein und komprimiert und bei wenig Licht verrauscht; <b>echte
+Aufnahmen</b> messen das Foto so, wie es im Stapel sein wird, brauchen aber jeweils einige Sekunden. Die Modi
+kombinieren beides:</p>
+<ul>
+<li><b>Schnell</b>: nur Live-View, ein Durchlauf. Um den Fokus zu suchen und für Versuche.</li>
+<li><b>Präzise</b> (Standard): zwei Durchläufe mit Live-View, dann <b>3 echte Bestätigungsaufnahmen</b> um den gefundenen
+  Fokus. Der Fokus wird aus diesen Aufnahmen neu berechnet (liegt die schärfste am Rand, kommen ein oder zwei dazu), und
+  auch die Kontrollaufnahme ist eine echte Aufnahme. Das ist der Modus, um Anfang oder Ende eines Stapels festzulegen.</li>
+<li><b>Echte Aufnahmen</b>: der ganze Durchlauf mit echten Aufnahmen. Am sichersten und am langsamsten.</li>
+</ul>
+<p>Jeder Modus merkt sich seine Einstellungen (Schrittweite, Aufnahmen pro Durchlauf, Durchläufe, Bilder,
+Bestätigungsaufnahmen), die unter <span class="ui">Konfiguration › Autofokus</span> geändert werden.</p>
+<p>Mit echten Aufnahmen (<i>Präzise</i> und <i>Echte Aufnahmen</i>) schaltet sich der Live-View vor der ersten
+Aufnahme aus, wie bei einer Testaufnahme, und bleibt bis zum Ende des Autofokus aus: Die Kamera wechselt nicht ständig
+zwischen Live-View und Aufnahme. Er startet von selbst wieder, wenn du den Fokussierer bewegst. Trennt sich die Kamera
+während einer Aufnahme, versucht es die App erneut und verbindet sie wieder; wiederholen sich die Trennungen, prüfe die
+Stromversorgung: Ein Akku-Dummy (<i>dummy battery</i>), der die Lastspitze der Aufnahme nicht verkraftet, trennt die
+Kamera vom USB.</p>
+<div class="box warn"><span class="t">Maximaler Verfahrweg: er schützt das Objekt</span>Der Autofokus entfernt sich nie
+weiter von der Startposition als der <b>maximale Verfahrweg</b> (± Schritte, im Wegbalken). Müsste sich der Durchlauf
+darüber hinaus verlängern, weil der Fokus weiter weg liegt als erwartet, hält er an und meldet es, statt weiter auf das
+Objekt zuzufahren. Der berechnete Wert deckt den geplanten Weg mit einer Reserve ab; verringern Sie ihn, wenn das
+Objekt nahe am Objektiv ist.</div>
 <div class="box warn"><span class="t">Niedrige Kontrolle: Spiel</span>Ist die Kontrollaufnahme deutlich weniger scharf
 als das Maximum der Kurve (unter 80 %), meldet die App es in Orange: Meist ist das Spiel der Mechanik größer als der
 Überfahrweg. Erhöhen Sie ihn unter <span class="ui">Konfiguration › Autofokus</span>; anfangs gilt der Spielausgleich
 der Sequenz, mindestens aber eine Spitzenbreite.</div>
-<p>Die Werte (Schrittweite, Zahl der Aufnahmen, weite Suche, wenn alles unscharf ist) stehen unter
-<span class="ui">Konfiguration › Autofokus</span>, Kapitel 12.</p>
+<p>Alle Werte stehen unter <span class="ui">Konfiguration › Autofokus</span>, Kapitel 12.</p>
 <h2>{ui('Ispettore')}</h2>
 <p>Das Feld <span class="ui">{ui('Ispettore')}</span> (Taste <kbd>I</kbd>) prüft die Belichtung eines Fotos nach denselben
 Regeln wie Focus Fusion. Es ist schreibgeschützt: Die Fotos werden nicht verändert. Es funktioniert auch mit dem
@@ -907,26 +926,26 @@ erhält. <span class="ui">{ui('Vai')}</span>, die
 Tasten mit einem einzelnen Klick und die Serie fahren dagegen immer bis zum Ziel, auch wenn die Bewegung viele Sekunden
 dauert.</p>
 <h2>Autofokus</h2>
-<p>Die Einstellungen des Autofokus auf einen Punkt (Kapitel 8). Leere Felder verwenden den berechneten Wert, der grau im
-Feld steht: Er wird aus der <b>Spitzenbreite</b> berechnet, also dem Schrittbereich, in dem die Schärfe über der Hälfte
-des Maximums bleibt.</p>
+<p>Die Einstellungen des Autofokus auf einen Punkt (Kapitel 8): zuerst der Modus und seine Einstellungen, dann die für
+alle Modi gemeinsamen. Leere Felder verwenden den Standardwert, der grau im Feld steht; Schrittweiten und Aufnahmen
+werden aus der <b>Spitzenbreite</b> berechnet, also dem Schrittbereich, in dem die Schärfe über der Hälfte des Maximums
+bleibt.</p>
 {fig("autofocus-config", [
-    "<b>Zu messende Bilder</b>: Live-View (Standard) oder echte Aufnahmen. Lässt sich auch im Feld des Betrachters wählen.",
-    "<b>Seitenlänge des Bereichs</b> in Sensorpixeln, dieselbe wie der Regler im Betrachter.",
-    "<b>Schrittweite des feinen Durchlaufs</b>: etwa ein Viertel der Spitzenbreite, damit mindestens 4–5 Aufnahmen auf die Spitze fallen.",
-    "<b>Weite Suche, wenn das ganze Bild unscharf ist</b>: vor dem feinen Durchlauf einige weit auseinanderliegende Aufnahmen (eine Spitzenbreite, einstellbar mit <b>Schrittweite der weiten Suche</b>), um den Fokusbereich zu finden.",
-    "<b>Suchen im Bereich ±</b> Schritte ab der aktuellen Position, immer innerhalb der Grenzen; daneben der Umfang in mm und die Zahl der nötigen Aufnahmen.",
+    "<b>Modus</b>, den der Betrachter verwendet, mit einer Zusammenfassung, was er tut. Lässt sich auch im Feld wählen.",
+    "<b>Einstellungen des Modus</b>: Bilder (Live-View oder echte Aufnahmen), Schrittweite und Aufnahmen des feinen Durchlaufs, Durchläufe. Leer = Standardwert des Modus oder aus der Spitzenbreite berechnet. <b>Modus zurücksetzen</b> stellt die Anfangswerte wieder her.",
+    "<b>Bestätigung mit echten Aufnahmen</b> (nur mit Live-View): wie viele echte Aufnahmen um den gefundenen Fokus; 0 = keine Bestätigung.",
+    "<b>Weite Suche</b>, wenn das ganze Bild unscharf ist, mit Umfang (± Schritte) und Schrittweite, eine Spitzenbreite: einige weit auseinanderliegende Aufnahmen.",
+    "<b>Maximaler Verfahrweg ±</b> ab der Startposition: darüber hinaus hält der Autofokus an. Darunter Wartezeit nach Bewegung und <b>Überfahrweg gegen Spiel</b>.",
     "<b>Spitzenbreite</b>, die für die Berechnungen verwendet wird, und ihre Herkunft. <b>Messung vergessen</b> kehrt zur Schätzung zurück.",
 ], layout="side", anchors={2: "r", 4: "r"})}
 <p>Beim ersten Mal wird die Spitzenbreite aus der Schärfentiefe des in der Sequenz gewählten Optikprofils und aus der
 Mechanik (µm pro Schritt) geschätzt, ohne Profil aus dem Verfahrweg zwischen den Grenzen. Nach jedem erfolgreichen
 Autofokus speichert die App die gemessene Breite für dieses Profil und verwendet sie danach. Die erste Schätzung ist grob:
 Ist die Spitze breiter als erwartet, verlängert sich der Durchlauf von selbst; ist sie schmaler, wiederholt er die
-Messung mit feinerer Schrittweite. Mit 2 oder 3 <b>Durchläufen</b> wiederholt der Autofokus die Messung um den
-gefundenen Fokus, jedes Mal mit halber Schrittweite. Der <b>Überfahrweg gegen Spiel</b> ist die Strecke, um die der
-Fokussierer über eine Position hinausfährt, bevor er zu ihr zurückkehrt: Er muss größer als das Spiel der Mechanik sein.
-<span class="ui">Berechnete Werte wiederherstellen</span> leert die von Hand eingetragenen Felder. Ist die weite Suche aus und der Fokus weit weg, endet der Autofokus und schlägt vor, sie
-einzuschalten.</p>
+Messung mit feinerer Schrittweite. Der <b>Überfahrweg gegen Spiel</b> ist die Strecke, um die der Fokussierer über eine
+Position hinausfährt, bevor er zu ihr zurückkehrt: Er muss größer als das Spiel der Mechanik sein.
+<span class="ui">Berechnete Werte wiederherstellen</span> leert die von Hand eingetragenen gemeinsamen Felder. Ist die
+weite Suche aus und der Fokus weit weg, endet der Autofokus und schlägt vor, sie einzuschalten.</p>
 <h2>{ui('Aggiornamenti')}</h2>
 {fig("aggiornamenti", [
     "Version der <b>App</b> und Ergebnis der letzten Prüfung.",

@@ -517,15 +517,15 @@ al volo) con zoom e spostamento, e il live view della fotocamera.</p>
     "<b>● Live</b> (<kbd>L</kbd>): il live view nella stessa finestra, con zoom e spostamento.",
     "<b>Zoom</b> − e + (<kbd>−</kbd> <kbd>+</kbd>) e livello di ingrandimento.",
     "<b>Adatta</b> (<kbd>0</kbd>), <b>100%</b> (<kbd>1</kbd>: un pixel del sensore = un pixel dello schermo), <b>Reset</b> (<kbd>R</kbd>).",
-    "<b>Segui ultimo</b> (<kbd>U</kbd>): mostra da solo ogni nuovo scatto.",
-    "<b>Blocca vista</b> (<kbd>K</kbd>): cambiando scatto mantiene zoom e posizione, per confrontare la messa a fuoco nello stesso punto.",
+    "<b>Segui ultimo</b> (<kbd>U</kbd>): mostra da solo ogni nuovo scatto. Come i due pulsanti seguenti è un'icona, evidenziata quando è attiva; all'apertura è attivo.",
+    "<b>Blocca vista</b> (<kbd>K</kbd>): cambiando scatto mantiene zoom e posizione, per confrontare la messa a fuoco nello stesso punto. Attivo all'apertura.",
     "<b>Guide di composizione</b> (<kbd>G</kbd>): a ogni clic terzi, incrocio al centro, terzi e centro, nessuna. Linee di 1 pixel che seguono zoom e spostamento; funzionano anche nel live view.",
-    "<b>Svuota</b>: ricomincia da capo. Gli scatti escono dal visualizzatore e la sequenza torna Pronta; i file restano nella cartella.",
-    "<b>Ispettore</b> (<kbd>I</kbd>): istogrammi, pixel bruciati e neri, valori sotto il puntatore (vedi sotto).",
+    "<b>Ispettore</b> (<kbd>I</kbd>): istogrammi, pixel bruciati e neri, valori sotto il puntatore (vedi sotto). Aperto all'apertura del visualizzatore.",
     "<b>Schermo intero</b> (<kbd>F</kbd>).",
     "<b>?</b>: questa guida, al capitolo del visualizzatore.",
     "<b>Miniature</b>: un clic apre lo scatto. <i>P</i> = scatto di prova, <i>C</i> = frame di calibrazione, <i>E</i> = foto per l'esposizione, <i>AF</i> = scatti dell'autofocus, i numeri sono gli scatti della sequenza. La striscia mostra solo la sequenza in corso o l'ultima: all'avvio di una sequenza si svuota, e il primo scatto di prova fatto dopo ne inizia una nuova. I file restano nella cartella.",
-], layout="full", anchors={n: "b" for n in range(1, 12)})}
+    "<b>Svuota</b>, in fondo a destra nella striscia delle miniature quando ci sono scatti: ricomincia da capo. Gli scatti escono dal visualizzatore e la sequenza torna Pronta; i file restano nella cartella.",
+], layout="full", anchors={n: "bb" if n in (7, 9, 11) else "b" for n in range(1, 12)})}
 <p>Con il mouse: trascina per spostare l'immagine, rotella (o pizzico sul trackpad) per lo zoom centrato
 sul cursore, doppio clic per passare da “adatta” al 100% e viceversa. Oltre il 150% i pixel restano netti,
 senza sfocatura.</p>
@@ -540,21 +540,22 @@ pelo, il bordo di una struttura. Serve per esempio a fissare con precisione l'in
 <li>Premi <span class="ui">⌖ Autofocus</span> (tasto <kbd>A</kbd>) e fai clic sul dettaglio: compare un quadrato azzurro,
   l'area misurata. Il lato si cambia con il cursore <b>Area</b> o con <kbd>[</kbd> <kbd>]</kbd>; un altro clic sposta il
   quadrato. Trascinare e lo zoom funzionano come sempre.</li>
-<li>Premi <span class="ui">Avvia</span>. Il focheggiatore si muove nella stessa direzione della pila e misura a ogni
-  posizione: la curva della nitidezza si allunga di un punto per volta.</li>
+<li>Scegli il <b>modo</b> (Veloce, Preciso o Scatti veri) e controlla la <b>corsa</b>: la barra e la riga sotto dicono
+  quanto si muoverà il focheggiatore e fin dove arriverà verso il campione. Poi premi <span class="ui">Avvia</span>: il
+  focheggiatore si muove nella stessa direzione della pila e la curva della nitidezza si allunga di un punto per volta.</li>
 <li>Alla fine il focheggiatore torna sulla posizione più nitida: passa prima oltre, della <b>sovracorsa</b>, e ci arriva
   nello stesso verso della scansione, così il gioco della meccanica non sposta il fuoco. Poi fa uno <b>scatto di
-  verifica</b>, il rombo verde sul grafico. <span class="ui">Usa come inizio pila</span> e
-  <span class="ui">Usa come fine pila</span> scrivono la posizione nella sequenza, nella finestra principale.</li>
+  verifica</b>, il rombo verde sul grafico. Nella riga sotto, <span class="ui">Usa il fuoco come</span>
+  <span class="ui">Inizio pila</span> o <span class="ui">Fine pila</span> scrive la posizione nella sequenza, nella finestra principale.</li>
 </ol>
 {fig("visualizzatore-autofocus", [
     "<b>⌖ Autofocus</b> (<kbd>A</kbd>): apre il pannello; il clic sull'immagine sceglie l'area. <kbd>Esc</kbd> lo chiude.",
     "<b>Area misurata</b>: tratteggiata durante l'autofocus. Resta sullo stesso punto anche cambiando scatto o passando al live.",
-    "<b>Immagini</b>: fotogrammi del <i>Live</i> (predefinito): l'autofocus è <b>più veloce</b>; oppure <i>Scatti</i> veri: il risultato è <b>più sicuro</b>, perché misura la foto a piena qualità, ma ogni scatto richiede qualche secondo. <b>Area</b>: lato del quadrato in pixel del sensore.",
-    "<b>Curva della nitidezza</b>: un punto per misura, in orizzontale la posizione del focheggiatore; sotto, il passo. La linea verde è la posizione scelta, il rombo verde lo scatto di verifica. Con il puntatore su un punto si leggono posizione e nitidezza (in % del massimo).",
+    "<b>Modo</b>: <i>Veloce</i>, <i>Preciso</i> (predefinito) o <i>Scatti veri</i>; sotto, che cosa farà. <b>Ricerca ampia</b> la accende per quando l'immagine è tutta sfocata. <b>Area</b>: lato del quadrato in pixel del sensore. La <b>barra della corsa</b> va da − a + l'escursione massima attorno alla partenza: in chiaro la corsa prevista, più scuro il tratto già percorso, la linea è la posizione attuale.",
+    "<b>Curva della nitidezza</b>: un punto per misura, in orizzontale la posizione del focheggiatore; sotto, il passo. Le passate precedenti restano più tenui sotto quella in corso, e il grafico si ingrandisce sulla zona della passata fine. I quadrati arancioni sono gli scatti veri di conferma, la linea verde la posizione scelta, il rombo verde lo scatto di verifica. Con il puntatore su un punto si leggono posizione e nitidezza (in % del massimo).",
     "<b>Stato</b>: passata, scatto in corso e posizione, poi il risultato con la verifica e la larghezza del picco, oppure il motivo per cui non ha trovato il fuoco.",
-    "<b>Usa come inizio pila</b> / <b>Usa come fine pila</b>, finché il focheggiatore resta sulla posizione trovata. <b>Rifai</b> ripete l'autofocus; un clic su un altro punto sposta l'area senza chiudere il pannello. Durante la misura c'è <b>Ferma</b>.",
-], layout="full")}
+    "<b>Rifai</b> e, sotto, <b>Usa il fuoco come Inizio pila / Fine pila</b>, finché il focheggiatore resta sulla posizione trovata. <b>Rifai</b> ripete l'autofocus; un clic su un altro punto sposta l'area senza chiudere il pannello. Durante la misura c'è <b>Ferma</b>.",
+], layout="full", anchors={6: "r"})}
 <p>A ogni scatto l'app misura quanto sono netti i bordi dentro l'area (il gradiente della luminosità, diviso per la
 luminosità media, così non conta l'esposizione). Lontano dal fuoco la curva è piatta, vicino sale in un picco
 stretto: l'app adatta una curva ai punti attorno al massimo, quindi la posizione trovata può cadere anche fra due
@@ -565,16 +566,33 @@ stesso fuoco del RAW sviluppato.</p>
 nell'area ci sono due cose a fuoco diverso (la zampa e il corpo di un insetto) la curva ha due picchi e l'app lo
 segnala in arancione: rimpicciolisci l'area sul dettaglio che ti interessa. Su uno sfondo uniforme non c'è niente da
 misurare e l'autofocus si ferma con un messaggio.</div>
-<div class="box tip"><span class="t">Live view o scatti veri?</span>Il <b>live view</b> è più veloce: va bene per cercare il
-fuoco e per le prove. Il fotogramma del live però è piccolo e compresso, e con poca luce è rumoroso. Gli <b>scatti
-veri</b> misurano la foto come sarà nella pila: per fissare con certezza l'inizio o la fine di una pila importante,
-rifai l'autofocus con <i>Scatti</i>.</div>
+<h3>I modi</h3>
+<p>Il <b>live view</b> è più veloce, ma il suo fotogramma è piccolo e compresso, e con poca luce è rumoroso; gli
+<b>scatti veri</b> misurano la foto come sarà nella pila, ma richiedono qualche secondo l'uno. I modi combinano le due
+cose:</p>
+<ul>
+<li><b>Veloce</b>: solo live view, una passata. Per cercare il fuoco e per le prove.</li>
+<li><b>Preciso</b> (predefinito): due passate col live view, poi <b>3 scatti veri di conferma</b> attorno al fuoco
+  trovato. Il fuoco si ricalcola su questi scatti (se il più nitido è al bordo se ne aggiungono uno o due) e anche lo
+  scatto di verifica è uno scatto vero. È il modo per fissare l'inizio o la fine di una pila.</li>
+<li><b>Scatti veri</b>: tutta la scansione con scatti veri. Il più sicuro e il più lento.</li>
+</ul>
+<p>Ogni modo ricorda i suoi parametri (passo, scatti per passata, passate, immagini, scatti di conferma), che si
+cambiano in <span class="ui">Configurazione › Autofocus</span>.</p>
+<p>Con gli scatti veri (<i>Preciso</i> e <i>Scatti veri</i>) il live view si spegne prima del primo scatto, come
+per uno scatto di prova, e resta spento fino alla fine dell'autofocus: la fotocamera non passa di continuo dal live
+allo scatto. Riparte da solo quando muovi il focheggiatore. Se la fotocamera si scollega durante uno scatto, l'app
+riprova e la ricollega; se gli scollegamenti si ripetono controlla l'alimentazione: una batteria finta (<i>dummy
+battery</i>) che non regge il picco dello scatto stacca la fotocamera dall'USB.</p>
+<div class="box warn"><span class="t">Escursione massima: protegge il soggetto</span>L'autofocus non si allontana mai dalla
+posizione di partenza più dell'<b>escursione massima</b> (± passi, nella barra della corsa). Se la passata dovesse
+allungarsi oltre, perché il fuoco è più lontano del previsto, si ferma e lo dice invece di continuare verso il
+campione. Il valore calcolato copre la corsa prevista con un margine; abbassalo se il campione è vicino all'obiettivo.</div>
 <div class="box warn"><span class="t">Verifica bassa: il gioco</span>Se lo scatto di verifica ha molta meno nitidezza del
 massimo della curva (sotto l'80 %), l'app lo segnala in arancione: di solito il gioco della meccanica è più grande della
 sovracorsa. Aumentala in <span class="ui">Configurazione › Autofocus</span>; in partenza vale la compensazione del gioco
 della sequenza, ma almeno una larghezza del picco.</div>
-<p>I valori (passo, numero di scatti, ricerca ampia quando tutto è sfocato) sono in <span class="ui">Configurazione ›
-Autofocus</span>, capitolo 12.</p>
+<p>Tutti i valori sono in <span class="ui">Configurazione › Autofocus</span>, capitolo 12.</p>
 <h2>Ispettore</h2>
 <p>Il pannello <span class="ui">Ispettore</span> (tasto <kbd>I</kbd>) controlla l'esposizione di una foto con le stesse
 regole di Focus Fusion. È di sola lettura: non modifica le foto. Funziona anche sul live view, aggiornato ogni mezzo
@@ -880,25 +898,24 @@ motore non si ferma mai; con firmware più vecchi avanza un tratto alla volta, c
 continuo il focheggiatore si ferma da solo se per 1,5 s non riceve più comandi dal Mac. <span class="ui">Vai</span>, i pulsanti con un singolo clic e la sequenza
 invece arrivano sempre a destinazione, anche se il movimento dura molti secondi.</p>
 <h2>Autofocus</h2>
-<p>Le impostazioni dell'autofocus su un punto (capitolo 8). I campi vuoti usano il valore calcolato, scritto in grigio
-nel campo: si calcola dalla <b>larghezza del picco</b>, cioè dall'intervallo di passi in cui la nitidezza resta sopra
-metà del massimo.</p>
+<p>Le impostazioni dell'autofocus su un punto (capitolo 8): prima il modo e i suoi parametri, poi quelli comuni a tutti
+i modi. I campi vuoti usano il valore predefinito, scritto in grigio nel campo; passi e scatti si calcolano dalla
+<b>larghezza del picco</b>, cioè dall'intervallo di passi in cui la nitidezza resta sopra metà del massimo.</p>
 {fig("autofocus-config", [
-    "<b>Immagini da misurare</b>: live view (predefinito) o scatti veri. Si sceglie anche nel pannello del visualizzatore.",
-    "<b>Lato dell'area</b> in pixel del sensore, lo stesso del cursore nel visualizzatore.",
-    "<b>Passo della passata fine</b>: circa un quarto della larghezza del picco, così almeno 4–5 scatti cadono sul picco.",
-    "<b>Ricerca ampia se l'immagine è tutta sfocata</b>: prima della passata fine, pochi scatti distanti (una larghezza del picco, regolabile con <b>Passo della ricerca ampia</b>) per trovare la zona del fuoco.",
-    "<b>Cerca entro ±</b> passi dalla posizione attuale, sempre dentro i fine corsa; accanto l'ampiezza in mm e quanti scatti servono.",
+    "<b>Modo</b> usato dal visualizzatore, con il riassunto di che cosa fa. Si sceglie anche nel pannello.",
+    "<b>Parametri del modo</b>: immagini (live view o scatti veri), passo e scatti della passata fine, passate. Vuoto = predefinito del modo o calcolato dalla larghezza del picco. <b>Ripristina il modo</b> torna ai valori iniziali.",
+    "<b>Conferma con scatti veri</b> (solo con il live view): quanti scatti veri attorno al fuoco trovato; 0 = nessuna conferma.",
+    "<b>Ricerca ampia</b> se l'immagine è tutta sfocata, con l'ampiezza (± passi) e il passo, una larghezza del picco: pochi scatti molto distanziati.",
+    "<b>Escursione massima ±</b> dalla posizione di partenza: oltre, l'autofocus si ferma. Sotto, attesa dopo il movimento e <b>sovracorsa per il gioco</b>.",
     "<b>Larghezza del picco</b> usata per i calcoli e da dove viene. <b>Dimentica la misura</b> torna alla stima.",
 ], layout="side", anchors={2: "r", 4: "r"})}
 <p>La prima volta la larghezza del picco si stima dalla profondità di campo del profilo ottico scelto nella sequenza e
 dalla meccanica (µm per passo); senza profilo, dall'escursione fra i fine corsa. Dopo ogni autofocus riuscito l'app
 salva la larghezza misurata per quel profilo e la usa le volte seguenti. La stima iniziale è approssimativa: se il
 picco è più largo del previsto la passata si allunga da sola, se è più stretto ripete la misura con un passo più fine.
-Con <b>Passate</b> da 2 a 3 l'autofocus ripete la misura attorno al fuoco trovato, ogni volta con metà passo. La
-<b>sovracorsa per il gioco</b> è quanto il focheggiatore va oltre una posizione prima di tornarci: deve superare il gioco
-della meccanica. <span class="ui">Ripristina valori calcolati</span> svuota i campi scritti a mano. Se la ricerca ampia è spenta e il
-fuoco è lontano, l'autofocus si ferma e suggerisce di accenderla.</p>
+La <b>sovracorsa per il gioco</b> è quanto il focheggiatore va oltre una posizione prima di tornarci: deve superare il
+gioco della meccanica. <span class="ui">Ripristina valori calcolati</span> svuota i campi comuni scritti a mano. Se la
+ricerca ampia è spenta e il fuoco è lontano, l'autofocus si ferma e suggerisce di accenderla.</p>
 <h2>Aggiornamenti</h2>
 {fig("aggiornamenti", [
     "Versione dell'<b>app</b> e stato dell'ultimo controllo.",

@@ -339,5 +339,12 @@
   "Lo scatto di verifica ha solo il {pct} % della nitidezza massima della curva: probabile gioco della meccanica. Aumenta la sovracorsa in Configurazione › Autofocus e rifai": "La prise de vérification n'a que {pct} % de la netteté maximale de la courbe : probablement du jeu dans la mécanique. Augmentez le dépassement dans Configuration › Autofocus et recommencez",
   "verifica {pct} %": "vérification {pct} %",
   "Passate": "Passes",
-  "Sovracorsa per il gioco": "Dépassement pour le jeu"
+  "Sovracorsa per il gioco": "Dépassement pour le jeu",
+  "L'autofocus dovrebbe andare a {pos}, oltre l'escursione massima (± {m} passi da {start}): fermato. Avvicina il fuoco a mano o allarga l'escursione in Configurazione › Autofocus": "L'autofocus devrait aller à {pos}, au-delà de l'excursion maximale (± {m} pas depuis {start}) : arrêté. Rapprochez la mise au point à la main ou élargissez l'excursion dans Configuration › Autofocus",
+  "Conferma con scatti veri": "Confirmation par de vraies prises",
+  "Conferma con {n} scatti veri attorno a {pos}, passo {s}": "Confirmation par {n} vraies prises autour de {pos}, pas de {s}",
+  "Conferma: fuoco a {pos} (col live view era {live})": "Confirmation : mise au point à {pos} (la visée en direct donnait {live})",
+  "Modo non valido": "Mode non valide",
+  "Escursione massima": "Excursion maximale",
+  "Scatti di conferma": "Prises de confirmation"
 }

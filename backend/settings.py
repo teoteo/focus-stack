@@ -71,8 +71,9 @@ DEFAULTS: dict = {
     "calibration": {"count": 16, "flat_target_pct": 50, "light_target_pct": 85, "light_stat": "highlights"},
     # autofocus su un punto (visualizzatore): None = valore calcolato da meccanica, fine corsa e profilo Ottica;
     # widths = larghezza del picco (passi a metà altezza) imparata per ogni profilo ottico ("" = nessun profilo)
-    "autofocus": {"source": "live", "roi_px": 256, "fine_step": None, "fine_points": None, "passes": None,
-                  "coarse": False, "coarse_range": None, "coarse_step": None, "settle_ms": None, "overscan": None, "widths": {}},
+    # modes: parametri propri di ogni modo (fast, precise, shots), vedi autofocus.MODE_DEFAULTS
+    "autofocus": {"mode": "precise", "modes": {}, "roi_px": 256, "coarse": False, "coarse_range": None,
+                  "coarse_step": None, "settle_ms": None, "overscan": None, "max_travel": None, "widths": {}},
     # pagina di sola lettura per seguire la sequenza dalla rete locale (smartphone): vedi remote.py
     "remote": {"enabled": False, "port": 8766, "token": ""},
     # lingua dell'interfaccia: "auto" = quella di macOS, oppure "it" / "en"

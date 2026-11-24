@@ -339,5 +339,12 @@
   "Lo scatto di verifica ha solo il {pct} % della nitidezza massima della curva: probabile gioco della meccanica. Aumenta la sovracorsa in Configurazione › Autofocus e rifai": "La toma de verificación tiene solo el {pct} % de la nitidez máxima de la curva: probable holgura de la mecánica. Aumenta el sobrerrecorrido en Configuración › Autoenfoque y repite",
   "verifica {pct} %": "verificación {pct} %",
   "Passate": "Pasadas",
-  "Sovracorsa per il gioco": "Sobrerrecorrido para la holgura"
+  "Sovracorsa per il gioco": "Sobrerrecorrido para la holgura",
+  "L'autofocus dovrebbe andare a {pos}, oltre l'escursione massima (± {m} passi da {start}): fermato. Avvicina il fuoco a mano o allarga l'escursione in Configurazione › Autofocus": "El autoenfoque tendría que ir a {pos}, más allá de la excursión máxima (± {m} pasos desde {start}): detenido. Acerca el enfoque a mano o amplía la excursión en Configuración › Autoenfoque",
+  "Conferma con scatti veri": "Confirmación con tomas reales",
+  "Conferma con {n} scatti veri attorno a {pos}, passo {s}": "Confirmación con {n} tomas reales alrededor de {pos}, paso {s}",
+  "Conferma: fuoco a {pos} (col live view era {live})": "Confirmación: enfoque en {pos} (con la vista en vivo era {live})",
+  "Modo non valido": "Modo no válido",
+  "Escursione massima": "Excursión máxima",
+  "Scatti di conferma": "Tomas de confirmación"
 }

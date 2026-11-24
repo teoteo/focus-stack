@@ -403,11 +403,11 @@ with sync_playwright() as p:
     page.click("#mech-mode button[data-mode=computed]")
     shot(page, "comandi-manuali", "#card-jog", m((1, "#jog-max", "l"), (2, "#jog-hold", "r"), (3, "#jog-chunk", "l")))
     # autofocus: ricerca ampia accesa, così si vede anche la riga «Cerca entro ±»
-    post("/api/autofocus/settings", {"source": "shot", "roi_px": 256, "coarse": True, "forget_width": True})
+    post("/api/autofocus/settings", {"mode": "precise", "roi_px": 256, "coarse": True, "forget_width": True})
     page.wait_for_timeout(1200)
     shot(page, "autofocus-config", "#card-af", m(
-        (1, "#af-src", "l"), (2, "#af-roi", "l"), (3, "#af-fine-step", "l"), (4, "#af-coarse", "l"),
-        (5, "#af-coarse-range", "l"), (6, "#af-width", "l")))
+        (1, "#af-mode", "l"), (2, "#af-src", "l"), (3, "#af-confirm", "l"), (4, "#af-coarse", "l"),
+        (5, "#af-max-travel", "l"), (6, "#af-width", "l")))
     # bobine spente a motore fermo: compare l'opzione "Alimentale comunque durante la sequenza"
     post("/api/focuser/motor", {"name": "coil_power", "value": False})
     page.wait_for_timeout(1500)
@@ -429,12 +429,15 @@ with sync_playwright() as p:
     vw.set_viewport_size({"width": 1500, "height": 860})
     vw.goto(BASE + "/viewer.html")
     vw.wait_for_timeout(2500)
+    if vw.get_attribute("#insp-btn", "aria-pressed") == "true":   # l'Ispettore è aperto all'inizio: ha la sua figura
+        vw.click("#insp-btn")
+        vw.wait_for_timeout(300)
     vw.click("#z-100")
     vw.wait_for_timeout(800)
     shot(vw, "visualizzatore", "body", m(
         (1, "#prev", "l"), (2, "#v-count", "l"), (3, "#liveview", "l"), (4, "#z-out", "l"), (5, "#z-fit", "l"),
-        (6, "#follow", "l"), (7, "#lock", "l"), (8, "#guides", "l"), (9, "#clear", "l"), (10, "#insp-btn", "l"),
-        (11, "#fs", "l"), (12, "#guide-btn", "r"), (13, "#strip", "l")))
+        (6, "#follow", "l"), (7, "#lock", "l"), (8, "#guides", "l"), (9, "#insp-btn", "l"),
+        (10, "#fs", "l"), (11, "#guide-btn", "r"), (12, "#strip", "l"), (13, "#clear", "l")))
     vw.set_viewport_size({"width": 1500, "height": 1250})   # il pannello dell'Ispettore intero, fino ai valori sotto il puntatore
     vw.click("#z-fit")
     vw.click("#insp-btn")
@@ -454,8 +457,8 @@ with sync_playwright() as p:
     shot(vw, "visualizzatore-live", "body", m((1, "#liveview", "l"), (2, "#live-badge", "r")))
     # autofocus su un punto, con il live view (predefinito): il live del simulatore è una scacchiera uniforme, a fuoco a
     # 25 000, quindi la curva è pulita in qualsiasi punto dell'immagine (che nella figura è la foto vera del live)
-    post("/api/autofocus/settings", {"source": "live", "roi_px": 256, "coarse": False, "settle_ms": 100,
-                                     "passes": 1, "forget_width": True})
+    post("/api/autofocus/settings", {"mode": "precise", "roi_px": 256, "coarse": False, "settle_ms": 100,
+                                     "forget_width": True})
     post("/api/focuser/move", {"position": 24000})
     for _ in range(120):
         f = state()["focuser"]
@@ -466,7 +469,7 @@ with sync_playwright() as p:
     vw.keyboard.press("a")
     vw.wait_for_timeout(300)
     box = vw.locator("#stage").bounding_box() or {"x": 300, "y": 300, "width": 400, "height": 300}
-    vw.mouse.click(box["x"] + box["width"] * 0.42, box["y"] + box["height"] * 0.45)
+    vw.mouse.click(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5)   # dentro il riquadro del simulatore
     vw.wait_for_timeout(300)
     vw.click("#af-start")
     time.sleep(2)
@@ -475,10 +478,11 @@ with sync_playwright() as p:
             break
         time.sleep(0.5)
     vw.wait_for_timeout(2500)
+    vw.evaluate("document.getElementById('notice').classList.add('hidden')")   # avviso del live messo da parte
     shot(vw, "visualizzatore-autofocus", "body", m(
-        (1, "#af-btn", "r"), (2, "#af-roi", "t"), (3, ".af-src", "r"), (4, "#af-chart", "l"), (5, "#af-status", "l"),
-        (6, "#af-use-start", "l")))
-    post("/api/autofocus/settings", {"source": "live", "roi_px": 256, "coarse": False})
+        (1, "#af-btn", "r"), (2, "#af-roi", "t"), (3, ".af-src", "l"), (4, "#af-chart", "l"), (5, "#af-status", "l"),
+        (6, "#af-start", "l")))
+    post("/api/autofocus/settings", {"mode": "precise", "roi_px": 256, "coarse": False})
     vw.close()
 
     # ---- sequenza in corso ----

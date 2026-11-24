@@ -21,7 +21,8 @@ from . import i18n
 from .i18n import tr
 from .optics import manifest_optics
 from . import calibration, desktop, rawstat, remote
-from .autofocus import AFParams, AutofocusRunner, computed_defaults, expected_width
+from .autofocus import (MODE_DEFAULTS, MODE_KEYS, MODES, AFParams, AutofocusRunner, computed_defaults,
+                        expected_width, planned_travel)
 from .camera import GPHOTO_AVAILABLE, CameraError, GPhotoCamera, SimulatedCamera
 from .focuser import FocuserError, LimitError, MyFocuserPro2, SimulatedFocuser, list_serial_ports
 from .sequence import SequenceParams, SequenceRunner
@@ -93,7 +94,8 @@ class App:
         self.remote = remote.RemoteServer(self.remote_status, self.remote_preview, CACHE_DIR)
         # autofocus su un punto (visualizzatore): scatti o fotogrammi del live view, vedi autofocus.py
         self.af = AutofocusRunner(lambda: self.focuser if self.focuser and self.focuser.connected else None,
-                                  self.af_grab, self.log, self.af_learn)
+                                  self.af_grab, self.log, self.af_learn, self.af_end)
+        self.af_shots = 0   # scatti veri fatti dall'autofocus in corso (alla fine il live view resta da parte)
 
     def log(self, msg: str) -> None:
         self.log_lines.append(f"{time.strftime('%H:%M:%S')}  {msg}")
@@ -177,7 +179,7 @@ class App:
     def live_paused(self) -> bool:
         """Live view in pausa: durante la calibrazione, durante l'autofocus con gli scatti veri e durante la
         sequenza, tranne mentre la slitta raggiunge il primo piano (si può guardare il ritorno all'inizio)."""
-        return (self.calib.busy or (self.af.busy and self.af.status.source == "shot")
+        return (self.calib.busy or (self.af.busy and "shot" in (self.af.status.source, self.af.status.capture))
                 or (self.runner.busy and not self.runner.status.live_ok))
 
     # ---------- autofocus ----------
@@ -193,9 +195,26 @@ class App:
         width, source = expected_width(self.cfg, self.um_per_step(), self.af_profile(), travel)
         calc = computed_defaults(width, travel, int(self.cfg["sequence"].get("backlash") or 0))
         calc["settle_ms"] = int(self.cfg["sequence"].get("settle_ms") or 0)
-        used = {k: (a.get(k) if a.get(k) is not None else v) for k, v in calc.items()}
+        shared = ("coarse_step", "coarse_range", "overscan", "settle_ms")
+        used = {k: (a.get(k) if a.get(k) is not None else calc[k]) for k in shared}
+        # modi: per ognuno i valori impostati (set, None = predefinito del modo o calcolato) e quelli usati
+        modes = {}
+        for m in MODES:
+            own = ((a.get("modes") or {}).get(m) or {})
+            base = {**MODE_DEFAULTS[m], **{k: own[k] for k in MODE_KEYS if own.get(k) is not None}}
+            mused = {k: (base[k] if base.get(k) is not None else calc.get(k)) for k in MODE_KEYS}
+            modes[m] = {"set": {k: own.get(k) for k in MODE_KEYS}, "used": mused,
+                        "default": {k: (MODE_DEFAULTS[m][k] if MODE_DEFAULTS[m][k] is not None else calc.get(k))
+                                    for k in MODE_KEYS}}
+        mode = a.get("mode") if a.get("mode") in MODES else "precise"
+        # corsa prevista e limite di escursione per ogni modo (± passi dalla posizione di partenza)
+        for m in MODES:
+            extent, auto_max = planned_travel({**used, **modes[m]["used"]}, bool(a.get("coarse")))
+            modes[m]["travel"] = {"planned": extent, "computed_max": auto_max,
+                                  "max": int(a["max_travel"]) if a.get("max_travel") else auto_max}
         return {"width": width, "width_source": source, "um_per_step": self.um_per_step(), "computed": calc,
-                "used": used, "profile": self.af_profile()}
+                "used": {**used, **modes[mode]["used"]}, "mode": mode, "modes": modes, "profile": self.af_profile(),
+                "travel": modes[mode]["travel"]}
 
     def af_learn(self, profile: str, width: float) -> None:
         """Larghezza del picco misurata da un autofocus riuscito: media con quella già salvata per il profilo."""
@@ -204,6 +223,42 @@ class App:
         widths[profile or ""] = round((old + width) / 2 if old else width, 1)
         store.save(self.cfg)
         self.log(tr("Autofocus: larghezza del picco {w} passi, salvata per i prossimi autofocus", w=round(width)))
+
+    def park_live(self) -> None:
+        """Live view messo da parte come dopo uno scatto di prova: gli stream finiscono, le finestre mostrano lo scatto
+        e riaprono il live al primo movimento del focheggiatore (vedi live_frames e la pagina)."""
+        f = self.focuser
+        self.live_park = {"rev": self.live_park["rev"] + 1, "pos": f.position if f and f.connected else None,
+                          "why": "af"}
+
+    async def af_end(self, source: str) -> None:
+        """Fine dell'autofocus. Con scatti veri il live view resta da parte fino al primo movimento (riprenderlo subito
+        dopo uno scatto, con la Sony, stacca la fotocamera dall'USB: errore -52). Con il solo live view, se nessuna
+        finestra lo sta guardando si spegne (l'autofocus l'aveva acceso da sé; una reflex terrebbe lo specchio alzato)."""
+        global live_frame
+        cam = self.camera if self.camera and self.camera.connected else None
+        if self.af_shots:
+            self.af_shots = 0
+            self.park_live()
+        elif source == "live" and cam and self.live_clients == 0 and cam.live:
+            live_frame = None
+            await cam.end_preview()
+
+    async def af_live_off(self, cam) -> None:
+        """Prima di uno scatto vero dell'autofocus: niente live view in nessuna finestra e fotocamera libera."""
+        global live_frame
+        if self.live_clients > 0:
+            self.park_live()
+            for _ in range(30):   # gli stream finiscono al prossimo giro (vedi live_frames)
+                if self.live_clients == 0:
+                    break
+                await asyncio.sleep(0.1)
+        was_live = cam.live
+        if cam.live:
+            live_frame = None
+            await cam.end_preview()
+        if was_live and cam.is_sony:
+            await asyncio.sleep(1.0)   # la Sony appena uscita dal live non è subito pronta a scattare
 
     async def af_grab(self, source: str, position: int) -> str:
         """Immagine da misurare a questa posizione: uno scatto vero (nel visualizzatore come prova) oppure un
@@ -230,17 +285,34 @@ class App:
             old.unlink(missing_ok=True)
         seq = self.cfg["sequence"]
         base = test_dir / f"af_{time.strftime('%H%M%S')}_{int(time.time() * 1000) % 1000:03d}"
+        await self.af_live_off(cam)
+        self.af_shots += 1
         files: list[str] = []
-        for attempt in range(2):
+        # come la sequenza: due nuovi tentativi, il secondo dopo aver ricollegato la fotocamera
+        for attempt in range(3):
             try:
                 files = await cam.capture(mode="download", dest_base=base, bulb_s=seq.get("bulb_s") or 0,
                                           mirror_s=(seq.get("mirror_delay_ms") or 0) / 1000)
                 break
             except Exception as exc:  # noqa: BLE001
-                if attempt:
+                if attempt == 2:
                     raise RuntimeError(tr("La fotocamera non ha scattato ({exc})", exc=exc)) from exc
-                self.log(tr("Scatto non riuscito ({exc}): nuovo tentativo fra {s} s ({a} di {n})", exc=exc, s=3, a=1, n=1))
-                await asyncio.sleep(3)
+                wait = 3 * (attempt + 1)
+                self.log(tr("Scatto non riuscito ({exc}): nuovo tentativo fra {s} s ({a} di {n})",
+                            exc=exc, s=wait, a=attempt + 1, n=2))
+                if attempt == 1:
+                    # la fotocamera può essere sparita dall'USB (es. ripartita per un calo di alimentazione): ci mette
+                    # qualche secondo a tornare, quindi il ricollegamento si ritenta per circa 15 s
+                    for k in range(5):
+                        try:
+                            await cam.reconnect()
+                            self.log(tr("Fotocamera ricollegata: {model}", model=cam.model))
+                            break
+                        except Exception as exc2:  # noqa: BLE001
+                            self.log(tr("Fotocamera non ricollegata: {exc}", exc=exc2))
+                            if k < 4:
+                                await asyncio.sleep(3)
+                await asyncio.sleep(wait)
         if not files:
             raise RuntimeError(tr("La fotocamera non ha restituito il file: imposta la destinazione sul computer o RAM"))
         f = self.focuser
@@ -443,8 +515,9 @@ async def poll_loop():
     last_pos: int | None = None
     while True:
         f = app_state.focuser
-        # Durante la sequenza è il runner stesso a interrogare il motore.
-        if f and f.connected and not app_state.runner.busy:
+        # Durante la sequenza e l'autofocus è il runner stesso a interrogare il motore (e a riconoscere i
+        # movimenti dai pulsanti): qui, fra i suoi tanti movimenti brevi, li scambiava per pressioni dei pulsanti.
+        if f and f.connected and not app_state.runner.busy and not app_state.af.busy:
             try:
                 await f.poll(with_temp=(tick % 20 == 0))
                 watchdog(f, last_pos)
@@ -1322,7 +1395,7 @@ async def camera_test(body: TestShot):
     f = app_state.focuser
     if live:
         app_state.live_park = {"rev": app_state.live_park["rev"] + 1,
-                               "pos": f.position if f and f.connected else None}
+                               "pos": f.position if f and f.connected else None, "why": "test"}
     app_state.add_shot(files, "test", f.position if f and f.connected else None,
                        f.temperature if f and f.connected else None)
     app_state.log(tr("Scatto di prova completato ({n} file)", n=len(files)))
@@ -1495,16 +1568,16 @@ async def sequence_reset():
 # ---------------- autofocus su un punto ----------------
 class AutofocusStart(BaseModel):
     roi: list[float]                # x0, y0, x1, y1 in frazioni dell'immagine vista
-    source: str | None = None       # shot | live (None = quella della Configurazione)
+    mode: str | None = None         # fast | precise | shots (None = quello della Configurazione)
 
 
 class AutofocusSettings(BaseModel):
-    source: str = "live"
+    mode: str = "precise"
+    # parametri propri di ogni modo: {modo: {source, fine_step, fine_points, passes, confirm}}; None = predefinito
+    modes: dict[str, dict] = {}
     roi_px: int = 256
-    fine_step: int | None = None    # None = calcolato
-    fine_points: int | None = None
-    passes: int | None = None       # passate fini (1–3)
     overscan: int | None = None     # sovracorsa per il gioco (passi)
+    max_travel: int | None = None   # escursione massima ± dalla posizione di partenza (None = calcolata)
     coarse: bool = False
     coarse_range: int | None = None
     coarse_step: int | None = None  # passo della ricerca ampia (passi)
@@ -1530,15 +1603,17 @@ async def autofocus_start(body: AutofocusStart):
     await f.poll()
     if f.moving:
         raise ValueError(tr("Il focheggiatore si sta muovendo: aspetta che si fermi"))
-    source = body.source or app_state.cfg["autofocus"].get("source") or "live"
-    if source not in AF_SOURCES:
-        raise ValueError(tr("Origine non valida"))
+    view = app_state.af_view()
+    mode = body.mode or view["mode"]
+    if mode not in MODES:
+        raise ValueError(tr("Modo non valido"))
+    used = {**view["used"], **view["modes"][mode]["used"]}
     seq = app_state.cfg["sequence"]
-    used = app_state.af_view()["used"]
-    p = AFParams(roi=(x0, y0, x1, y1), source=source, fine_step=int(used["fine_step"]),
+    p = AFParams(roi=(x0, y0, x1, y1), source=used["source"], fine_step=int(used["fine_step"]),
                  fine_points=int(used["fine_points"]), coarse=bool(app_state.cfg["autofocus"].get("coarse")),
                  coarse_range=int(used["coarse_range"]), coarse_step=int(used["coarse_step"]),
                  settle_ms=int(used["settle_ms"]), overscan=int(used["overscan"]), passes=int(used["passes"]),
+                 confirm=int(used["confirm"] or 0), mode=mode, max_travel=int(view["modes"][mode]["travel"]["max"]),
                  direction=1 if int(seq.get("end") or 0) >= int(seq.get("start") or 0) else -1,
                  profile=app_state.af_profile())
     app_state.af.start(p)
@@ -1554,21 +1629,38 @@ async def autofocus_stop():
 @api.post("/api/autofocus/settings")
 @guard
 async def autofocus_settings(body: AutofocusSettings):
-    if body.source not in AF_SOURCES:
-        raise ValueError(tr("Origine non valida"))
-    checks = (("fine_step", tr("Passo"), 1, 100000), ("fine_points", tr("Scatti della passata fine"), 5, 41),
-              ("coarse_range", tr("Ampiezza della ricerca ampia"), 1, 1000000),
-              ("coarse_step", tr("Passo della ricerca ampia"), 1, 1000000),
-              ("passes", tr("Passate"), 1, 3), ("overscan", tr("Sovracorsa per il gioco"), 0, 1000000),
-              ("settle_ms", tr("Attesa dopo il movimento"), 0, 30000))
-    for key, label, lo, hi in checks:
-        v = getattr(body, key)
-        if v is not None and not lo <= v <= hi:
+    if body.mode not in MODES:
+        raise ValueError(tr("Modo non valido"))
+
+    def check(label: str, v, lo: int, hi: int) -> None:
+        if v is not None and not (isinstance(v, int) and lo <= v <= hi):
             raise ValueError(tr("{name}: da {lo} a {hi}", name=label, lo=lo, hi=hi))
+
+    for label, key, lo, hi in ((tr("Ampiezza della ricerca ampia"), "coarse_range", 1, 1000000),
+                               (tr("Passo della ricerca ampia"), "coarse_step", 1, 1000000),
+                               (tr("Sovracorsa per il gioco"), "overscan", 0, 1000000),
+                               (tr("Escursione massima"), "max_travel", 1, 1000000),
+                               (tr("Attesa dopo il movimento"), "settle_ms", 0, 30000)):
+        check(label, getattr(body, key), lo, hi)
     if not 16 <= body.roi_px <= 4000:
         raise ValueError(tr("Lato dell'area: da 16 a 4000 pixel"))
+    modes = {}
+    for m, params in (body.modes or {}).items():
+        if m not in MODES or not isinstance(params, dict):
+            raise ValueError(tr("Modo non valido"))
+        clean = {k: params.get(k) for k in MODE_KEYS}
+        if clean["source"] is not None and clean["source"] not in AF_SOURCES:
+            raise ValueError(tr("Origine non valida"))
+        check(tr("Passo"), clean["fine_step"], 1, 100000)
+        check(tr("Scatti della passata fine"), clean["fine_points"], 5, 41)
+        check(tr("Passate"), clean["passes"], 1, 3)
+        check(tr("Scatti di conferma"), clean["confirm"], 0, 7)
+        modes[m] = clean
     a = app_state.cfg["autofocus"]
-    a.update(body.model_dump(exclude={"forget_width"}))
+    for old in ("source", "fine_step", "fine_points", "passes"):   # 1.3.0: ora sono parametri dei modi
+        a.pop(old, None)
+    a.update(body.model_dump(exclude={"forget_width", "modes"}))
+    a["modes"] = {**(a.get("modes") or {}), **modes}
     if body.forget_width:
         (a.get("widths") or {}).pop(app_state.af_profile(), None)
     store.save(app_state.cfg)

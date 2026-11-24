@@ -43,6 +43,18 @@ MAX_REFINES = 2             # quante volte la passata fine si ripete con un pass
 MAX_POINTS = 60             # limite di sicurezza per una passata
 MAX_PASSES = 3              # passate fini: ognuna attorno al fuoco della precedente, con metà passo
 VERIFY_MIN = 0.8            # scatto di verifica sotto l'80 % del massimo della curva = probabile gioco
+CONFIRM_EXTRA = 2           # conferma: scatti in più se il fuoco cade sul bordo dei primi
+
+# Modi: ognuno con i suoi parametri essenziali (modificabili in Configurazione › Autofocus, salvati per modo). Un valore
+# None = calcolato dalla larghezza del picco (passo e scatti della passata). confirm = scatti veri attorno al fuoco
+# trovato col live view (0 = nessuna conferma): il live è piccolo e compresso, la pila si fa con gli scatti veri.
+MODES = ("fast", "precise", "shots")
+MODE_KEYS = ("source", "fine_step", "fine_points", "passes", "confirm")
+MODE_DEFAULTS = {
+    "fast": {"source": "live", "fine_step": None, "fine_points": None, "passes": 1, "confirm": 0},
+    "precise": {"source": "live", "fine_step": None, "fine_points": None, "passes": 2, "confirm": 3},
+    "shots": {"source": "shot", "fine_step": None, "fine_points": None, "passes": 1, "confirm": 0},
+}
 
 
 def dof_um(optics: dict) -> float | None:
@@ -65,6 +77,19 @@ def expected_width(cfg: dict, um_per_step: float, profile: str, travel: int | No
     if travel:
         return max(MIN_WIDTH, travel // 50), "travel"
     return 40, "default"
+
+
+def planned_travel(used: dict, coarse: bool) -> tuple[int, int]:
+    """Corsa prevista (± passi dalla posizione di partenza) e limite di escursione calcolato. La passata fine può
+    allungarsi o ripartire più indietro: il limite lascia per questo due mezze passate in più. La sovracorsa per il
+    gioco si aggiunge sempre, dal lato da cui si arriva."""
+    fine_half = (max(5, int(used.get("fine_points") or FINE_POINTS)) - 1) // 2 * int(used.get("fine_step") or 1)
+    coarse_half = 0
+    if coarse:
+        step = max(1, int(used.get("coarse_step") or 1))
+        coarse_half = max(1, int(used.get("coarse_range") or 0) // step) * step
+    extent = coarse_half + fine_half + int(used.get("overscan") or 0)
+    return extent, extent + 2 * fine_half
 
 
 def computed_defaults(width: int, travel: int | None, backlash: int = 0) -> dict:
@@ -91,6 +116,9 @@ class AFParams:
     settle_ms: int = 1500
     overscan: int = 0                        # sovracorsa per il gioco (vedi computed_defaults)
     passes: int = 1                          # passate fini
+    max_travel: int = 0                      # mai più lontano di così dalla posizione di partenza (0 = nessun limite)
+    confirm: int = 0                         # scatti veri di conferma attorno al fuoco (solo con il live view)
+    mode: str = ""
     direction: int = 1                       # verso della pila: +1 passi crescenti, −1 decrescenti
     profile: str = ""
 
@@ -107,6 +135,14 @@ class AFStatus:
     step: int = 0
     roi: list = field(default_factory=list)
     source: str = "live"
+    capture: str = ""            # immagini della misura in corso: live | shot (la conferma usa scatti veri anche in live)
+    mode: str = ""
+    confirm_points: list = field(default_factory=list)   # conferma con scatti veri: [{pos, v}] (scala propria)
+    coarse_points: list = field(default_factory=list)    # ricerca ampia finita
+    prev_passes: list = field(default_factory=list)      # passate precedenti (ricerca ampia compresa): sullo sfondo
+    start_pos: int | None = None # posizione di partenza
+    max_travel: int = 0          # limite di escursione (± passi da start_pos)
+    visited: list = field(default_factory=list)   # [minimo, massimo] delle posizioni raggiunte
     best: int | None = None
     fit: dict | None = None
     pass_no: int = 1             # passata fine in corso
@@ -208,15 +244,18 @@ class AutofocusRunner:
     """grab(source, position) → file da misurare (scatto vero o fotogramma del live view)."""
 
     def __init__(self, focuser_getter: Callable, grab: Callable[[str, int], Awaitable[str]],
-                 log: Callable[[str], None], on_width: Callable[[str, float], None]):
+                 log: Callable[[str], None], on_width: Callable[[str, float], None],
+                 on_end: Callable[[str], Awaitable[None]] | None = None):
         self._focuser = focuser_getter
         self._grab = grab
+        self._on_end = on_end   # fine dell'autofocus (riuscito o no): riceve la sorgente usata
         self._log = log
         self._on_width = on_width
         self.status = AFStatus()
         self._task: asyncio.Task | None = None
         self._stop = False
-        self._source = "auto"     # sorgente di fs-rawstat: decisa al primo scatto, poi sempre quella
+        # sorgente di fs-rawstat per live e per scatti: decisa alla prima misura, poi sempre quella
+        self._sources = {"live": "auto", "shot": "auto"}
 
     @property
     def busy(self) -> bool:
@@ -228,9 +267,10 @@ class AutofocusRunner:
         if self._focuser() is None:
             raise RuntimeError(tr("Focheggiatore non connesso"))
         self._stop = False
-        self._source = "auto"
+        self._sources = {"live": "auto", "shot": "auto"}
         self.status = AFStatus(state="running", rev=self.status.rev + 1, roi=list(p.roi), source=p.source,
-                               started_at=time.time(), message=tr("Autofocus…"), passes=max(1, p.passes))
+                               started_at=time.time(), message=tr("Autofocus…"), passes=max(1, p.passes),
+                               mode=p.mode, max_travel=p.max_travel)
         self._task = asyncio.create_task(self._run(p))
 
     async def stop(self) -> None:
@@ -258,12 +298,29 @@ class AutofocusRunner:
         if approach and p.overscan > 0:
             before = self._clamp(pos - p.direction * p.overscan)
             if before != pos:
+                self._guard(before, p)
                 await f.move_to(before, wait=True)
+                self._seen(before)
                 self._check()
+        self._guard(pos, p)
         await f.move_to(pos, wait=True)
+        self._seen(pos)
         self._check()
 
-    async def _measure_at(self, pos: int, p: AFParams) -> float:
+    def _guard(self, pos: int, p: AFParams) -> None:
+        """Limite di escursione: nessun movimento oltre ± max_travel dalla posizione di partenza (protegge il
+        soggetto se la passata si allunga più del previsto)."""
+        st = self.status
+        if p.max_travel > 0 and st.start_pos is not None and abs(pos - st.start_pos) > p.max_travel:
+            raise AutofocusError(tr("L'autofocus dovrebbe andare a {pos}, oltre l'escursione massima (± {m} passi da "
+                                    "{start}): fermato. Avvicina il fuoco a mano o allarga l'escursione in "
+                                    "Configurazione › Autofocus", pos=pos, m=p.max_travel, start=st.start_pos))
+
+    def _seen(self, pos: int) -> None:
+        v = self.status.visited
+        self.status.visited = [min(v[0], pos), max(v[1], pos)] if v else [pos, pos]
+
+    async def _measure_at(self, pos: int, p: AFParams, source: str | None = None) -> float:
         f = self._focuser()
         await asyncio.sleep(p.settle_ms / 1000)
         self._check()
@@ -271,15 +328,57 @@ class AutofocusRunner:
         if f.position != pos or f.moving:
             raise AutofocusError(tr("Movimento manuale rilevato ({actual} invece di {pos}): autofocus fermato",
                                     actual=f.position, pos=pos))
-        path = await self._grab(p.source, pos)
+        source = source or p.source
+        self.status.capture = source
+        path = await self._grab(source, pos)
         self._check()
         try:
-            r = await rawstat.focus(path, p.roi, self._source)
+            r = await rawstat.focus(path, p.roi, self._sources[source])
         except rawstat.RawStatError as exc:
             raise AutofocusError(str(exc)) from exc
-        if self._source == "auto":
-            self._source = r.get("source") if r.get("source") in ("preview", "raw") else "auto"
+        if self._sources[source] == "auto":
+            self._sources[source] = r.get("source") if r.get("source") in ("preview", "raw") else "auto"
         return float(r["focus"])
+
+    async def _confirm(self, center: int, step: int, p: AFParams) -> tuple[int, dict | None]:
+        """Conferma con scatti veri: p.confirm scatti attorno al fuoco trovato col live view, a un passo fine l'uno
+        dall'altro e arrivando nel verso della scansione. Se il più nitido è sul bordo se ne aggiungono fino a
+        CONFIRM_EXTRA da quella parte. Il fuoco si ricalcola solo su questi scatti: hanno una scala diversa dal live."""
+        st = self.status
+        d = max(1, step)
+        half = max(1, p.confirm // 2)
+        positions = []
+        for k in range(-half, half + 1):
+            x = self._clamp(center + p.direction * d * k)
+            if x not in positions:
+                positions.append(x)
+        st.phase, st.confirm_points, st.index, st.total, st.step = "confirm", [], 0, len(positions), d
+        st.message = tr("Conferma con scatti veri")
+        self._log(tr("Conferma con {n} scatti veri attorno a {pos}, passo {s}", n=len(positions), pos=center, s=d))
+
+        async def take(pos: int, approach: bool) -> None:
+            st.target = pos
+            await self._go(pos, p, approach=approach)
+            v = await self._measure_at(pos, p, source="shot")
+            st.confirm_points.append({"pos": pos, "v": v})
+            st.index = len(st.confirm_points)
+
+        for i, pos in enumerate(positions):
+            await take(pos, approach=i == 0)
+        for _ in range(CONFIRM_EXTRA):
+            ordered = sorted(st.confirm_points, key=lambda q: q["pos"] * p.direction)
+            k = max(range(len(ordered)), key=lambda i: ordered[i]["v"])
+            if 0 < k < len(ordered) - 1:
+                break
+            # il fuoco è oltre l'ultimo scatto (si prosegue) o prima del primo (si torna indietro con la sovracorsa)
+            nxt = self._clamp(ordered[k]["pos"] + p.direction * d * (1 if k else -1))
+            if any(q["pos"] == nxt for q in st.confirm_points):
+                break
+            st.total += 1
+            await take(nxt, approach=k == 0)
+        best, fit = self._best(st.confirm_points)
+        self._log(tr("Conferma: fuoco a {pos} (col live view era {live})", pos=best, live=center))
+        return best, fit
 
     async def _scan(self, start: int, step: int, count: int, p: AFParams, phase: str,
                     early_stop: bool, extend: bool) -> list[dict]:
@@ -288,6 +387,8 @@ class AutofocusRunner:
         passata continua; se la nitidezza sale ancora, con un passo che raddoppia ogni 5 punti in salita (fino a 8
         volte): il picco può essere più largo del previsto."""
         st = self.status
+        if st.points:   # la passata finita resta sullo sfondo del grafico (al massimo le ultime 4)
+            st.prev_passes = (st.prev_passes + [st.points])[-4:]
         st.phase, st.points, st.index, st.total, st.step = phase, [], 0, count, step
         st.warning = ""
         lo, hi = self._focuser().bounds()
@@ -341,6 +442,7 @@ class AutofocusRunner:
         try:
             await f.poll()
             here = f.position
+            st.start_pos, st.visited = here, [here, here]
             self._log(tr("Autofocus: area {w}×{h} % dell'immagine, da {pos}",
                          w=round((p.roi[2] - p.roi[0]) * 100, 1), h=round((p.roi[3] - p.roi[1]) * 100, 1), pos=here))
             center = here
@@ -354,6 +456,7 @@ class AutofocusRunner:
                     raise AutofocusError(tr("Nessun punto a fuoco trovato nella ricerca ampia: allarga la ricerca, "
                                             "avvicina il fuoco a mano o scegli un'area con più dettagli"))
                 center = max(pts, key=lambda q: q["v"])["pos"]
+                st.coarse_points = list(pts)
                 self._log(tr("Ricerca ampia: fuoco vicino a {pos}", pos=center))
             n = max(5, p.fine_points)
             step = p.fine_step
@@ -427,6 +530,12 @@ class AutofocusRunner:
             if second_peak(pts):
                 st.warning = tr("Nell'area ci sono due cose a fuoco diverso: rimpicciolisci l'area sul dettaglio che ti interessa")
                 self._log(st.warning)
+            # conferma con scatti veri (modo Preciso): il fuoco e la verifica si riferiscono agli scatti veri
+            ref_pts, ref_fit, verify_source = pts, fit, p.source
+            if p.confirm > 0 and p.source == "live":
+                st.best = best
+                best, cfit = await self._confirm(best, step, p)
+                ref_pts, ref_fit, verify_source = st.confirm_points, cfit, "shot"
             st.best = best
             st.phase, st.target = "moving", best
             st.message = tr("Vado al fuoco: {pos}", pos=best)
@@ -434,12 +543,12 @@ class AutofocusRunner:
             # scatto di verifica sulla posizione scelta: deve essere vicino al massimo della curva
             st.phase = "verify"
             st.message = tr("Scatto di verifica a {pos}", pos=best)
-            v = await self._measure_at(best, p)
+            v = await self._measure_at(best, p, source=verify_source)
             # confronto con la cima della curva adattata (non col punto più alto misurato: il fuoco scelto cade di
             # solito fra due misure, più vicino alla cima, e la verifica supererebbe il 100 %)
-            top_v = max(fit["peak"] if fit else 0.0, max(q["v"] for q in pts))
+            top_v = max(ref_fit["peak"] if ref_fit else 0.0, max(q["v"] for q in ref_pts))
             ratio = v / top_v if top_v > 0 else 0.0
-            st.verify = {"pos": best, "v": v, "ratio": round(ratio, 3)}
+            st.verify = {"pos": best, "v": v, "ratio": round(ratio, 3), "shot": verify_source == "shot"}
             if ratio < VERIFY_MIN:
                 st.warning = tr("Lo scatto di verifica ha solo il {pct} % della nitidezza massima della curva: probabile "
                                 "gioco della meccanica. Aumenta la sovracorsa in Configurazione › Autofocus e rifai",
@@ -473,7 +582,13 @@ class AutofocusRunner:
                 st.message = str(exc)
                 self._log(tr("ERRORE autofocus: {exc}", exc=exc))
         finally:
+            st.capture = ""
             st.target = None if st.state != "done" else st.best
-            if st.phase in ("moving", "verify") and st.state != "done":
+            if st.phase in ("moving", "verify", "confirm") and st.state != "done":
                 st.phase = ""
+            if self._on_end:
+                try:
+                    await self._on_end(p.source)
+                except Exception as exc:  # noqa: BLE001
+                    self._log(tr("Live view non spento: {exc}", exc=exc))
 

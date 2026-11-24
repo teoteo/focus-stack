@@ -18,7 +18,7 @@ const Inspector = (() => {
   const luma8 = (r, g, b) => (r * 54 + g * 183 + b * 19 + 128) >> 8;
   const fmtInt = (n) => fmtNum(Math.round(n), 0);
 
-  const defaults = { open: false, marks: false, lo: true, hi: true, rule: "all", ch: [true, true, true, true], log: false, range: "all" };
+  const defaults = { open: true, marks: false, lo: true, hi: true, rule: "all", ch: [true, true, true, true], log: false, range: "all" };
   let ui = { ...defaults };
   try { ui = { ...defaults, ...JSON.parse(localStorage.getItem("fs-inspector") || "{}") }; } catch { /* opzionale */ }
   const saveUi = () => { try { localStorage.setItem("fs-inspector", JSON.stringify(ui)); } catch { /* opzionale */ } };

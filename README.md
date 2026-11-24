@@ -223,7 +223,7 @@ second monitor. If the live view is on, the viewer opens straight on the live vi
 | **Follow latest** | U | show every new shot automatically |
 | **Lock view** | K | keep zoom and position when changing shot, to compare focus at the same spot |
 | **Inspector** | I | side panel, read only: R, G, B and brightness histograms, burnt (channels at 255) and black (channels at 0) pixels under a chosen rule, red/blue marks on the image, values under the pointer and min/max/mean/median of the whole image. It also works on the live view (updated twice a second) |
-| **⌖ Autofocus** | A, [ ], Esc | autofocus on a point: click the detail, then Start. The focuser scans in the direction of the stack, the sharpness curve (Sobel gradient in the area) fills in shot by shot, and the focuser returns to the sharpest position from the same side (backlash overshoot) and takes a check shot. Live view frames (default, faster) or real shots (more certain); wide search when everything is blurred; settings in Configuration › Autofocus |
+| **⌖ Autofocus** | A, [ ], Esc | autofocus on a point: click the detail, then Start. The focuser scans in the direction of the stack, the sharpness curve (Sobel gradient in the area) fills in shot by shot, and the focuser returns to the sharpest position from the same side (backlash overshoot) and takes a check shot. Modes: Fast (live view), Precise (live view, then 3 real confirmation shots; default) and Real shots, each with its own settings; it never moves further from the start than the maximum excursion; wide search when everything is blurred; settings in Configuration › Autofocus |
 | Full screen | F | — |
 
 The Inspector measures the 8-bit image on screen: for a RAW shot that is the conversion for the screen,

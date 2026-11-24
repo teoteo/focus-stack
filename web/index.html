@@ -931,21 +931,25 @@
     <section class="set-sec" id="card-af">
       <header class="card-head"><h2>Autofocus</h2></header>
       <div class="set-box">
-        <p class="hint">Nel visualizzatore: <b>⌖ Autofocus</b>, clic sul dettaglio da mettere a fuoco, poi Avvia. I campi vuoti usano il valore calcolato, scritto in grigio.</p>
+        <p class="hint">Nel visualizzatore: <b>⌖ Autofocus</b>, clic sul dettaglio da mettere a fuoco, poi Avvia. I campi vuoti usano il valore predefinito, scritto in grigio.</p>
+        <div class="set-rows">
+          <div class="set-row">
+            <span class="set-lbl">Modo</span>
+            <span class="set-ctl"><span class="seg" id="af-mode" role="radiogroup" aria-label="Modo dell'autofocus">
+              <button data-mode="fast" data-i18n-skip>Veloce</button>
+              <button data-mode="precise">Preciso</button>
+              <button data-mode="shots">Scatti veri</button>
+            </span><span class="set-help" id="af-mode-help">&nbsp;</span></span>
+          </div>
+        </div>
+        <h3 class="set-sub" id="af-mode-title">Parametri del modo</h3>
         <div class="set-rows">
           <div class="set-row">
             <span class="set-lbl">Immagini da misurare</span>
             <span class="set-ctl"><span class="seg" id="af-src" role="radiogroup" aria-label="Immagini da misurare">
               <button data-src="live">Live view</button>
               <button data-src="shot">Scatti veri</button>
-            </span><span class="set-help">il live view è veloce; gli scatti veri sono più dettagliati ma richiedono qualche secondo l'uno</span></span>
-          </div>
-          <div class="set-row">
-            <span class="set-lbl">Lato dell'area</span>
-            <span class="set-ctl">
-              <input type="number" class="num wide" id="af-roi" min="16" max="4000" step="8" inputmode="numeric" aria-label="Lato dell'area (pixel)">
-              <span class="unit">pixel</span>
-            <span class="set-help">si cambia anche nel visualizzatore; più piccola se nell'area ci sono cose a profondità diverse</span></span>
+            </span><span class="set-help">il live view è più veloce; gli scatti veri danno un risultato più sicuro, ma richiedono qualche secondo l'uno</span></span>
           </div>
           <div class="set-row">
             <span class="set-lbl">Passo della passata fine</span>
@@ -953,7 +957,7 @@
               <input type="number" class="num wide" id="af-fine-step" min="1" max="100000" step="1" inputmode="numeric" aria-label="Passo della passata fine (passi)">
               <span class="unit">passi</span>
               <span class="unit" id="af-fine-um">&nbsp;</span>
-            <span class="set-help">circa un quarto della larghezza del picco</span></span>
+            <span class="set-help">vuoto = un quarto della larghezza del picco</span></span>
           </div>
           <div class="set-row">
             <span class="set-lbl">Scatti della passata fine</span>
@@ -967,9 +971,27 @@
               <input type="number" class="num wide" id="af-passes" min="1" max="3" step="1" inputmode="numeric" aria-label="Passate">
             <span class="set-help">da 1 a 3: ogni passata in più riparte dal fuoco trovato con metà passo</span></span>
           </div>
+          <div class="set-row" id="af-confirm-row">
+            <span class="set-lbl">Conferma con scatti veri</span>
+            <span class="set-ctl">
+              <input type="number" class="num wide" id="af-confirm" min="0" max="7" step="1" inputmode="numeric" aria-label="Scatti veri di conferma">
+              <span class="unit">scatti</span>
+            <span class="set-help">dopo il live view, scatti veri attorno al fuoco trovato per ricalcolarlo; 0 = nessuna conferma</span></span>
+          </div>
+        </div>
+        <div class="set-actions"><button class="btn ghost small" id="af-mode-reset">Ripristina il modo</button></div>
+        <h3 class="set-sub">Per tutti i modi</h3>
+        <div class="set-rows">
+          <div class="set-row">
+            <span class="set-lbl">Lato dell'area</span>
+            <span class="set-ctl">
+              <input type="number" class="num wide" id="af-roi" min="16" max="4000" step="8" inputmode="numeric" aria-label="Lato dell'area (pixel)">
+              <span class="unit">pixel</span>
+            <span class="set-help">si cambia anche nel visualizzatore; più piccola se nell'area ci sono cose a profondità diverse</span></span>
+          </div>
           <label class="set-row">
             <span class="set-lbl">Ricerca ampia se l'immagine è tutta sfocata</span>
-            <span class="set-ctl"><input type="checkbox" id="af-coarse"><span class="set-help">prima della passata fine, pochi scatti distanti per trovare la zona del fuoco</span></span>
+            <span class="set-ctl"><input type="checkbox" id="af-coarse"><span class="set-help">prima della passata fine, pochi scatti distanti per trovare la zona del fuoco; si accende anche nel visualizzatore</span></span>
           </label>
           <div class="set-row" id="af-coarse-row">
             <span class="set-lbl">Cerca entro ±</span>
@@ -986,6 +1008,14 @@
               <span class="unit">passi</span>
               <span class="unit" id="af-coarse-step-um">&nbsp;</span>
             <span class="set-help">circa una larghezza del picco: più largo, meno scatti, ma un picco stretto può cadere fra due scatti</span></span>
+          </div>
+          <div class="set-row">
+            <span class="set-lbl">Escursione massima ±</span>
+            <span class="set-ctl">
+              <input type="number" class="num wide" id="af-max-travel" min="1" max="1000000" step="1" inputmode="numeric" aria-label="Escursione massima (passi)">
+              <span class="unit">passi</span>
+              <span class="unit" id="af-max-travel-um">&nbsp;</span>
+            <span class="set-help">l'autofocus non va mai più lontano di così dalla posizione di partenza: se ne avrebbe bisogno si ferma; protegge il soggetto</span></span>
           </div>
           <div class="set-row">
             <span class="set-lbl">Attesa dopo il movimento</span>
@@ -1012,6 +1042,7 @@
         <details class="set-details">
           <summary>Dettagli</summary>
           <p>L'autofocus sposta il focheggiatore nella stessa direzione della pila e misura la nitidezza dell'area a ogni scatto. La curva si disegna nel visualizzatore; alla fine il focheggiatore torna dove la nitidezza è massima, passando oltre della sovracorsa per arrivarci nello stesso verso della scansione, e fa uno scatto di verifica: se la nitidezza è molto sotto il massimo della curva, il gioco è maggiore della sovracorsa.</p>
+          <p>I modi raccolgono i parametri che cambiano la precisione: <b>Veloce</b> misura solo il live view; <b>Preciso</b> fa due passate col live view e poi conferma il fuoco con alcuni scatti veri; <b>Scatti veri</b> fa tutta la scansione con scatti veri. Ogni modo ricorda i suoi valori.</p>
           <p>I valori calcolati partono dalla larghezza attesa del picco (la zona in cui la nitidezza è sopra metà del massimo). La prima volta si stima dalla profondità di campo del profilo ottico della sequenza e dalla meccanica; dopo ogni autofocus riuscito l'app salva la larghezza misurata per quel profilo e la usa le volte seguenti.</p>
           <p>Con gli scatti RAW la misura usa l'anteprima JPEG che la fotocamera mette dentro il file: nelle prove dà lo stesso fuoco del RAW sviluppato, con meno rumore.</p>
         </details>

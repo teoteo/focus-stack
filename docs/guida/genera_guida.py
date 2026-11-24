@@ -21,12 +21,13 @@ def make_fig(notes, img_dir):
     def fig(name, legend=(), layout="side", width=None, caption="", anchors=None):
         """Schermata con i numeri sopra gli elementi e, accanto o sotto, la legenda numerata.
         anchors {numero: ancora} sostituisce l'ancora salvata: "b" = sotto l'elemento, centrato
-        (per le barre di pulsanti fitti, dove a sinistra il numero coprirebbe il pulsante vicino)."""
+        (per le barre di pulsanti fitti, dove a sinistra il numero coprirebbe il pulsante vicino); "bb" = come "b" ma
+        più in basso, alternato a "b" quando i pulsanti sono così fitti che i numeri si toccherebbero."""
         marks = []
         for mk in notes.get(name, {}).get("marks", []):
             x, y, w, h = mk["x"], mk["y"], mk["w"], mk["h"]
             mk = {**mk, "anchor": (anchors or {}).get(mk["n"], mk["anchor"])}
-            if mk["anchor"] == "b":
+            if mk["anchor"] in ("b", "bb"):   # bb = sotto, più in basso: alternato a "b" per le icone fitte
                 cx, cy = x + w / 2, y + h
             elif mk["anchor"] == "r":
                 cx, cy = x + w, y + h / 2
@@ -117,6 +118,7 @@ figcaption { font-size: 8.8pt; color: #5a6b80; margin-top: 1.5mm; text-align: ce
 .mk.l { transform: translate(calc(-100% - 0.5mm), -50%); }
 .mk.r { transform: translate(0.5mm, -50%); }
 .mk.b { transform: translate(-50%, 0.6mm); }
+.mk.bb { transform: translate(-50%, 6.4mm); }
 .fig-wrap.below-marks figure.shot { padding-bottom: 6.5mm; }
 .legend { list-style: none; padding: 0 0 0 1mm; margin: 0; font-size: 9.6pt; }
 .legend li { display: grid; grid-template-columns: 6.5mm 1fr; gap: 2mm; margin-bottom: 2.1mm; }

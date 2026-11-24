@@ -541,15 +541,15 @@ les RAW, convertis à la volée) avec zoom et déplacement, ainsi que la visée 
     f"<b>{ui('● Live')}</b> (<kbd>L</kbd>) : la visée en direct dans la même fenêtre, avec zoom et déplacement.",
     "<b>Zoom</b> − et + (<kbd>−</kbd> <kbd>+</kbd>) et niveau d'agrandissement.",
     f"<b>{ui('Adatta')}</b> (<kbd>0</kbd>), <b>100%</b> (<kbd>1</kbd> : un pixel du capteur = un pixel de l'écran), <b>{ui('Reset')}</b> (<kbd>R</kbd>).",
-    f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>) : affiche automatiquement chaque nouvelle photo.",
-    f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>) : conserve le zoom et la position quand vous changez de photo, pour comparer la mise au point au même endroit.",
+    f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>) : affiche automatiquement chaque nouvelle photo. Comme les deux boutons suivants, c'est une icône, en surbrillance quand elle est active ; il est actif à l'ouverture.",
+    f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>) : conserve le zoom et la position quand vous changez de photo, pour comparer la mise au point au même endroit. Actif à l'ouverture.",
     "<b>Guides de composition</b> (<kbd>G</kbd>) : à chaque clic, tiers, croix au centre, tiers et centre, aucun. Lignes de 1 pixel qui suivent le zoom et le déplacement ; elles fonctionnent aussi en visée en direct.",
-    f"<b>{ui('Svuota')}</b> : repart de zéro. Les photos quittent la visionneuse et la séquence redevient {ui('Pronta')} ; les fichiers restent dans le dossier.",
-    f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>) : histogrammes, pixels brûlés et noirs, valeurs sous le pointeur (voir ci-dessous).",
+    f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>) : histogrammes, pixels brûlés et noirs, valeurs sous le pointeur (voir ci-dessous). Ouvert à l'ouverture de la visionneuse.",
     "<b>Plein écran</b> (<kbd>F</kbd>).",
     "<b>?</b> : ce guide, au chapitre de la visionneuse.",
     f"<b>Vignettes</b> : un clic ouvre la photo. <i>{ui('P')}</i> = photo test, <i>{ui('C')}</i> = image de calibration, <i>{ui('E')}</i> = photo pour l'exposition, <i>AF</i> = prises de l'autofocus, les numéros sont les photos de la séquence. La bande montre seulement la séquence en cours ou la dernière : elle se vide au démarrage d'une séquence, et la première photo test prise ensuite en commence une nouvelle. Les fichiers restent dans le dossier.",
-], layout="full", anchors={n: "b" for n in range(1, 12)})}
+    f"<b>{ui('Svuota')}</b>, en bas à droite de la bande des vignettes quand il y a des photos : repart de zéro. Les photos quittent la visionneuse et la séquence redevient {ui('Pronta')} ; les fichiers restent dans le dossier.",
+], layout="full", anchors={n: "bb" if n in (7, 9, 11) else "b" for n in range(1, 12)})}
 <p>À la souris : faites glisser pour déplacer l'image, molette (ou pincement sur le trackpad) pour zoomer autour du
 pointeur, double-clic pour passer de « ajuster » à 100 % et inversement. Au-delà de 150 %, les pixels restent nets,
 sans flou.</p>
@@ -564,21 +564,23 @@ d'une structure. Il sert par exemple à fixer avec précision le début ou la fi
 <li>Appuyez sur <span class="ui">⌖ Autofocus</span> (touche <kbd>A</kbd>) et cliquez sur le détail : un carré bleu
   apparaît, la zone mesurée. Son côté se règle avec le curseur <b>Zone</b> ou avec <kbd>[</kbd> <kbd>]</kbd> ; un autre
   clic déplace le carré. Le glissement et le zoom fonctionnent comme d'habitude.</li>
-<li>Appuyez sur <span class="ui">Démarrer</span>. Le focuser se déplace dans le même sens que la pile et mesure à
-  chaque position : la courbe de netteté s'allonge d'un point à la fois.</li>
+<li>Choisissez le <b>mode</b> (Rapide, Précis ou Vraies prises) et vérifiez la <b>course</b> : la barre et la ligne en
+  dessous indiquent de combien le focuser va bouger et jusqu'où il s'approchera de l'échantillon. Puis appuyez sur
+  <span class="ui">Démarrer</span> : le focuser se déplace dans le même sens que la pile et la courbe de netteté
+  s'allonge d'un point à la fois.</li>
 <li>À la fin, le focuser revient à la position la plus nette : il la dépasse d'abord du <b>dépassement</b> et y arrive
   dans le même sens que le balayage, pour que le jeu de la mécanique ne déplace pas la mise au point. Puis il fait une
-  <b>prise de vérification</b>, le losange vert du graphique. <span class="ui">Utiliser comme début de pile</span> et
-  <span class="ui">Utiliser comme fin de pile</span> écrivent la position dans la séquence, dans la fenêtre principale.</li>
+  <b>prise de vérification</b>, le losange vert du graphique. Dans la ligne en dessous, <span class="ui">Utiliser la mise au point comme</span>
+  <span class="ui">début de pile</span> ou <span class="ui">fin de pile</span> écrit la position dans la séquence, dans la fenêtre principale.</li>
 </ol>
 {fig("visualizzatore-autofocus", [
     "<b>⌖ Autofocus</b> (<kbd>A</kbd>) : ouvre le panneau ; un clic sur l'image choisit la zone. <kbd>Échap</kbd> le ferme.",
     "<b>Zone mesurée</b> : en pointillés pendant l'autofocus. Elle reste au même endroit si l'on change de prise ou si l'on passe à la visée en direct.",
-    "<b>Images</b> : images de la visée en <i>Direct</i> (par défaut) : l'autofocus est <b>plus rapide</b> ; ou vraies <i>Prises</i> : le résultat est <b>plus sûr</b>, car il mesure la photo en pleine qualité, mais chaque prise demande quelques secondes. <b>Zone</b> : côté du carré en pixels du capteur.",
-    "<b>Courbe de netteté</b> : un point par mesure, la position du focuser en horizontal ; en dessous, le pas. La ligne verte est la position choisie, le losange vert la prise de vérification. En survolant un point on lit sa position et sa netteté (en % du maximum).",
+    "<b>Mode</b> : <i>Rapide</i>, <i>Précis</i> (par défaut) ou <i>Vraies prises</i> ; en dessous, ce qu'il va faire. <b>Recherche large</b> l'active quand l'image est entièrement floue. <b>Zone</b> : côté du carré en pixels du capteur. La <b>barre de course</b> va de − à + l'excursion maximale autour du départ : en clair la course prévue, plus foncé le trajet déjà parcouru, le trait est la position actuelle.",
+    "<b>Courbe de netteté</b> : un point par mesure, la position du focuser en horizontal ; en dessous, le pas. Les passes précédentes restent plus pâles sous la passe en cours, et le graphique zoome sur la zone de la passe fine. Les carrés orange sont les vraies prises de confirmation, la ligne verte la position choisie, le losange vert la prise de vérification. En survolant un point on lit sa position et sa netteté (en % du maximum).",
     "<b>État</b> : passe, prise en cours et position, puis le résultat avec la vérification et la largeur du pic, ou la raison pour laquelle la mise au point n'a pas été trouvée.",
-    "<b>Utiliser comme début de pile</b> / <b>Utiliser comme fin de pile</b>, tant que le focuser reste sur la position trouvée. <b>Recommencer</b> relance l'autofocus ; un clic sur un autre point déplace la zone sans fermer le panneau. Pendant la mesure il y a <b>Arrêter</b>.",
-], layout="full")}
+    "<b>Recommencer</b> et, en dessous, <b>Utiliser la mise au point comme début de pile / fin de pile</b>, tant que le focuser reste sur la position trouvée. <b>Recommencer</b> relance l'autofocus ; un clic sur un autre point déplace la zone sans fermer le panneau. Pendant la mesure il y a <b>Arrêter</b>.",
+], layout="full", anchors={6: "r"})}
 <p>À chaque prise, l'app mesure la netteté des bords dans la zone (le gradient de luminosité, divisé par la luminosité
 moyenne, pour que l'exposition ne compte pas). Loin de la mise au point la courbe est plate ; près d'elle, elle monte en
 un pic étroit. L'app ajuste une courbe sur les points autour du maximum : la position trouvée peut donc tomber entre
@@ -589,16 +591,35 @@ le fichier : lors des essais sur de vraies piles, il donne la même mise au poin
 contient deux éléments à des mises au point différentes (la patte et le corps d'un insecte), la courbe a deux pics et
 l'app le signale en orange : réduisez la zone sur le détail qui vous intéresse. Sur un fond uniforme il n'y a rien à
 mesurer et l'autofocus s'arrête avec un message.</div>
-<div class="box tip"><span class="t">Visée en direct ou vraies prises ?</span>La <b>visée en direct</b> est plus rapide :
-elle convient pour chercher la mise au point et pour les essais. L'image du direct est toutefois petite et compressée,
-et bruitée en faible lumière. Les <b>vraies prises</b> mesurent la photo telle qu'elle sera dans la pile : pour fixer
-avec certitude le début ou la fin d'une pile importante, relancez l'autofocus avec <i>Prises</i>.</div>
+<h3>Les modes</h3>
+<p>La <b>visée en direct</b> est plus rapide, mais son image est petite et compressée, et bruitée en faible lumière ; les
+<b>vraies prises</b> mesurent la photo telle qu'elle sera dans la pile, mais demandent quelques secondes chacune. Les
+modes combinent les deux :</p>
+<ul>
+<li><b>Rapide</b> : visée en direct seulement, une passe. Pour chercher la mise au point et pour les essais.</li>
+<li><b>Précis</b> (par défaut) : deux passes en visée en direct, puis <b>3 vraies prises de confirmation</b> autour de la
+  mise au point trouvée. La mise au point est recalculée sur ces prises (si la plus nette est au bord, une ou deux sont
+  ajoutées) et la prise de vérification est aussi une vraie prise. C'est le mode pour fixer le début ou la fin d'une pile.</li>
+<li><b>Vraies prises</b> : tout le balayage avec de vraies prises. Le plus sûr et le plus lent.</li>
+</ul>
+<p>Chaque mode garde ses propres réglages (pas, prises par passe, passes, images, prises de confirmation), qui se
+modifient dans <span class="ui">Configuration › Autofocus</span>.</p>
+<p>Avec des prises réelles (<i>Précis</i> et <i>Vraies prises</i>), la visée en direct s'éteint avant la
+première prise, comme pour une photo test, et reste éteinte jusqu'à la fin de l'autofocus : l'appareil ne passe pas
+sans cesse de la visée à la prise de vue. Elle redémarre seule quand vous déplacez le focuser. Si l'appareil se
+déconnecte pendant une prise, l'app réessaie et le reconnecte ; si les déconnexions se répètent, vérifiez
+l'alimentation : une fausse batterie (<i>dummy battery</i>) qui ne tient pas le pic de la prise de vue déconnecte
+l'appareil de l'USB.</p>
+<div class="box warn"><span class="t">Excursion maximale : elle protège le sujet</span>L'autofocus ne s'éloigne jamais de
+la position de départ de plus que l'<b>excursion maximale</b> (± pas, dans la barre de course). Si la passe devait
+s'allonger au-delà, parce que la mise au point est plus loin que prévu, il s'arrête et le signale au lieu de continuer
+vers l'échantillon. La valeur calculée couvre la course prévue avec une marge ; diminuez-la si l'échantillon est
+proche de l'objectif.</div>
 <div class="box warn"><span class="t">Vérification basse : le jeu</span>Si la prise de vérification est bien moins nette
 que le maximum de la courbe (moins de 80 %), l'app le signale en orange : en général le jeu de la mécanique est plus
 grand que le dépassement. Augmentez-le dans <span class="ui">Configuration › Autofocus</span> ; au départ il vaut la
 compensation du jeu de la séquence, mais au moins une largeur du pic.</div>
-<p>Les valeurs (pas, nombre de prises, recherche large quand tout est flou) sont dans <span class="ui">Configuration ›
-Autofocus</span>, chapitre 12.</p>
+<p>Toutes les valeurs sont dans <span class="ui">Configuration › Autofocus</span>, chapitre 12.</p>
 <h2>{ui('Ispettore')}</h2>
 <p>Le panneau <span class="ui">{ui('Ispettore')}</span> (touche <kbd>I</kbd>) contrôle l'exposition d'une photo avec les
 mêmes règles que Focus Fusion. Il est en lecture seule : il ne modifie pas les photos. Il fonctionne aussi sur la visée
@@ -915,26 +936,26 @@ du Mac pendant 1,5 s. <span class="ui">{ui('Vai')}</span>, les
 boutons en un seul clic et la séquence arrivent en revanche toujours à destination, même si le mouvement dure de
 nombreuses secondes.</p>
 <h2>Autofocus</h2>
-<p>Les réglages de l'autofocus sur un point (chapitre 8). Les champs vides utilisent la valeur calculée, écrite en gris
-dans le champ : elle se calcule à partir de la <b>largeur du pic</b>, c'est-à-dire l'intervalle de pas où la netteté
-reste au-dessus de la moitié du maximum.</p>
+<p>Les réglages de l'autofocus sur un point (chapitre 8) : d'abord le mode et ses réglages, puis ceux communs à tous
+les modes. Les champs vides utilisent la valeur par défaut, écrite en gris dans le champ ; pas et prises se calculent
+à partir de la <b>largeur du pic</b>, c'est-à-dire l'intervalle de pas où la netteté reste au-dessus de la moitié du
+maximum.</p>
 {fig("autofocus-config", [
-    "<b>Images à mesurer</b> : visée en direct (par défaut) ou vraies prises. Se choisit aussi dans le panneau de la visionneuse.",
-    "<b>Côté de la zone</b> en pixels du capteur, le même que le curseur de la visionneuse.",
-    "<b>Pas de la passe fine</b> : environ un quart de la largeur du pic, pour qu'au moins 4 à 5 prises tombent sur le pic.",
-    "<b>Recherche large si l'image est entièrement floue</b> : avant la passe fine, quelques prises espacées (une largeur du pic, réglable avec <b>Pas de la recherche large</b>) pour trouver la zone de mise au point.",
-    "<b>Chercher à ±</b> pas de la position actuelle, toujours dans les limites ; à côté, l'amplitude en mm et le nombre de prises nécessaires.",
+    "<b>Mode</b> utilisé par la visionneuse, avec le résumé de ce qu'il fait. Se choisit aussi dans le panneau.",
+    "<b>Réglages du mode</b> : images (visée en direct ou vraies prises), pas et prises de la passe fine, passes. Vide = valeur par défaut du mode ou calculée d'après la largeur du pic. <b>Rétablir le mode</b> revient aux valeurs initiales.",
+    "<b>Confirmation par de vraies prises</b> (avec la visée en direct) : combien de vraies prises autour de la mise au point trouvée ; 0 = pas de confirmation.",
+    "<b>Recherche large</b> si l'image est entièrement floue, avec son amplitude (± pas) et son pas, une largeur du pic : quelques prises très espacées.",
+    "<b>Excursion maximale ±</b> depuis la position de départ : au-delà, l'autofocus s'arrête. En dessous, attente après le mouvement et <b>dépassement pour le jeu</b>.",
     "<b>Largeur du pic</b> utilisée pour les calculs et son origine. <b>Oublier la mesure</b> revient à l'estimation.",
 ], layout="side", anchors={2: "r", 4: "r"})}
 <p>La première fois, la largeur du pic est estimée d'après la profondeur de champ du profil optique choisi dans la
-séquence et la mécanique (µm par pas) ; sans profil, d'après la course entre les limites. Après chaque autofocus réussi,
-l'app enregistre la largeur mesurée pour ce profil et l'utilise ensuite. La première estimation est approximative : si
-le pic est plus large que prévu la passe s'allonge toute seule, s'il est plus étroit elle répète la mesure avec un pas
-plus fin. Avec 2 ou 3 <b>Passes</b>, l'autofocus répète la mesure autour de la mise au point trouvée, à chaque fois
-avec un pas deux fois plus petit. Le <b>dépassement pour le jeu</b> est la distance dont le focuser dépasse une position
-avant d'y revenir : il doit être supérieur au jeu de la mécanique. <span class="ui">Rétablir les valeurs
-calculées</span> vide les champs saisis à la main. Si la recherche
-large est désactivée et que la mise au point est loin, l'autofocus s'arrête et propose de l'activer.</p>
+séquence et la mécanique (µm par pas) ; sans profil, d'après la course entre les limites. Après chaque autofocus
+réussi, l'app enregistre la largeur mesurée pour ce profil et l'utilise ensuite. La première estimation est
+approximative : si le pic est plus large que prévu la passe s'allonge toute seule, s'il est plus étroit elle répète la
+mesure avec un pas plus fin. Le <b>dépassement pour le jeu</b> est la distance dont le focuser dépasse une position avant
+d'y revenir : il doit être supérieur au jeu de la mécanique. <span class="ui">Rétablir les valeurs calculées</span>
+vide les champs communs saisis à la main. Si la recherche large est désactivée et que la mise au point est loin,
+l'autofocus s'arrête et propose de l'activer.</p>
 <h2>{ui('Aggiornamenti')}</h2>
 {fig("aggiornamenti", [
     "Version de l'<b>app</b> et résultat de la dernière vérification.",

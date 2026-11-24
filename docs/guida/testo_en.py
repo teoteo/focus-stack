@@ -693,15 +693,15 @@ fly) with zoom and pan, and the camera's live view.</p>
     "<b>● Live</b> (<kbd>L</kbd>): live view in the same window, with zoom and pan.",
     "<b>Zoom</b> − and + (<kbd>−</kbd> <kbd>+</kbd>) and the zoom level.",
     f"<b>{ui('Adatta')}</b> (<kbd>0</kbd>), <b>100%</b> (<kbd>1</kbd>: one sensor pixel = one screen pixel), <b>{ui('Reset')}</b> (<kbd>R</kbd>).",
-    f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>): shows every new shot automatically.",
-    f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>): keeps zoom and position when you change shot, to compare focus at the same spot.",
+    f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>): shows every new shot automatically. Like the next two buttons it is an icon, highlighted when on; it is on when the viewer opens.",
+    f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>): keeps zoom and position when you change shot, to compare focus at the same spot. On when the viewer opens.",
     "<b>Composition guides</b> (<kbd>G</kbd>): each click switches between thirds, a cross at the centre, thirds and centre, none. 1-pixel lines that follow zoom and panning; they also work in live view.",
-    f"<b>{ui('Svuota')}</b>: starts over. The shots leave the viewer and the sequence goes back to Ready; the files stay in the folder.",
-    f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>): histograms, burnt-out and black pixels, values under the pointer (see below).",
+    f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>): histograms, burnt-out and black pixels, values under the pointer (see below). Open when the viewer opens.",
     "<b>Full screen</b> (<kbd>F</kbd>).",
     "<b>?</b>: this guide, at the viewer chapter.",
     "<b>Thumbnails</b>: click to open a shot. <i>P</i> = test shot, <i>C</i> = calibration frame, <i>E</i> = exposure photo, <i>AF</i> = autofocus shots, numbers are the sequence shots. The strip shows only the current or last sequence: it empties when a sequence starts, and the first test shot taken afterwards starts a new one. The files stay in the folder.",
-], layout="full", anchors={n: "b" for n in range(1, 12)})}
+    f"<b>{ui('Svuota')}</b>, at the bottom right of the thumbnail strip when there are shots: starts over. The shots leave the viewer and the sequence goes back to Ready; the files stay in the folder.",
+], layout="full", anchors={n: "bb" if n in (7, 9, 11) else "b" for n in range(1, 12)})}
 <p>With the mouse: drag to pan, scroll wheel (or pinch on the trackpad) to zoom around the pointer, double-click to
 switch between “fit” and 100%. Above 150% the pixels stay crisp, without blurring.</p>
 {fig("visualizzatore-live", [
@@ -715,21 +715,22 @@ a structure. It is useful, for example, to set the start or the end of the stack
 <li>Press <span class="ui">⌖ Autofocus</span> (<kbd>A</kbd> key) and click the detail: a blue square appears, the
   measured area. Change its side with the <b>Area</b> slider or with <kbd>[</kbd> <kbd>]</kbd>; another click moves the
   square. Dragging and zoom work as usual.</li>
-<li>Press <span class="ui">Start</span>. The focuser moves in the same direction as the stack and measures at every
-  position: the sharpness curve grows one point at a time.</li>
+<li>Choose the <b>mode</b> (Fast, Precise or Real shots) and check the <b>travel</b>: the bar and the line below show
+  how far the focuser will move and how close it will get to the specimen. Then press <span class="ui">Start</span>: the
+  focuser moves in the same direction as the stack and the sharpness curve grows one point at a time.</li>
 <li>At the end the focuser goes back to the sharpest position: it first goes past it by the <b>overshoot</b> and
   arrives in the same direction as the scan, so the backlash of the mechanics does not shift the focus. Then it takes a
-  <b>check shot</b>, the green diamond on the chart. <span class="ui">Use as stack start</span> and
-  <span class="ui">Use as stack end</span> write the position into the sequence, in the main window.</li>
+  <b>check shot</b>, the green diamond on the chart. In the row below, <span class="ui">Use the focus as</span>
+  <span class="ui">stack start</span> or <span class="ui">stack end</span> writes the position into the sequence, in the main window.</li>
 </ol>
 {fig("visualizzatore-autofocus", [
     "<b>⌖ Autofocus</b> (<kbd>A</kbd>): opens the panel; clicking the image chooses the area. <kbd>Esc</kbd> closes it.",
     "<b>Measured area</b>: dashed while the autofocus runs. It stays on the same spot when you change shot or switch to live view.",
-    "<b>Images</b>: <i>Live</i> view frames (default): the autofocus is <b>faster</b>; or real <i>Shots</i>: the result is <b>more certain</b>, because it measures the full-quality photo, but each shot takes a few seconds. <b>Area</b>: side of the square in sensor pixels.",
-    "<b>Sharpness curve</b>: one point per measurement, the focuser position across; below, the step. The green line is the chosen position, the green diamond the check shot. Hover over a point to read its position and sharpness (in % of the maximum).",
+    "<b>Mode</b>: <i>Fast</i>, <i>Precise</i> (default) or <i>Real shots</i>; below, what it will do. <b>Wide search</b> turns it on for when the whole image is blurred. <b>Area</b>: side of the square in sensor pixels. The <b>travel bar</b> runs from − to + the maximum excursion around the start: in light colour the planned travel, darker the path already covered, the line is the current position.",
+    "<b>Sharpness curve</b>: one point per measurement, the focuser position across; below, the step. Earlier passes stay fainter under the current one, and the chart zooms in on the area of the fine pass. The orange squares are the real confirmation shots, the green line the chosen position, the green diamond the check shot. Hover over a point to read its position and sharpness (in % of the maximum).",
     "<b>Status</b>: pass, current shot and position, then the result with the check and the peak width, or the reason why no focus was found.",
-    "<b>Use as stack start</b> / <b>Use as stack end</b>, as long as the focuser stays on the position found. <b>Run again</b> repeats the autofocus; clicking another point moves the area without closing the panel. While measuring there is <b>Stop</b>.",
-], layout="full")}
+    "<b>Run again</b> and, below, <b>Use the focus as stack start / stack end</b>, as long as the focuser stays on the position found. <b>Run again</b> repeats the autofocus; clicking another point moves the area without closing the panel. While measuring there is <b>Stop</b>.",
+], layout="full", anchors={6: "r"})}
 <p>At every shot the app measures how sharp the edges inside the area are (the brightness gradient, divided by the
 mean brightness, so the exposure does not count). Far from focus the curve is flat; close to it, it rises into a narrow
 peak. The app fits a curve to the points around the maximum, so the position found can also fall between two shots.
@@ -740,16 +741,33 @@ real stacks it gives the same focus as the developed RAW.</p>
 two things at different focus (the leg and the body of an insect) the curve has two peaks and the app says so in
 orange: make the area smaller, on the detail you care about. On a uniform background there is nothing to measure and
 the autofocus stops with a message.</div>
-<div class="box tip"><span class="t">Live view or real shots?</span><b>Live view</b> is faster: it is fine for finding the
-focus and for trials. The live frame, though, is small and compressed, and noisy in low light. <b>Real shots</b>
-measure the photo as it will be in the stack: to set the start or end of an important stack with certainty, run the
-autofocus again with <i>Shots</i>.</div>
+<h3>The modes</h3>
+<p><b>Live view</b> is faster, but its frame is small and compressed, and noisy in low light; <b>real shots</b> measure
+the photo as it will be in the stack, but take a few seconds each. The modes combine the two:</p>
+<ul>
+<li><b>Fast</b>: live view only, one pass. For finding the focus and for trials.</li>
+<li><b>Precise</b> (default): two live view passes, then <b>3 real confirmation shots</b> around the focus found. The
+  focus is recalculated on these shots (if the sharpest is at the edge, one or two more are added) and the check shot is
+  a real shot too. This is the mode for setting the start or end of a stack.</li>
+<li><b>Real shots</b>: the whole scan with real shots. The most certain and the slowest.</li>
+</ul>
+<p>Each mode remembers its own settings (step, shots per pass, passes, images, confirmation shots), which you change
+in <span class="ui">Configuration › Autofocus</span>.</p>
+<p>With real shots (<i>Precise</i> and <i>Real shots</i>) live view turns off before the first shot, as for a
+test shot, and stays off until the autofocus ends: the camera does not keep switching between live view and shooting.
+It restarts by itself when you move the focuser. If the camera disconnects during a shot, the app retries and
+reconnects it; if disconnections keep happening, check the power supply: a dummy battery that cannot handle the peak
+of the shot drops the camera from USB.</p>
+<div class="box warn"><span class="t">Maximum excursion: it protects the subject</span>The autofocus never moves further
+from the starting position than the <b>maximum excursion</b> (± steps, in the travel bar). If the pass would have to
+extend beyond it, because the focus is further than expected, it stops and says so instead of carrying on towards the
+specimen. The calculated value covers the planned travel with a margin; lower it if the specimen is close to the
+objective.</div>
 <div class="box warn"><span class="t">Low check: backlash</span>If the check shot is much less sharp than the peak of the
 curve (below 80 %), the app says so in orange: usually the backlash of the mechanics is larger than the overshoot.
 Increase it in <span class="ui">Configuration › Autofocus</span>; it starts from the sequence's backlash compensation,
 but at least one peak width.</div>
-<p>The values (step, number of shots, wide search when everything is blurred) are in <span class="ui">Configuration ›
-Autofocus</span>, chapter 12.</p>
+<p>All the values are in <span class="ui">Configuration › Autofocus</span>, chapter 12.</p>
 <h2>{ui('Ispettore')}</h2>
 <p>The <span class="ui">{ui('Ispettore')}</span> panel (<kbd>I</kbd> key) checks the exposure of a photo with the same
 rules as Focus Fusion. It is read-only: it does not modify the photos. It also works on live view, updated every half
@@ -1052,25 +1070,24 @@ next (short segments are safer but jerkier). From <b>build 4</b> there is extra 
 the focuser stops by itself if it receives no commands from the Mac for 1.5 s. <span class="ui">{ui('Vai')}</span>, single-click buttons and the sequence, on the other hand,
 always reach their destination, even if the move takes many seconds.</p>
 <h2>Autofocus</h2>
-<p>Settings of the autofocus on a point (chapter 8). Empty fields use the calculated value, shown in grey inside the
-field: it is calculated from the <b>peak width</b>, the range of steps over which sharpness stays above half its
-maximum.</p>
+<p>Settings of the autofocus on a point (chapter 8): first the mode and its settings, then those shared by all
+modes. Empty fields use the default value, shown in grey inside the field; steps and shots are calculated from the
+<b>peak width</b>, the range of steps over which sharpness stays above half its maximum.</p>
 {fig("autofocus-config", [
-    "<b>Images to measure</b>: live view (default) or real shots. It can also be chosen in the viewer's panel.",
-    "<b>Area side</b> in sensor pixels, the same as the slider in the viewer.",
-    "<b>Fine pass step</b>: about a quarter of the peak width, so that at least 4–5 shots fall on the peak.",
-    "<b>Wide search if the whole image is blurred</b>: before the fine pass, a few widely spaced shots (one peak width, adjustable with <b>Wide search step</b>) to find where the focus is.",
-    "<b>Search within ±</b> steps from the current position, always within the limits; next to it, the range in mm and how many shots it takes.",
+    "<b>Mode</b> used by the viewer, with a summary of what it does. It can also be chosen in the panel.",
+    "<b>Mode settings</b>: images (live view or real shots), step and shots of the fine pass, passes. Empty = the mode's default or calculated from the peak width. <b>Restore the mode</b> goes back to the initial values.",
+    "<b>Confirm with real shots</b> (live view only): how many real shots around the focus found; 0 = no confirmation.",
+    "<b>Wide search</b> if the whole image is blurred, with its range (± steps) and step, one peak width: a few widely spaced shots.",
+    "<b>Maximum excursion ±</b> from the starting position: beyond it, the autofocus stops. Below, settle time after moving and <b>backlash overshoot</b>.",
     "<b>Peak width</b> used for the calculations and where it comes from. <b>Forget the measurement</b> goes back to the estimate.",
 ], layout="side", anchors={2: "r", 4: "r"})}
 <p>The first time, the peak width is estimated from the depth of field of the optics profile chosen in the sequence and
 from the mechanics (µm per step); without a profile, from the travel between the limits. After each successful
 autofocus the app saves the measured width for that profile and uses it from then on. The first estimate is rough: if
 the peak is wider than expected the pass extends by itself, if it is narrower it repeats the measurement with a finer
-step. With 2 or 3 <b>Passes</b> the autofocus repeats the measurement around the focus found, each time with half the
 step. The <b>backlash overshoot</b> is how far the focuser goes past a position before returning to it: it must exceed
-the backlash of the mechanics. <span class="ui">Restore calculated values</span> clears the fields typed by hand. If the wide search is off and
-the focus is far away, the autofocus stops and suggests turning it on.</p>
+the backlash of the mechanics. <span class="ui">Restore calculated values</span> clears the shared fields typed by
+hand. If the wide search is off and the focus is far away, the autofocus stops and suggests turning it on.</p>
 <h2>{ui('Aggiornamenti')}</h2>
 {fig("aggiornamenti", [
     "<b>App</b> version and the result of the last check.",

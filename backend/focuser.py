@@ -93,6 +93,7 @@ class MyFocuserPro2:
         self.commanded = False
         self._cmd_time = 0.0
         self._last_polled_position: int | None = None
+        self._halts = 0   # cresce a ogni STOP: un movimento fermato non va ripetuto (vedi wait_idle)
 
     def _mark_commanded(self) -> None:
         self.commanded = True
@@ -319,21 +320,47 @@ class MyFocuserPro2:
         self._mark_commanded()
         await asyncio.to_thread(self._send, f":96{pos}#")
 
+    # Il firmware accetta :05# solo nel suo ciclo principale, che a volte resta occupato qualche decimo di secondo
+    # (lettura della sonda di temperatura, display): letto subito dopo il comando può dire «fermo» con la posizione
+    # di prima, come se il movimento fosse finito nel posto sbagliato (capitato con l'autofocus, che fa molti
+    # movimenti piccoli: «Movimento terminato a 369996 invece di 369995»). Fermo ma non arrivato: si aspetta fino a
+    # START_GRACE_S; se non è ancora partito si rimanda il comando una volta (mai dopo uno STOP).
+    START_GRACE_S = 2.0
+
     async def wait_idle(self, timeout: float = 600, target: int | None = None) -> None:
         deadline = time.monotonic() + timeout
+        halts = self._halts
         await asyncio.sleep(0.15)
+        idle_since: float | None = None
+        resent = False
         while True:
             await self.poll()
             if not self.moving:
-                if target is not None and self.position != target:
+                if target is None or self.position == target:
+                    return
+                now = time.monotonic()
+                idle_since = idle_since or now
+                if self._halts != halts or now - idle_since > self.START_GRACE_S:
+                    if self._halts == halts and not resent:
+                        resent = True
+                        idle_since = None
+                        self._mark_commanded()
+                        await self._resend_move(int(target))
+                        await asyncio.sleep(0.15)
+                        continue
                     raise FocuserError(tr("Movimento terminato a {pos} invece di {target}", pos=self.position, target=target))
-                return
+            else:
+                idle_since = None
             if time.monotonic() > deadline:
                 raise FocuserError(tr("Timeout movimento"))
             await asyncio.sleep(0.1)
 
+    async def _resend_move(self, pos: int) -> None:
+        await asyncio.to_thread(self._send, f":05{pos}#")
+
     async def halt(self) -> None:
         self._mark_commanded()   # la frenata dopo lo STOP (rampa del firmware) non è un movimento dai pulsanti
+        self._halts += 1
         await asyncio.to_thread(self._send, ":27#")
 
     async def sync(self, pos: int) -> None:
@@ -445,9 +472,14 @@ class SimulatedFocuser(MyFocuserPro2):
 
     async def halt(self) -> None:
         self._mark_commanded()
+        self._halts += 1
         self._advance()
         self._target = self.position
         self._pos = float(self.position)
+
+    async def _resend_move(self, pos: int) -> None:
+        self._advance()
+        self._target = pos
 
     async def sync(self, pos: int) -> None:
         self._mark_commanded()

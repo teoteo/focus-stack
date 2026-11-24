@@ -521,15 +521,15 @@ al vuelo) con zoom y desplazamiento, y la vista en vivo de la cámara.</p>
     f"<b>{ui('● Live')}</b> (<kbd>L</kbd>): la vista en vivo en la misma ventana, con zoom y desplazamiento.",
     "<b>Zoom</b> − y + (<kbd>−</kbd> <kbd>+</kbd>) y nivel de ampliación.",
     f"<b>{ui('Adatta')}</b> (<kbd>0</kbd>), <b>100%</b> (<kbd>1</kbd>: un píxel del sensor = un píxel de la pantalla), <b>{ui('Reset')}</b> (<kbd>R</kbd>).",
-    f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>): muestra automáticamente cada foto nueva.",
-    f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>): al cambiar de foto mantiene el zoom y la posición, para comparar el enfoque en el mismo punto.",
+    f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>): muestra automáticamente cada foto nueva. Como los dos botones siguientes es un icono, resaltado cuando está activo; al abrir el visor está activo.",
+    f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>): al cambiar de foto mantiene el zoom y la posición, para comparar el enfoque en el mismo punto. Activo al abrir el visor.",
     "<b>Guías de composición</b> (<kbd>G</kbd>): cada clic alterna tercios, cruz en el centro, tercios y centro, ninguna. Líneas de 1 píxel que siguen el zoom y el desplazamiento; funcionan también en la vista en vivo.",
-    f"<b>{ui('Svuota')}</b>: empieza de cero. Las fotos salen del visor y la secuencia vuelve a {ui('Pronta')}; los archivos se quedan en la carpeta.",
-    f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>): histogramas, píxeles quemados y negros, valores bajo el puntero (mira más abajo).",
+    f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>): histogramas, píxeles quemados y negros, valores bajo el puntero (mira más abajo). Abierto al abrir el visor.",
     "<b>Pantalla completa</b> (<kbd>F</kbd>).",
     "<b>?</b>: esta guía, en el capítulo del visor.",
     "<b>Miniaturas</b>: un clic abre la foto. <i>P</i> = foto de prueba, <i>C</i> = fotograma de calibración, <i>E</i> = foto para la exposición, <i>AF</i> = tomas del autoenfoque, los números son las fotos de la secuencia. La tira muestra solo la secuencia en curso o la última: se vacía al arrancar una secuencia, y la primera foto de prueba hecha después empieza una nueva. Los archivos se quedan en la carpeta.",
-], layout="full", anchors={n: "b" for n in range(1, 12)})}
+    f"<b>{ui('Svuota')}</b>, abajo a la derecha en la tira de miniaturas cuando hay fotos: empieza de cero. Las fotos salen del visor y la secuencia vuelve a {ui('Pronta')}; los archivos se quedan en la carpeta.",
+], layout="full", anchors={n: "bb" if n in (7, 9, 11) else "b" for n in range(1, 12)})}
 <p>Con el ratón: arrastra para desplazar la imagen, rueda (o pellizco en el trackpad) para el zoom centrado en el
 puntero, doble clic para pasar de “ajustar” al 100% y viceversa. Por encima del 150% los píxeles se ven nítidos,
 sin desenfoque.</p>
@@ -545,21 +545,22 @@ pila.</p>
 <li>Pulsa <span class="ui">⌖ Autoenfoque</span> (tecla <kbd>A</kbd>) y haz clic en el detalle: aparece un cuadrado azul,
   el área medida. Su lado se cambia con el control <b>Área</b> o con <kbd>[</kbd> <kbd>]</kbd>; otro clic mueve el
   cuadrado. Arrastrar y el zoom funcionan como siempre.</li>
-<li>Pulsa <span class="ui">Iniciar</span>. El enfocador se mueve en la misma dirección que la pila y mide en cada
-  posición: la curva de nitidez crece un punto cada vez.</li>
+<li>Elige el <b>modo</b> (Rápido, Preciso o Tomas reales) y comprueba el <b>recorrido</b>: la barra y la línea de debajo
+  indican cuánto se moverá el enfocador y hasta dónde se acercará a la muestra. Luego pulsa <span class="ui">Iniciar</span>:
+  el enfocador se mueve en la misma dirección que la pila y la curva de nitidez crece un punto cada vez.</li>
 <li>Al final el enfocador vuelve a la posición más nítida: primero la sobrepasa del <b>sobrerrecorrido</b> y llega en
   el mismo sentido del barrido, para que la holgura de la mecánica no desplace el enfoque. Luego hace una <b>toma de
-  verificación</b>, el rombo verde del gráfico. <span class="ui">Usar como inicio de la pila</span> y
-  <span class="ui">Usar como fin de la pila</span> escriben la posición en la secuencia, en la ventana principal.</li>
+  verificación</b>, el rombo verde del gráfico. En la fila de abajo, <span class="ui">Usar el enfoque como</span>
+  <span class="ui">inicio de la pila</span> o <span class="ui">fin de la pila</span> escribe la posición en la secuencia, en la ventana principal.</li>
 </ol>
 {fig("visualizzatore-autofocus", [
     "<b>⌖ Autoenfoque</b> (<kbd>A</kbd>): abre el panel; el clic en la imagen elige el área. <kbd>Esc</kbd> lo cierra.",
     "<b>Área medida</b>: discontinua mientras funciona el autoenfoque. Se queda en el mismo punto aunque cambies de toma o pases a la vista en vivo.",
-    "<b>Imágenes</b>: fotogramas de la vista <i>En vivo</i> (predeterminado): el autoenfoque es <b>más rápido</b>; o <i>Tomas</i> reales: el resultado es <b>más seguro</b>, porque mide la foto a plena calidad, pero cada toma tarda unos segundos. <b>Área</b>: lado del cuadrado en píxeles del sensor.",
-    "<b>Curva de nitidez</b>: un punto por medida, en horizontal la posición del enfocador; debajo, el paso. La línea verde es la posición elegida, el rombo verde la toma de verificación. Con el puntero sobre un punto se leen su posición y su nitidez (en % del máximo).",
+    "<b>Modo</b>: <i>Rápido</i>, <i>Preciso</i> (predeterminado) o <i>Tomas reales</i>; debajo, lo que hará. <b>Búsqueda amplia</b> la activa para cuando toda la imagen está desenfocada. <b>Área</b>: lado del cuadrado en píxeles del sensor. La <b>barra del recorrido</b> va de − a + la excursión máxima alrededor de la partida: en claro el recorrido previsto, más oscuro el tramo ya recorrido, la línea es la posición actual.",
+    "<b>Curva de nitidez</b>: un punto por medida, en horizontal la posición del enfocador; debajo, el paso. Las pasadas anteriores quedan más tenues bajo la que está en curso, y el gráfico se amplía en la zona de la pasada fina. Los cuadrados naranjas son las tomas reales de confirmación, la línea verde la posición elegida, el rombo verde la toma de verificación. Con el puntero sobre un punto se leen su posición y su nitidez (en % del máximo).",
     "<b>Estado</b>: pasada, toma en curso y posición, luego el resultado con la verificación y la anchura del pico, o el motivo por el que no encontró el enfoque.",
-    "<b>Usar como inicio de la pila</b> / <b>Usar como fin de la pila</b>, mientras el enfocador siga en la posición encontrada. <b>Repetir</b> vuelve a hacer el autoenfoque; un clic en otro punto mueve el área sin cerrar el panel. Durante la medida está <b>Detener</b>.",
-], layout="full")}
+    "<b>Repetir</b> y, debajo, <b>Usar el enfoque como inicio / fin de la pila</b>, mientras el enfocador siga en la posición encontrada. <b>Repetir</b> vuelve a hacer el autoenfoque; un clic en otro punto mueve el área sin cerrar el panel. Durante la medida está <b>Detener</b>.",
+], layout="full", anchors={6: "r"})}
 <p>En cada toma la app mide lo nítidos que son los bordes dentro del área (el gradiente de la luminosidad, dividido por
 la luminosidad media, para que la exposición no cuente). Lejos del enfoque la curva es plana; cerca, sube en un pico
 estrecho. La app ajusta una curva a los puntos alrededor del máximo, así que la posición encontrada puede caer también
@@ -570,16 +571,34 @@ del archivo: en las pruebas con pilas reales da el mismo enfoque que el RAW reve
 área hay dos cosas a distinto enfoque (la pata y el cuerpo de un insecto) la curva tiene dos picos y la app lo indica
 en naranja: reduce el área al detalle que te interesa. Sobre un fondo uniforme no hay nada que medir y el autoenfoque se
 detiene con un mensaje.</div>
-<div class="box tip"><span class="t">¿Vista en vivo o tomas reales?</span>La <b>vista en vivo</b> es más rápida: sirve para
-buscar el enfoque y para las pruebas. Pero el fotograma en vivo es pequeño y comprimido, y con poca luz tiene ruido. Las
-<b>tomas reales</b> miden la foto tal como estará en la pila: para fijar con seguridad el inicio o el fin de una pila
-importante, repite el autoenfoque con <i>Tomas</i>.</div>
+<h3>Los modos</h3>
+<p>La <b>vista en vivo</b> es más rápida, pero su fotograma es pequeño y comprimido, y con poca luz tiene ruido; las
+<b>tomas reales</b> miden la foto tal como estará en la pila, pero tardan unos segundos cada una. Los modos combinan
+ambas cosas:</p>
+<ul>
+<li><b>Rápido</b>: solo vista en vivo, una pasada. Para buscar el enfoque y para las pruebas.</li>
+<li><b>Preciso</b> (predeterminado): dos pasadas con la vista en vivo y luego <b>3 tomas reales de confirmación</b>
+  alrededor del enfoque encontrado. El enfoque se recalcula con estas tomas (si la más nítida está en el borde se añaden
+  una o dos) y la toma de verificación también es real. Es el modo para fijar el inicio o el fin de una pila.</li>
+<li><b>Tomas reales</b>: todo el barrido con tomas reales. El más seguro y el más lento.</li>
+</ul>
+<p>Cada modo recuerda sus parámetros (paso, tomas por pasada, pasadas, imágenes, tomas de confirmación), que se cambian
+en <span class="ui">Configuración › Autoenfoque</span>.</p>
+<p>Con tomas reales (<i>Preciso</i> y <i>Tomas reales</i>) la vista en vivo se apaga antes de la primera toma,
+como con una foto de prueba, y sigue apagada hasta el final del autoenfoque: la cámara no pasa una y otra vez de la
+vista en vivo al disparo. Vuelve sola cuando mueves el enfocador. Si la cámara se desconecta durante una toma, la app
+lo reintenta y la vuelve a conectar; si las desconexiones se repiten, revisa la alimentación: una batería falsa
+(<i>dummy battery</i>) que no aguanta el pico del disparo desconecta la cámara del USB.</p>
+<div class="box warn"><span class="t">Excursión máxima: protege el sujeto</span>El autoenfoque nunca se aleja de la
+posición de partida más que la <b>excursión máxima</b> (± pasos, en la barra del recorrido). Si la pasada tuviera que
+alargarse más allá, porque el enfoque está más lejos de lo previsto, se detiene y lo indica en lugar de seguir hacia la
+muestra. El valor calculado cubre el recorrido previsto con un margen; redúcelo si la muestra está cerca del
+objetivo.</div>
 <div class="box warn"><span class="t">Verificación baja: la holgura</span>Si la toma de verificación es mucho menos nítida
 que el máximo de la curva (por debajo del 80 %), la app lo indica en naranja: normalmente la holgura de la mecánica es
 mayor que el sobrerrecorrido. Auméntalo en <span class="ui">Configuración › Autoenfoque</span>; al principio vale la
 compensación de holgura de la secuencia, pero al menos una anchura del pico.</div>
-<p>Los valores (paso, número de tomas, búsqueda amplia cuando todo está desenfocado) están en
-<span class="ui">Configuración › Autoenfoque</span>, capítulo 12.</p>
+<p>Todos los valores están en <span class="ui">Configuración › Autoenfoque</span>, capítulo 12.</p>
 <h2>{ui('Ispettore')}</h2>
 <p>El panel <span class="ui">{ui('Ispettore')}</span> (tecla <kbd>I</kbd>) comprueba la exposición de una foto con las
 mismas reglas que Focus Fusion. Es de solo lectura: no modifica las fotos. Funciona también sobre la vista en vivo,
@@ -888,26 +907,26 @@ un tramo y otro (los tramos cortos son más seguros, pero van más a saltos). De
 más: durante el movimiento continuo el enfocador se detiene por sí solo si durante 1,5 s deja de recibir órdenes del Mac. En cambio, <span class="ui">{ui('Vai')}</span>,
 los botones con un solo clic y la secuencia siempre llegan a su destino, aunque el movimiento dure muchos segundos.</p>
 <h2>Autoenfoque</h2>
-<p>Los ajustes del autoenfoque en un punto (capítulo 8). Los campos vacíos usan el valor calculado, escrito en gris en
-el campo: se calcula a partir de la <b>anchura del pico</b>, es decir, el intervalo de pasos en el que la nitidez se
-mantiene por encima de la mitad del máximo.</p>
+<p>Los ajustes del autoenfoque en un punto (capítulo 8): primero el modo y sus parámetros, luego los comunes a todos los
+modos. Los campos vacíos usan el valor predeterminado, escrito en gris en el campo; pasos y tomas se calculan a partir
+de la <b>anchura del pico</b>, es decir, el intervalo de pasos en el que la nitidez se mantiene por encima de la mitad
+del máximo.</p>
 {fig("autofocus-config", [
-    "<b>Imágenes que medir</b>: vista en vivo (predeterminado) o tomas reales. También se elige en el panel del visor.",
-    "<b>Lado del área</b> en píxeles del sensor, el mismo que el control del visor.",
-    "<b>Paso de la pasada fina</b>: aproximadamente un cuarto de la anchura del pico, para que al menos 4–5 tomas caigan en el pico.",
-    "<b>Búsqueda amplia si toda la imagen está desenfocada</b>: antes de la pasada fina, unas pocas tomas espaciadas (una anchura del pico, ajustable con <b>Paso de la búsqueda amplia</b>) para encontrar la zona de enfoque.",
-    "<b>Buscar dentro de ±</b> pasos desde la posición actual, siempre dentro de los límites; al lado, la amplitud en mm y cuántas tomas hacen falta.",
+    "<b>Modo</b> que usa el visor, con el resumen de lo que hace. También se elige en el panel.",
+    "<b>Parámetros del modo</b>: imágenes (vista en vivo o tomas reales), paso y tomas de la pasada fina, pasadas. Vacío = predeterminado del modo o calculado a partir de la anchura del pico. <b>Restablecer el modo</b> vuelve a los valores iniciales.",
+    "<b>Confirmación con tomas reales</b> (solo con la vista en vivo): cuántas tomas reales alrededor del enfoque encontrado; 0 = sin confirmación.",
+    "<b>Búsqueda amplia</b> si toda la imagen está desenfocada, con su amplitud (± pasos) y su paso, una anchura del pico: unas pocas tomas muy espaciadas.",
+    "<b>Excursión máxima ±</b> desde la posición de partida: más allá, el autoenfoque se detiene. Debajo, espera tras el movimiento y <b>sobrerrecorrido para la holgura</b>.",
     "<b>Anchura del pico</b> usada para los cálculos y de dónde viene. <b>Olvidar la medida</b> vuelve a la estimación.",
 ], layout="side", anchors={2: "r", 4: "r"})}
 <p>La primera vez la anchura del pico se estima a partir de la profundidad de campo del perfil óptico elegido en la
 secuencia y de la mecánica (µm por paso); sin perfil, a partir del recorrido entre los límites. Tras cada autoenfoque
 logrado la app guarda la anchura medida para ese perfil y la usa en adelante. La primera estimación es aproximada: si
 el pico es más ancho de lo previsto la pasada se alarga sola, si es más estrecho repite la medida con un paso más fino.
-Con 2 o 3 <b>Pasadas</b> el autoenfoque repite la medida alrededor del enfoque encontrado, cada vez con la mitad del
-paso. El <b>sobrerrecorrido para la holgura</b> es cuánto sobrepasa el enfocador una posición antes de volver a ella:
-debe superar la holgura de la mecánica. <span class="ui">Restablecer valores calculados</span> vacía los campos escritos
-a mano. Si la búsqueda amplia está
-desactivada y el enfoque está lejos, el autoenfoque se detiene y propone activarla.</p>
+El <b>sobrerrecorrido para la holgura</b> es cuánto sobrepasa el enfocador una posición antes de volver a ella: debe
+superar la holgura de la mecánica. <span class="ui">Restablecer valores calculados</span> vacía los campos comunes
+escritos a mano. Si la búsqueda amplia está desactivada y el enfoque está lejos, el autoenfoque se detiene y propone
+activarla.</p>
 <h2>{ui('Aggiornamenti')}</h2>
 {fig("aggiornamenti", [
     "Versión de la <b>app</b> y resultado de la última comprobación.",

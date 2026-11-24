@@ -339,5 +339,12 @@
   "Lo scatto di verifica ha solo il {pct} % della nitidezza massima della curva: probabile gioco della meccanica. Aumenta la sovracorsa in Configurazione › Autofocus e rifai": "The check shot has only {pct} % of the curve's peak sharpness: probably backlash in the mechanics. Increase the overshoot in Configuration › Autofocus and run again",
   "verifica {pct} %": "check {pct} %",
   "Passate": "Passes",
-  "Sovracorsa per il gioco": "Backlash overshoot"
+  "Sovracorsa per il gioco": "Backlash overshoot",
+  "L'autofocus dovrebbe andare a {pos}, oltre l'escursione massima (± {m} passi da {start}): fermato. Avvicina il fuoco a mano o allarga l'escursione in Configurazione › Autofocus": "The autofocus would have to go to {pos}, beyond the maximum excursion (± {m} steps from {start}): stopped. Bring the focus closer by hand or widen the excursion in Configuration › Autofocus",
+  "Conferma con scatti veri": "Confirm with real shots",
+  "Conferma con {n} scatti veri attorno a {pos}, passo {s}": "Confirming with {n} real shots around {pos}, step {s}",
+  "Conferma: fuoco a {pos} (col live view era {live})": "Confirmation: focus at {pos} (live view gave {live})",
+  "Modo non valido": "Invalid mode",
+  "Escursione massima": "Maximum excursion",
+  "Scatti di conferma": "Confirmation shots"
 }

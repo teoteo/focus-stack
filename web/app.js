@@ -94,8 +94,9 @@ function connectWS() {
     if (liveParkRev != null && park.rev > liveParkRev && liveOn) {
       setLive(false);
       liveResume = { pos: park.pos };
-      toast(t("Scatto di prova: il live view riparte quando muovi il focheggiatore"));
-    }
+      toast(park.why === "af" ? t("Autofocus con scatti veri: il live view riparte quando muovi il focheggiatore")
+        : t("Scatto di prova: il live view riparte quando muovi il focheggiatore"));
+    } else if (liveParkRev != null && park.rev > liveParkRev && liveResume) liveResume = { pos: park.pos };
     liveParkRev = park.rev ?? liveParkRev;
     render();
   };
@@ -514,7 +515,7 @@ function renderLive(c, run) {
   const firstShot = shots > 0 && liveShotsPrev === 0;
   liveShotsPrev = shots;
   if (firstShot && liveOn) { setLive(false); toast(t("Primo scatto della sequenza: live view chiuso, ora segue l'ultimo scatto")); return; }
-  if (liveResume && !liveOn) {
+  if (liveResume && !liveOn && !(S.autofocus && S.autofocus.busy)) {   // durante l'autofocus il live resta da parte
     // dopo lo scatto di prova: il live riparte al primo movimento (pulsanti dell'app, tastiera o del focheggiatore)
     const f = S.focuser || {};
     if (!c.connected || run) liveResume = null;
@@ -1708,26 +1709,50 @@ function jogSizes() {
   return out;
 }
 
-// Configurazione › Autofocus: campo vuoto = valore calcolato (mostrato come segnaposto)
-const AF_FIELDS = { "af-fine-step": "fine_step", "af-fine-points": "fine_points", "af-passes": "passes",
-  "af-coarse-range": "coarse_range", "af-coarse-step": "coarse_step", "af-settle": "settle_ms", "af-overscan": "overscan" };
+// Configurazione › Autofocus. Modi (Veloce, Preciso, Scatti veri) con i loro parametri, poi quelli comuni.
+// Campo vuoto = valore predefinito del modo o calcolato dalla larghezza del picco (mostrato come segnaposto).
+const AF_MODE_FIELDS = { "af-fine-step": "fine_step", "af-fine-points": "fine_points", "af-passes": "passes", "af-confirm": "confirm" };
+const AF_SHARED_FIELDS = { "af-coarse-range": "coarse_range", "af-coarse-step": "coarse_step", "af-settle": "settle_ms",
+  "af-overscan": "overscan", "af-max-travel": "max_travel" };
+// «Veloce|modo»: chiave a parte da «Veloce» della velocità del motore (in spagnolo Rápido, non Rápida); il testo dopo
+// la barra serve solo a distinguere la chiave e non si mostra
+const AF_FAST = () => t("Veloce|modo").split("|")[0];
+const AF_MODE_NAMES = { fast: AF_FAST, precise: () => t("Preciso"), shots: () => t("Scatti veri") };
+// riassunto di un modo: «live view · 2 passate · conferma con 3 scatti veri»
+function afModeSummary(u) {
+  if (!u) return "";
+  const parts = [u.source === "shot" ? t("scatti veri") : t("live view"),
+    u.passes > 1 ? t("{n} passate", { n: u.passes }) : t("1 passata")];
+  if (u.source !== "shot" && u.confirm > 0) parts.push(t("conferma con {n} scatti veri", { n: u.confirm }));
+  return parts.join(" · ");
+}
 function renderAfSettings() {
   const a = S.settings.autofocus || {}, v = S.autofocus || {}, calc = v.computed || {}, used = v.used || {};
-  $$("#af-src button").forEach((b) => b.setAttribute("aria-checked", b.dataset.src === (a.source || "live")));
+  const mode = v.mode || "precise", m = (v.modes || {})[mode] || {}, mset = m.set || {}, mdef = m.default || {}, mused = m.used || {};
+  $$("#af-mode button").forEach((b) => b.setAttribute("aria-checked", b.dataset.mode === mode));
+  const fastBtn = document.querySelector("#af-mode button[data-mode=fast]");
+  if (fastBtn.textContent !== AF_FAST()) fastBtn.textContent = AF_FAST();
+  $("af-mode-help").textContent = afModeSummary(mused);
+  $("af-mode-title").textContent = t("Parametri del modo «{m}»", { m: AF_MODE_NAMES[mode]() });
+  $$("#af-src button").forEach((b) => b.setAttribute("aria-checked", b.dataset.src === mused.source));
   const setVal = (id, val) => { if (document.activeElement !== $(id)) $(id).value = val == null ? "" : val; };
+  const setPh = (id, val) => { const ph = val != null ? fmtInt(val) : ""; if ($(id).placeholder !== ph) $(id).placeholder = ph; };
+  for (const [id, key] of Object.entries(AF_MODE_FIELDS)) { setVal(id, mset[key]); setPh(id, mdef[key]); }
+  $("af-confirm-row").classList.toggle("hidden", mused.source === "shot");
   setVal("af-roi", a.roi_px || 256);
-  for (const [id, key] of Object.entries(AF_FIELDS)) {
+  for (const [id, key] of Object.entries(AF_SHARED_FIELDS)) {
     setVal(id, a[key]);
-    const ph = calc[key] != null ? fmtInt(calc[key]) : "";
-    if ($(id).placeholder !== ph) $(id).placeholder = ph;
+    setPh(id, key === "max_travel" ? (v.travel || {}).computed_max : calc[key]);
   }
   $("af-coarse").checked = !!a.coarse;
   $("af-coarse-row").classList.toggle("hidden", !a.coarse);
   $("af-coarse-step-row").classList.toggle("hidden", !a.coarse);
   const um = v.um_per_step || 0;
-  $("af-fine-um").innerHTML = um && used.fine_step ? t("= {um}", { um: fmtUm(used.fine_step) }) : "&nbsp;";
-  $("af-overscan-um").innerHTML = um && used.overscan ? t("= {um}", { um: fmtUm(used.overscan) }) : "&nbsp;";
-  $("af-coarse-step-um").innerHTML = um && used.coarse_step ? t("= {um}", { um: fmtUm(used.coarse_step) }) : "&nbsp;";
+  const umTxt = (n) => (um && n ? t("= {um}", { um: fmtUm(n) }) : "&nbsp;");
+  $("af-fine-um").innerHTML = umTxt(mused.fine_step);
+  $("af-overscan-um").innerHTML = umTxt(used.overscan);
+  $("af-coarse-step-um").innerHTML = umTxt(used.coarse_step);
+  $("af-max-travel-um").innerHTML = umTxt((v.travel || {}).max);
   const n = used.coarse_range && used.coarse_step ? 2 * Math.floor(used.coarse_range / used.coarse_step) + 1 : null;
   let info = "&nbsp;";
   if (n) {
@@ -1742,10 +1767,17 @@ function renderAfSettings() {
   $("af-forget").classList.toggle("hidden", v.width_source !== "learned");
 }
 
-async function saveAf(change, okMsg) {
-  const a = S.settings.autofocus || {};
-  const keys = ["source", "roi_px", "fine_step", "fine_points", "passes", "coarse", "coarse_range", "coarse_step", "settle_ms", "overscan"];
+// le impostazioni si mandano intere: si parte da quelle salvate e si cambia solo il necessario.
+// modeChange: parametri del modo attivo da cambiare ({} con reset=true: tutti al predefinito)
+async function saveAf(change, okMsg, modeChange = null, reset = false) {
+  const a = S.settings.autofocus || {}, v = S.autofocus || {};
+  const keys = ["mode", "roi_px", "coarse", "coarse_range", "coarse_step", "settle_ms", "overscan", "max_travel"];
   const body = Object.fromEntries(keys.filter((k) => k in a).map((k) => [k, a[k]]));
+  body.mode = v.mode || a.mode || "precise";
+  if (modeChange) {
+    const cur = reset ? {} : { ...(((v.modes || {})[body.mode] || {}).set || {}) };
+    body.modes = { [body.mode]: { ...cur, ...modeChange } };
+  }
   return act(null, async () => {
     await api("/api/autofocus/settings", { ...body, ...change });
     const st = await api("/api/state", undefined, "GET");
@@ -1920,13 +1952,15 @@ function bind() {
     $("v-other-screen").onchange = (e) => FSNative.setPref("viewerOtherScreen", e.target.checked);
   }
   // autofocus
-  $$("#af-src button").forEach((b) => (b.onclick = () => saveAf({ source: b.dataset.src })));
+  $$("#af-mode button").forEach((b) => (b.onclick = () => saveAf({ mode: b.dataset.mode })));
+  $$("#af-src button").forEach((b) => (b.onclick = () => saveAf({}, null, { source: b.dataset.src })));
   $("af-roi").onchange = (e) => saveAf({ roi_px: Math.round(Number(e.target.value)) || 256 });
-  for (const [id, key] of Object.entries(AF_FIELDS)) {
-    $(id).onchange = (e) => saveAf({ [key]: e.target.value.trim() === "" ? null : Math.round(Number(e.target.value)) });
-  }
+  const afNum = (e) => (e.target.value.trim() === "" ? null : Math.round(Number(e.target.value)));
+  for (const [id, key] of Object.entries(AF_MODE_FIELDS)) $(id).onchange = (e) => saveAf({}, null, { [key]: afNum(e) });
+  for (const [id, key] of Object.entries(AF_SHARED_FIELDS)) $(id).onchange = (e) => saveAf({ [key]: afNum(e) });
   $("af-coarse").onchange = (e) => saveAf({ coarse: e.target.checked });
-  $("af-reset").onclick = () => saveAf({ fine_step: null, fine_points: null, passes: null, coarse_range: null, coarse_step: null, settle_ms: null, overscan: null },
+  $("af-mode-reset").onclick = () => saveAf({}, t("Modo ripristinato"), {}, true);
+  $("af-reset").onclick = () => saveAf({ coarse_range: null, coarse_step: null, settle_ms: null, overscan: null, max_travel: null },
     t("Valori calcolati ripristinati"));
   $("af-forget").onclick = () => saveAf({ forget_width: true }, t("Larghezza del picco dimenticata: torna la stima"));
   $("jog-hold").onchange = (e) => act(null, async () => {

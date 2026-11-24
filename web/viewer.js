@@ -153,7 +153,10 @@ function show(id, { keepView = lockView } = {}) {
     if (token !== loadToken) return;
     const oldW = natW;
     natW = el.naturalWidth; natH = el.naturalHeight;
-    if (isFull) fullW = afSensorW = natW;   // pixel del sensore: il lato dell'area dell'autofocus è in questi
+    if (isFull) {   // pixel del sensore: il lato dell'area dell'autofocus è in questi
+      fullW = afSensorW = natW;
+      try { localStorage.setItem("fs-sensor-w", String(natW)); } catch { /* opzionale */ }
+    }
     img.src = el.src;
     $("msg").classList.add("hidden");
     Inspector.analyze(el, inspectorInfo(shot, el, isFull));
@@ -275,7 +278,7 @@ async function fetchShots() {
   allCount = data.count ?? data.items.length;
   // la striscia ricomincia a ogni sequenza; gli scatti di prova fatti dopo ne aprono una nuova
   shots = data.group == null ? data.items : data.items.filter((s) => s.group === data.group);
-  $("clear").disabled = !allCount;
+  $("clear").classList.toggle("hidden", !allCount);
   renderCounter();
   renderStrip();
   // server riavviato: lo scatto mostrato non esiste più
@@ -336,10 +339,12 @@ function connectWS() {
       setLiveView(false, { restore: false });
       liveResume = { pos: park.pos };
       if (shots.length) show(shots[shots.length - 1].id, { keepView: false });   // poi loadShots porta quello nuovo
-      notice(t("Scatto di prova: il live view riparte quando muovi il focheggiatore"));
+      notice(park.why === "af" ? t("Autofocus con scatti veri: il live view riparte quando muovi il focheggiatore")
+        : t("Scatto di prova: il live view riparte quando muovi il focheggiatore"));
     }
+    else if (liveParkRev != null && park.rev > liveParkRev && liveResume) liveResume = { pos: park.pos };
     liveParkRev = park.rev ?? liveParkRev;
-    if (liveResume && !liveOn) {
+    if (liveResume && !liveOn && !(st.autofocus && st.autofocus.busy)) {   // durante l'autofocus il live resta da parte
       const f = st.focuser || {};
       if (!camState.connected || seqRunning) liveResume = null;
       else if (f.connected && (f.moving || (liveResume.pos != null && f.position !== liveResume.pos))) setLiveView(true);
@@ -470,7 +475,10 @@ let afPanelOpen = false;     // pannello aperto: un clic sull'immagine sceglie l
 let afHover = null;          // punto del grafico sotto il puntatore (indice in points, o "verify")
 let afRoi = null;            // {cx, cy, s}: centro e lato in frazioni della larghezza dell'immagine
 let afSizePx = 256;          // lato dell'area in pixel del sensore (Configurazione › Autofocus)
-let afSensorW = 0;           // larghezza della piena risoluzione dell'ultimo scatto visto (pixel del sensore)
+// larghezza della piena risoluzione dell'ultimo scatto visto (pixel del sensore), ricordata anche dopo: con il solo
+// live view non si conosce, e il lato dell'area in «pixel del sensore» diventava in pixel del fotogramma live
+let afSensorW = 0;
+try { afSensorW = Number(localStorage.getItem("fs-sensor-w")) || 0; } catch { /* opzionale */ }
 let afState = null;          // stato dell'autofocus dal server
 let afRevSeen = null;        // ultimo autofocus visto: uno nuovo (anche da un'altra finestra) apre il pannello
 let afSizeSaveTimer = 0;
@@ -531,7 +539,7 @@ function setAfSize(px, save = true) {
 // le impostazioni si mandano intere: si parte da quelle del server e si cambia solo il necessario
 function afSaveSettings(change) {
   const a = (lastState && lastState.settings && lastState.settings.autofocus) || {};
-  const keys = ["source", "roi_px", "fine_step", "fine_points", "passes", "coarse", "coarse_range", "coarse_step", "settle_ms", "overscan"];
+  const keys = ["mode", "roi_px", "coarse", "coarse_range", "coarse_step", "settle_ms", "overscan", "max_travel"];
   const body = Object.fromEntries(keys.filter((k) => k in a).map((k) => [k, a[k]]));
   return post("/api/autofocus/settings", { ...body, ...change });
 }
@@ -552,12 +560,34 @@ function drawAfRoi() {
 
 // curva: x = posizione del focheggiatore, y = nitidezza (scala dal minimo al massimo della passata in corso)
 let afChartGeom = null;   // funzioni di scala dell'ultimo disegno, per trovare il punto sotto il puntatore
+const AF_W = 400, AF_H = 190;   // dimensioni del grafico (viewBox)
+// Zoom del grafico: intervallo mostrato e animazione verso quello nuovo (ease-out). Si anima solo quando l'intervallo
+// cambia molto (inizio della passata fine dopo la ricerca ampia); gli allargamenti di un punto alla volta no.
+let afView = null, afAnim = null, afAnimRaf = 0;
+function afZoom(x0, x1, olds) {
+  const now = performance.now();
+  if (!afView || !olds.length) { afView = [x0, x1]; afAnim = null; return afView; }
+  const [v0, v1] = afAnim ? afAnim.to : afView;
+  if (v0 !== x0 || v1 !== x1) {
+    const big = (x1 - x0) < 0.6 * (v1 - v0);
+    if (big && !afAnim) afAnim = { from: afView.slice(), to: [x0, x1], t0: now };
+    else if (afAnim) afAnim.to = [x0, x1];
+    else afView = [x0, x1];
+  }
+  if (afAnim) {
+    const k = Math.min(1, (now - afAnim.t0) / 700), e = 1 - Math.pow(1 - k, 3);
+    afView = [afAnim.from[0] + (afAnim.to[0] - afAnim.from[0]) * e, afAnim.from[1] + (afAnim.to[1] - afAnim.from[1]) * e];
+    if (k >= 1) afAnim = null;
+    else { cancelAnimationFrame(afAnimRaf); afAnimRaf = requestAnimationFrame(drawAfChart); }
+  }
+  return afView;
+}
 function drawAfChart() {
   afChartGeom = null;
   const svg = $("af-chart");
   const a = afState || {};
   const pts = (a.points || []).slice();
-  const W = 320, H = 150, L = 10, R = 10, T = 24, B = 26;
+  const W = AF_W, H = AF_H, L = 10, R = 10, T = 24, B = 26;
   const ns = "http://www.w3.org/2000/svg";
   svg.replaceChildren();
   const el = (tag, attrs, text) => {
@@ -568,19 +598,54 @@ function drawAfChart() {
     return e;
   };
   for (let i = 0; i <= 3; i++) el("line", { class: "grid", x1: L, x2: W - R, y1: T + ((H - T - B) * i) / 3, y2: T + ((H - T - B) * i) / 3 });
-  if (!pts.length) {
+  const cps = (a.confirm_points || []).slice();
+  const prevs = (a.prev_passes || []).filter((ps) => ps && ps.length);   // passate finite, dalla più vecchia
+  const olds = prevs.flat();
+  if (!pts.length && !olds.length) {
+    afView = null;
     el("text", { x: W / 2, y: H / 2 + 4, "text-anchor": "middle" }, t("La curva della nitidezza compare qui, scatto per scatto"));
     return;
   }
-  const xs = pts.map((p) => p.pos).concat(a.target != null ? [a.target] : [], a.best != null ? [a.best] : []);
+  // prima del primo punto della passata fine si vede ancora tutta la ricerca ampia
+  const xs = (pts.length ? pts : olds).map((p) => p.pos)
+    .concat(cps.map((p) => p.pos), a.target != null ? [a.target] : [], a.best != null ? [a.best] : []);
   let x0 = Math.min(...xs), x1 = Math.max(...xs);
   if (x1 === x0) { x0 -= 1; x1 += 1; }
+  // zoom animato: quando l'intervallo cambia molto (dalla ricerca ampia alla passata fine) ci si arriva in 0,7 s
+  [x0, x1] = afZoom(x0, x1, olds);
   const ver = a.verify && a.state === "done" ? a.verify : null;
-  const vs = pts.map((p) => p.v).concat(ver ? [ver.v] : []);
+  // scala verticale: la passata in corso e, delle passate precedenti, solo i punti dentro la zona mostrata
+  const inView = olds.filter((p) => p.pos >= x0 && p.pos <= x1);
+  const vs = pts.map((p) => p.v).concat(ver && !ver.shot ? [ver.v] : [], (pts.length ? inView : olds).map((p) => p.v));
   const vmin = Math.min(...vs), vmax = Math.max(...vs), span = vmax - vmin || 1;
-  const top = Math.max(...pts.map((p) => p.v)) || 1;   // le percentuali sono sul massimo della passata
+  const top = Math.max(...(pts.length ? pts : olds).map((p) => p.v)) || 1;   // le percentuali sono sul massimo della passata
   const X = (pos) => L + ((pos - x0) / (x1 - x0)) * (W - L - R);
   const Y = (v) => T + (1 - (v - vmin) / span) * (H - T - B);
+  // area del grafico: i punti fuori dall'intervallo (ricerca ampia, durante lo zoom) non escono dai bordi
+  const clip = document.createElementNS(ns, "clipPath");
+  clip.setAttribute("id", "af-clip");
+  const cr = document.createElementNS(ns, "rect");
+  for (const [k, v] of Object.entries({ x: L - 6, y: 0, width: W - L - R + 12, height: H - B + 6 })) cr.setAttribute(k, v);
+  clip.appendChild(cr);
+  svg.appendChild(clip);
+  // passate precedenti sotto quella in corso: la più recente un po' visibile, le altre sempre più tenui
+  prevs.forEach((ps, i) => {
+    const g = document.createElementNS(ns, "g");
+    g.setAttribute("class", "old");
+    g.setAttribute("opacity", String(0.38 * Math.pow(0.6, prevs.length - 1 - i)));
+    g.setAttribute("clip-path", "url(#af-clip)");
+    const os = ps.slice().sort((p, q) => p.pos - q.pos);
+    const pl = document.createElementNS(ns, "polyline");
+    pl.setAttribute("class", "curve");
+    pl.setAttribute("points", os.map((p) => `${X(p.pos).toFixed(1)},${Y(p.v).toFixed(1)}`).join(" "));
+    g.appendChild(pl);
+    for (const p of os) {
+      const c = document.createElementNS(ns, "circle");
+      for (const [k, v] of Object.entries({ class: "pt coarse", cx: X(p.pos), cy: Y(p.v), r: 3.5 })) c.setAttribute(k, v);
+      g.appendChild(c);
+    }
+    svg.appendChild(g);
+  });
   const sorted = pts.slice().sort((p, q) => p.pos - q.pos);
   el("polyline", { class: "curve", points: sorted.map((p) => `${X(p.pos).toFixed(1)},${Y(p.v).toFixed(1)}`).join(" ") });
   if (a.busy && a.target != null && a.phase !== "moving") el("line", { class: "target", x1: X(a.target), x2: X(a.target), y1: T - 6, y2: H - B });
@@ -589,8 +654,17 @@ function drawAfChart() {
   for (const p of pts) {
     el("circle", { class: `pt${coarse ? " coarse" : ""}${p === last && a.busy ? " last" : ""}`, cx: X(p.pos), cy: Y(p.v), r: coarse ? 4.5 : 3.2 });
   }
+  // conferma con scatti veri: hanno una scala diversa dal live, il più nitido si disegna alla stessa altezza del
+  // massimo della curva del live
+  const cmax = Math.max(0, ...cps.map((p) => p.v)) || 1;
+  const Yc = (v) => Y(vmin + (v / cmax) * (vmax - vmin));
+  if (cps.length) {
+    const cs = cps.slice().sort((p, q) => p.pos - q.pos);
+    el("polyline", { class: "ccurve", points: cs.map((p) => `${X(p.pos).toFixed(1)},${Yc(p.v).toFixed(1)}`).join(" ") });
+    for (const p of cps) el("rect", { class: "cpt", x: X(p.pos) - 4, y: Yc(p.v) - 4, width: 8, height: 8 });
+  }
   if (ver) {   // scatto di verifica: rombo verde sulla posizione scelta
-    const cx = X(ver.pos), cy = Y(ver.v), r = 5.5;
+    const cx = X(ver.pos), cy = ver.shot && cps.length ? Yc(ver.v) : Y(ver.v), r = 5.5;
     el("polygon", { class: "verify", points: `${cx},${cy - r} ${cx + r},${cy} ${cx},${cy + r} ${cx - r},${cy}` });
   }
   if (a.best != null && (a.phase === "moving" || a.phase === "verify" || a.state === "done")) {
@@ -599,28 +673,38 @@ function drawAfChart() {
     el("text", { class: "best-lbl", x: X(a.best) + (right ? -5 : 5), y: 13, "text-anchor": right ? "end" : "start" }, fmtNum(a.best));
   }
   // valori del punto sotto il puntatore
-  const hov = afHover === "verify" ? ver : Number.isInteger(afHover) ? pts[afHover] : null;
+  const isC = typeof afHover === "string" && afHover.startsWith("c");
+  const hov = afHover === "verify" ? ver : isC ? cps[Number(afHover.slice(1))] : Number.isInteger(afHover) ? pts[afHover] : null;
   if (hov) {
+    const shotScale = isC || (afHover === "verify" && ver.shot && cps.length);
+    const pct = fmtNum((hov.v / (shotScale ? cmax : top)) * 100);
     const label = afHover === "verify"
-      ? t("verifica · posizione {pos} · {pct} %", { pos: fmtNum(hov.pos), pct: fmtNum((hov.v / top) * 100) })
-      : t("scatto {i} · posizione {pos} · {pct} %", { i: afHover + 1, pos: fmtNum(hov.pos), pct: fmtNum((hov.v / top) * 100) });
+      ? t("verifica · posizione {pos} · {pct} %", { pos: fmtNum(hov.pos), pct })
+      : isC ? t("scatto vero {i} · posizione {pos} · {pct} %", { i: Number(afHover.slice(1)) + 1, pos: fmtNum(hov.pos), pct })
+        : t("scatto {i} · posizione {pos} · {pct} %", { i: afHover + 1, pos: fmtNum(hov.pos), pct });
     const tx = el("text", { class: "tip-txt", x: 0, y: 0 }, label);
     const w = tx.getComputedTextLength ? tx.getComputedTextLength() + 12 : label.length * 6;
-    let bx = X(hov.pos) - w / 2, by = Y(hov.v) - 26;
+    const hy = shotScale ? Yc(hov.v) : Y(hov.v);
+    let bx = X(hov.pos) - w / 2, by = hy - 26;
     bx = Math.max(2, Math.min(W - w - 2, bx));
-    if (by < 2) by = Y(hov.v) + 10;
+    if (by < 2) by = hy + 10;
     const box = document.createElementNS(ns, "rect");
     for (const [k, v] of Object.entries({ class: "tip-box", x: bx, y: by, width: w, height: 18, rx: 4 })) box.setAttribute(k, v);
     svg.insertBefore(box, tx);
     tx.setAttribute("x", bx + 6);
     tx.setAttribute("y", by + 13);
-    el("circle", { class: "pt-hover", cx: X(hov.pos), cy: Y(hov.v), r: 6 });
+    el("circle", { class: "pt-hover", cx: X(hov.pos), cy: hy, r: 6 });
   }
-  afChartGeom = { X, Y, pts, ver };
+  afChartGeom = { X, Y, Yc, pts, cps, ver };
   el("text", { x: L, y: H - 8 }, fmtNum(x0));
   el("text", { x: W - R, y: H - 8, "text-anchor": "end" }, fmtNum(x1));
   if (a.step) el("text", { x: W / 2, y: H - 8, "text-anchor": "middle" }, t("passo {s}", { s: fmtNum(a.step) }));
 }
+
+// Testi e classi riscritti solo se cambiano: renderAf gira a ogni messaggio di stato (4 volte al secondo) e in WebKit
+// riscrivere il testo di un pulsante mentre lo si preme fa perdere il clic (Avvia/Rifai andava premuto più volte).
+function setText(el, text) { if (el.textContent !== text) el.textContent = text; }
+function setClass(el, cls) { if (el.className !== cls) el.className = cls; }
 
 function renderAf() {
   const a = afState || {};
@@ -630,26 +714,31 @@ function renderAf() {
   $("af-btn").disabled = !ready && !busy && !afPanelOpen;
   stage.classList.toggle("af-mode", afPanelOpen && !busy);
   $("af-panel").classList.toggle("hidden", !(afPanelOpen || busy));
-  const src = a.busy ? a.source : ((lastState && lastState.settings && lastState.settings.autofocus) || {}).source || "live";
-  for (const b of document.querySelectorAll("[data-af-src]")) {
-    b.setAttribute("aria-pressed", String(b.dataset.afSrc === src));
+  const cfg = (lastState && lastState.settings && lastState.settings.autofocus) || {};
+  const mode = a.mode || "precise";
+  for (const b of document.querySelectorAll("[data-af-mode]")) {
+    b.setAttribute("aria-pressed", String(b.dataset.afMode === mode));
     b.disabled = busy;
   }
+  $("af-coarse-chip").setAttribute("aria-pressed", String(!!cfg.coarse));
+  $("af-coarse-chip").disabled = busy;
+  const mused = (((a.modes || {})[mode]) || {}).used;
+  setText($("af-mode-sum"), afModeSummary(mused));
+  renderTravel(a, f, mode);
   const max = Math.max(64, Math.min(2048, Math.floor((refW() || 2048) / 2)));
   if (Number($("af-size").max) !== max) { $("af-size").max = max; setAfSize(afSizePx, false); }
   $("af-size").disabled = busy;
   const seqBusy = lastState && (["running", "paused", "stopping"].includes(lastState.sequence.state) || lastState.calibration.busy);
   $("af-start").disabled = busy || !ready || !afRoi || !natW || seqBusy;
-  $("af-start").textContent = a.state === "done" || a.state === "failed" ? t("Rifai") : t("Avvia");
+  setText($("af-start"), a.state === "done" || a.state === "failed" ? t("Rifai") : t("Avvia"));
   $("af-start").classList.toggle("hidden", busy);
   $("af-stop").classList.toggle("hidden", !busy);
   $("af-stop").disabled = a.state === "stopping";
   const doneHere = a.state === "done" && !busy && a.best != null && f.connected && f.position === a.best && !f.moving;
-  $("af-use-start").classList.toggle("hidden", !doneHere);
-  $("af-use-end").classList.toggle("hidden", !doneHere);
+  $("af-use").classList.toggle("hidden", !doneHere);
   // stato
   const st = $("af-status");
-  st.className = "af-status";
+  let cls = "af-status";
   let text = "";
   if (busy) {
     const n = Math.min((a.index || 0) + 1, a.total || 0);
@@ -658,27 +747,69 @@ function renderAf() {
     else if (a.phase === "coarse") text = t("Ricerca ampia · scatto {i} di {n} · posizione {pos}", { i: n, n: a.total, pos });
     else if (a.phase === "fine" && a.passes > 1) text = t("Passata {k} di {m} · scatto {i} di {n} · posizione {pos}", { k: a.pass_no, m: a.passes, i: n, n: a.total, pos });
     else if (a.phase === "fine") text = t("Passata fine · scatto {i} di {n} · posizione {pos}", { i: n, n: a.total, pos });
+    else if (a.phase === "confirm") text = t("Conferma con scatti veri · scatto {i} di {n} · posizione {pos}", { i: n, n: a.total, pos });
     else text = a.message || t("Autofocus…");
   } else if (a.state === "done") {
-    st.classList.add("ok");
+    cls += " ok";
     text = t("Fuoco a {pos}", { pos: fmtNum(a.best) });
     if (a.verify) text += " · " + t("verifica {pct} %", { pct: fmtNum(a.verify.ratio * 100) });
     if (a.fit && a.fit.width) text += " · " + t("picco largo {w} passi", { w: fmtNum(a.fit.width) });
   } else if (a.state === "failed" || a.state === "error") {
-    st.classList.add("bad");
+    cls += " bad";
     text = a.message;
   } else if (a.state === "idle" && a.message && afRevSeen != null) text = a.message;
-  st.textContent = text;
-  $("af-warn").textContent = a.warning || "";
+  setClass(st, cls);
+  setText(st, text);
+  setText($("af-warn"), a.warning || "");
   $("af-warn").classList.toggle("hidden", !a.warning);
   let hint = "";
   if (!ready) hint = t("Collega fotocamera e focheggiatore per usare l'autofocus.");
   else if (!busy && !afRoi) hint = t("Clic sul dettaglio da mettere a fuoco, poi Avvia.");
   else if (!busy) hint = t("Puoi spostare l'area con un altro clic e cambiarne il lato con [ e ].");
-  $("af-hint").textContent = hint;
+  setText($("af-hint"), hint);
   $("af-hint").classList.toggle("hidden", !hint);
   drawAfChart();
   drawAfRoi();
+}
+
+// riassunto di un modo: «live view · 2 passate · conferma con 3 scatti veri» (come in Configurazione)
+// «Veloce|modo»: chiave a parte da «Veloce» della velocità del motore (vedi app.js)
+document.querySelector("[data-af-mode=fast]").textContent = t("Veloce|modo").split("|")[0];
+
+function afModeSummary(u) {
+  if (!u) return "";
+  const parts = [u.source === "shot" ? t("scatti veri") : t("live view"),
+    u.passes > 1 ? t("{n} passate", { n: u.passes }) : t("1 passata")];
+  if (u.source !== "shot" && u.confirm > 0) parts.push(t("conferma con {n} scatti veri", { n: u.confirm }));
+  return parts.join(" · ");
+}
+
+// Corsa: prima di Avvia quella prevista attorno alla posizione attuale; durante e dopo, il tratto percorso. La barra
+// va da −escursione massima a +escursione massima attorno alla partenza (oltre, l'autofocus si ferma da solo).
+function renderTravel(a, f, mode) {
+  const busyOrDone = a.start_pos != null && (a.busy || ["done", "failed", "error"].includes(a.state));
+  const tr = (((a.modes || {})[mode]) || {}).travel || a.travel || {};
+  const start = busyOrDone ? a.start_pos : f.position;
+  const M = busyOrDone && a.max_travel ? a.max_travel : tr.max, P = tr.planned;
+  const box = $("af-travel");
+  box.classList.toggle("hidden", !(f.connected && start != null && M));
+  if (!(f.connected && start != null && M)) return;
+  const frac = (pos) => Math.max(0, Math.min(1, (pos - (start - M)) / (2 * M)));
+  const place = (el, a0, b0) => { el.style.left = `${frac(a0) * 100}%`; el.style.width = `${Math.max(0, frac(b0) - frac(a0)) * 100}%`; };
+  place($("af-bar-plan"), start - P, start + P);
+  const seen = a.visited && a.visited.length === 2 && busyOrDone ? a.visited : null;
+  $("af-bar-seen").classList.toggle("hidden", !seen);
+  if (seen) place($("af-bar-seen"), seen[0], seen[1]);
+  $("af-bar-now").style.left = `${frac(f.position) * 100}%`;
+  const um = (lastState && lastState.um_per_step) || 0;
+  const umTxt = (n) => (um ? ` (${fmtNum((n * um) / 1000, n * um >= 1000 ? 2 : 3)} mm)` : "");
+  // verso il campione: con «decreasing» avvicinarsi al campione vuol dire passi decrescenti
+  const toward = ((lastState && lastState.settings && lastState.settings.toward_specimen) || "decreasing") === "decreasing" ? -1 : 1;
+  let text = busyOrDone && seen
+    ? t("Percorso: da {a} a {b} · al massimo ± {m} passi{um} dalla partenza", { a: fmtNum(seen[0]), b: fmtNum(seen[1]), m: fmtNum(M), um: umTxt(M) })
+    : t("Corsa prevista ± {p} passi{up} · al massimo ± {m}{um}", { p: fmtNum(P), up: umTxt(P), m: fmtNum(M), um: umTxt(M) });
+  text += " · " + t("verso il campione fino a {pos}", { pos: fmtNum(start + toward * M) });
+  setText($("af-travel-txt"), text);
 }
 
 function onAfState(st) {
@@ -690,6 +821,7 @@ function onAfState(st) {
   // autofocus partito (anche da un'altra finestra): pannello aperto; con gli scatti veri si seguono gli scatti
   if (afRevSeen != null && a.rev > afRevSeen) {
     afPanelOpen = true;
+    afView = null; afAnim = null;   // grafico nuovo: niente zoom dal grafico dell'autofocus precedente
     if (a.source === "shot") {
       setFollow(true);
       if (liveOn) setLiveView(false, { restore: false });
@@ -702,15 +834,19 @@ function onAfState(st) {
 $("af-btn").onclick = () => (afPanelOpen ? closeAf() : openAf());
 $("af-close").onclick = closeAf;
 $("af-size").addEventListener("input", (e) => setAfSize(Number(e.target.value)));
-for (const b of document.querySelectorAll("[data-af-src]")) {
-  b.onclick = () => afSaveSettings({ source: b.dataset.afSrc }).catch((e) => notice(e.message));
+for (const b of document.querySelectorAll("[data-af-mode]")) {
+  b.onclick = () => afSaveSettings({ mode: b.dataset.afMode }).catch((e) => notice(e.message));
 }
+$("af-coarse-chip").onclick = () => {
+  const cfg = (lastState && lastState.settings && lastState.settings.autofocus) || {};
+  afSaveSettings({ coarse: !cfg.coarse }).catch((e) => notice(e.message));
+};
 $("af-start").onclick = async () => {
   const roi = afRoiRect();
   if (!roi) return;
   $("af-start").disabled = true;
   try {
-    const src = ((lastState && lastState.settings && lastState.settings.autofocus) || {}).source || "live";
+    const v = (lastState && lastState.autofocus) || {}, src = (((v.modes || {})[v.mode] || {}).used || {}).source || "live";
     if (src === "shot") { setFollow(true); if (liveOn) setLiveView(false, { restore: false }); }
     await post("/api/autofocus/start", { roi });
   } catch (e) {
@@ -732,11 +868,13 @@ $("af-use-end").onclick = () => useAs("end");
 $("af-chart").addEventListener("pointermove", (e) => {
   const g = afChartGeom, svg = $("af-chart");
   if (!g) return;
-  const r = svg.getBoundingClientRect(), k = 320 / r.width;
+  const r = svg.getBoundingClientRect(), k = AF_W / r.width;
   const mx = (e.clientX - r.left) * k, my = (e.clientY - r.top) * k;
   let best = null, bestD = 14;
   g.pts.forEach((p, i) => { const d = Math.hypot(g.X(p.pos) - mx, g.Y(p.v) - my); if (d < bestD) { bestD = d; best = i; } });
-  if (g.ver && Math.hypot(g.X(g.ver.pos) - mx, g.Y(g.ver.v) - my) < bestD) best = "verify";
+  g.cps.forEach((p, i) => { const d = Math.hypot(g.X(p.pos) - mx, g.Yc(p.v) - my); if (d < bestD) { bestD = d; best = `c${i}`; } });
+  const vy = g.ver ? (g.ver.shot && g.cps.length ? g.Yc(g.ver.v) : g.Y(g.ver.v)) : 0;
+  if (g.ver && Math.hypot(g.X(g.ver.pos) - mx, vy - my) < bestD) best = "verify";
   if (best !== afHover) { afHover = best; drawAfChart(); }
 });
 $("af-chart").addEventListener("pointerleave", () => { if (afHover != null) { afHover = null; drawAfChart(); } });
