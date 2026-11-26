@@ -667,3 +667,5 @@ label.set-row { cursor: pointer; }
 .sum-dr .sn-mini { width: 150px; flex: none; margin: 0; }
 .sum-dr b { color: var(--text); }
 .sum-dr .muted { color: var(--text-2); font-size: 13px; }
+/* riepilogo della sequenza: pulsante che allinea il diaframma della fotocamera al profilo */
+.summary .sum-fix { margin: 6px 0 2px; padding: 3px 10px; font-size: 13px; display: inline-block; }

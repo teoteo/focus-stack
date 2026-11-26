@@ -981,5 +981,10 @@
  "oltre {iso}": "above {iso}",
  "Consigliati: ISO {list}": "Recommended: ISO {list}",
  "stop": "stops",
- "Profilo ottico, calibrazione e sensore": "Optics profile, calibration and sensor"
+ "Profilo ottico, calibrazione e sensore": "Optics profile, calibration and sensor",
+ "Obiettivo senza contatti: imposta {f} sulla ghiera, come nel profilo": "Lens without contacts: set {f} on the aperture ring, as in the profile",
+ "La fotocamera non offre {f} con l'obiettivo di ora: imposta il diaframma a mano": "The camera doesn't offer {f} with the current lens: set the aperture by hand",
+ "Diaframma della fotocamera impostato a {f}, come nel profilo «{name}»": "Camera aperture set to {f}, as in the “{name}” profile",
+ "⚠ La fotocamera è a {cur}, il profilo dice {f}": "⚠ The camera is at {cur}, the profile says {f}",
+ "Imposta {f}": "Set {f}"
 }

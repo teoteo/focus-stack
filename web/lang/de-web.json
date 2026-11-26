@@ -981,5 +981,10 @@
  "oltre {iso}": "über {iso}",
  "Consigliati: ISO {list}": "Empfohlen: ISO {list}",
  "stop": "Blendenstufen",
- "Profilo ottico, calibrazione e sensore": "Optikprofil, Kalibrierung und Sensor"
+ "Profilo ottico, calibrazione e sensore": "Optikprofil, Kalibrierung und Sensor",
+ "Obiettivo senza contatti: imposta {f} sulla ghiera, come nel profilo": "Objektiv ohne Kontakte: {f} am Blendenring einstellen, wie im Profil",
+ "La fotocamera non offre {f} con l'obiettivo di ora: imposta il diaframma a mano": "Die Kamera bietet {f} mit dem aktuellen Objektiv nicht an: Blende von Hand einstellen",
+ "Diaframma della fotocamera impostato a {f}, come nel profilo «{name}»": "Kamerablende auf {f} gestellt, wie im Profil „{name}“",
+ "⚠ La fotocamera è a {cur}, il profilo dice {f}": "⚠ Die Kamera steht auf {cur}, das Profil sagt {f}",
+ "Imposta {f}": "{f} einstellen"
 }

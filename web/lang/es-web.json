@@ -981,5 +981,10 @@
  "oltre {iso}": "por encima de {iso}",
  "Consigliati: ISO {list}": "Recomendados: ISO {list}",
  "stop": "pasos",
- "Profilo ottico, calibrazione e sensore": "Perfil óptico, calibración y sensor"
+ "Profilo ottico, calibrazione e sensore": "Perfil óptico, calibración y sensor",
+ "Obiettivo senza contatti: imposta {f} sulla ghiera, come nel profilo": "Objetivo sin contactos: ajusta {f} en el anillo, como en el perfil",
+ "La fotocamera non offre {f} con l'obiettivo di ora: imposta il diaframma a mano": "La cámara no ofrece {f} con el objetivo actual: ajusta el diafragma a mano",
+ "Diaframma della fotocamera impostato a {f}, come nel profilo «{name}»": "Diafragma de la cámara ajustado a {f}, como en el perfil «{name}»",
+ "⚠ La fotocamera è a {cur}, il profilo dice {f}": "⚠ La cámara está a {cur}, el perfil dice {f}",
+ "Imposta {f}": "Ajustar {f}"
 }

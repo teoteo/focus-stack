@@ -772,6 +772,10 @@ function updateSummary() {
   if (out.length) html += `<span class="bad-text">${approach != null && out.includes(approach)
     ? t("⚠ La sequenza (con la compensazione del gioco) esce dai fine corsa {lo} – {hi}", lim)
     : t("⚠ La sequenza esce dai fine corsa {lo} – {hi}", lim)}</span>`;
+  const ap = profileAperture(p.optics_profile);
+  if (ap && ap.connected && !ap.same && !ap.manual)
+    html += `<span class="warn-text">${t("⚠ La fotocamera è a {cur}, il profilo dice {f}", { cur: escapeHtml(ap.cur), f: ap.label })}` +
+      (ap.choice ? ` <button type="button" class="btn ghost small sum-fix" data-act="apply-aperture">${t("Imposta {f}", { f: escapeHtml(ap.choice) })}</button>` : "") + "</span>";
   if (p.capture_mode === "trigger") html += `<span class="warn-text">${t("In modalità trigger imposta la destinazione su scheda.")}</span>`;
   $("s-summary").innerHTML = html;
   // sequenza ferma e mai avviata: il contatore segue i campi (prima si aggiornava solo all'arrivo dello stato)
@@ -1455,6 +1459,36 @@ function opticsSummary() {
   if (!o) return t("Nessun profilo ottico: in sequence.json il filtro risulterà «nessuno»");
   return t("Profilo «{name}»: {txt}", { name: escapeHtml(name), txt: escapeHtml(opticsText(o)) });
 }
+// Diaframma del profilo macro e fotocamera: scegliendo il profilo nella Sessione il diaframma salvato passa alla
+// fotocamera (la scelta più vicina fra quelle che offre, entro 1/3 di stop); se poi i due divergono, il riepilogo lo dice.
+const fNum = (v) => { const n = parseFloat(String(v || "").replace(/^f\//i, "")); return n > 0 ? n : 0; };
+function profileAperture(name) {
+  const o = opticsProfiles()[name], n = o && o.kind === "macro" && fNum((o.macro || {}).f_number);
+  if (!n) return null;
+  const c = S && S.camera, s = c && c.connected && (c.settings || {}).aperture;
+  const info = { want: n, label: `f/${+n.toFixed(1)}`, cur: s ? s.current : "", choice: null, manual: false, connected: !!s };
+  if (!s) return info;
+  info.manual = !fNum(s.current);   // f/0: obiettivo senza contatti, il diaframma si gira a mano
+  let bd = Infinity;
+  for (const ch of s.choices || []) {
+    const v = fNum(ch), d = v ? Math.abs(Math.log2(v / n)) : Infinity;
+    if (d < bd) { bd = d; info.choice = ch; }
+  }
+  if (bd > 0.17 || s.readonly) info.choice = null;
+  info.same = !info.manual && Math.abs(Math.log2(fNum(s.current) / n)) < 0.05;
+  return info;
+}
+async function applyProfileAperture(name) {
+  const a = profileAperture(name), run = S && S.sequence && ["running", "paused", "stopping"].includes(S.sequence.state);
+  if (!a || !a.connected || a.same || run) return;
+  if (a.manual) { toast(t("Obiettivo senza contatti: imposta {f} sulla ghiera, come nel profilo", { f: a.label })); return; }
+  if (!a.choice) { toast(t("La fotocamera non offre {f} con l'obiettivo di ora: imposta il diaframma a mano", { f: a.label }), true); return; }
+  try {
+    await api("/api/camera/settings", { name: "aperture", value: a.choice });
+    camSettingsSig = "";
+    toast(t("Diaframma della fotocamera impostato a {f}, come nel profilo «{name}»", { f: a.choice, name }));
+  } catch (err) { toast(err.message || String(err), true); }
+}
 const escapeHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 let pxResultHtml = null;   // ultimo testo di Scala sul campione
@@ -1644,7 +1678,7 @@ function bindOptics() {
       updateSummary();
     }, t("Profilo eliminato"));
   };
-  $("s-optics").addEventListener("change", updateSummary);
+  $("s-optics").addEventListener("change", () => { updateSummary(); applyProfileAperture($("s-optics").value); });
   $("s-optics-edit").onclick = () => {
     switchTab("optics");
     if (!$("o-dirty").textContent) editProfile($("s-optics").value);
@@ -2413,6 +2447,10 @@ function bind() {
     $("s-step").value = Math.max(1, Math.ceil(span / (n - 1)));
     syncCount(); linkMark(); linkDone(); updateSummary();
   });
+  $("s-summary").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-act=apply-aperture]");
+    if (b) { b.disabled = true; applyProfileAperture($("s-optics").value); }
+  });
   $("s-summary").addEventListener("toggle", (e) => { if (e.target.id === "s-sum-more") summaryOpen = e.target.open; }, true);
   // una nuova modifica dello stesso campo, dopo esserne usciti, riparte dai valori di quel momento
   LINKED.forEach((id) => $(id).addEventListener("blur", () => { if (linkEdit && linkEdit.field === id) linkEdit.closed = true; }));
@@ -2455,6 +2493,7 @@ function bind() {
     if (p.return_to_start !== undefined) $("s-return").checked = p.return_to_start;
     if (p.sound_on_end !== undefined) $("s-sound").checked = p.sound_on_end;
     linkClear(); syncCount(); updateSummary();
+    if (p.optics_profile) applyProfileAperture(p.optics_profile);
   };
   $("s-preset-save").onclick = () => {
     const name = (window.prompt(t("Nome del preset (es. obiettivo 10×)"), $("s-preset").value || "") || "").trim();

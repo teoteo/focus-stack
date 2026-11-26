@@ -344,7 +344,7 @@ add(f"""
     "<b>Passo</b> fra uno scatto e il successivo, in passi del motore (capitolo 11).",
     "<b>Numero di scatti</b>. Se cambi Inizio, Fine o Passo si ricalcola il numero di scatti; se cambi il numero di scatti si ricalcola il passo. Quando il passo cambia da solo diventa arancione e mostra <span class='ui'>↺ era …</span>: un clic annulla la modifica.",
     "<b>Attesa dopo il movimento</b>: tempo per far smorzare le vibrazioni prima dello scatto (1–3 s al microscopio).",
-    "<b>Ottica e filtro (profilo)</b>: il profilo di obiettivo, filtro e illuminazione da scrivere nei dati della pila (7.2). <span class='ui'>Modifica</span> lo apre nella scheda Ottica. Senza profilo la pila risulta «nessun filtro».",
+    "<b>Ottica e filtro (profilo)</b>: il profilo di obiettivo, filtro e illuminazione da scrivere nei dati della pila (7.2). <span class='ui'>Modifica</span> lo apre nella scheda Ottica. Senza profilo la pila risulta «nessun filtro». Con un profilo macro che indica il diaframma, sceglierlo imposta anche il diaframma della fotocamera; se poi i due non coincidono, il riepilogo lo segnala.",
     "<b>Riepilogo</b>: scatti, escursione in passi e in µm, passo in µm e durata stimata. Un clic sul riepilogo (▶ a destra) mostra anche il profilo ottico usato e la calibrazione che verrà collegata alla pila. Se la sequenza esce dai fine corsa compare un avviso rosso e la sequenza non parte.",
     "<b>Salva in</b>: la cartella delle foto. <span class='ui'>Scegli…</span> apre il pannello del Finder, <span class='ui'>Apri</span> la mostra nel Finder.",
     "<b>Scatti per posizione</b>: quante foto fare a ogni posizione (predefinito 1). Con più scatti il software di fusione può farne la media e ridurre il rumore (7.4).",
