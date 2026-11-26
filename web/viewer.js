@@ -88,7 +88,10 @@ function drawGuides() {
     }
   }
   if (guideMode === "center" || guideMode === "both") {
-    const cx = x0 + w / 2, cy = y0 + h / 2, arm = Math.max(12 * d, Math.min(w, h) / 24);
+    // con l'area dell'autofocus in vista l'incrocio ne segna il centro (si sposta con lei), altrimenti il centro
+    const roi = afShownRect();
+    const cx = roi ? x0 + ((roi[0] + roi[2]) / 2) * w : x0 + w / 2, cy = roi ? y0 + ((roi[1] + roi[3]) / 2) * h : y0 + h / 2;
+    const arm = Math.max(12 * d, Math.min(w, h) / 24);
     vline(cx, cy - arm, cy + arm + 1);
     hline(cy, cx - arm, cx + arm + 1);
   }
@@ -544,12 +547,21 @@ function afSaveSettings(change) {
   return post("/api/autofocus/settings", { ...body, ...change });
 }
 
+// area dell'autofocus mostrata sull'immagine (frazioni x0, y0, x1, y1) o null: quella della misura in corso,
+// altrimenti quella scelta, solo con il pannello aperto
+function afShownRect() {
+  const running = afBusy() && afState.roi && afState.roi.length === 4;
+  const rect = running ? afState.roi : afRoiRect();
+  return (afPanelOpen || running) && rect && natW > 0 && img.style.visibility !== "hidden" ? rect : null;
+}
+
 function drawAfRoi() {
   const box = $("af-roi");
   const running = afBusy() && afState.roi && afState.roi.length === 4;
-  const rect = running ? afState.roi : afRoiRect();
-  const show = (afPanelOpen || running) && rect && natW > 0 && img.style.visibility !== "hidden";
+  const rect = afShownRect();
+  const show = !!rect;
   box.classList.toggle("hidden", !show);
+  drawGuides();   // l'incrocio delle guide segue l'area
   if (!show) return;
   box.classList.toggle("running", running);
   const [x0, y0, x1, y1] = rect;
