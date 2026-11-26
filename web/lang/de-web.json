@@ -991,5 +991,10 @@
  "Fotogrammi {list} molto diversi dagli altri del set: conviene rifarlo": "Aufnahmen {list} weichen stark vom Rest des Satzes ab: besser neu aufnehmen",
  "livello {v} % contro {ref} %": "Pegel {v} % statt {ref} %",
  "{name}_data-ora": "{name}_Datum-Uhrzeit",
- "Salva in {path}: ogni pila ha una cartella nuova, anche con lo stesso nome": "Speichert in {path}: jeder Stapel bekommt einen neuen Ordner, auch mit demselben Namen"
+ "Salva in {path}: ogni pila ha una cartella nuova, anche con lo stesso nome": "Speichert in {path}: jeder Stapel bekommt einen neuen Ordner, auch mit demselben Namen",
+ "Area durante la misura": "Bereich während der Messung",
+ "Area fissa: misura sempre lo stesso punto dell'immagine": "Fester Bereich: misst immer dieselbe Stelle des Bildes",
+ "Area fissa": "Fester Bereich",
+ "Segue il soggetto: l'area si sposta con il soggetto quando l'immagine scorre mentre il fuoco cambia (macro)": "Folgt dem Motiv: der Bereich wandert mit dem Motiv, wenn das Bild beim Fokussieren wandert (Makro)",
+ "Segue il soggetto": "Folgt dem Motiv"
 }

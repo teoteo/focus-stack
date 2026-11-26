@@ -79,7 +79,8 @@ DEFAULTS: dict = {
     # widths = larghezza del picco (passi a metà altezza) imparata per ogni profilo ottico ("" = nessun profilo)
     # modes: parametri propri di ogni modo (fast, precise, shots), vedi autofocus.MODE_DEFAULTS
     "autofocus": {"mode": "precise", "modes": {}, "roi_px": 256, "coarse": False, "coarse_range": None,
-                  "coarse_step": None, "settle_ms": None, "overscan": None, "max_travel": None, "widths": {}},
+                  "coarse_step": None, "settle_ms": None, "overscan": None, "max_travel": None, "widths": {},
+                  "track": False},   # True = l'area segue il soggetto durante la misura
     # pagina di sola lettura per seguire la sequenza dalla rete locale (smartphone): vedi remote.py
     "remote": {"enabled": False, "port": 8766, "token": ""},
     # lingua dell'interfaccia: "auto" = quella di macOS, oppure "it" / "en"

@@ -991,5 +991,10 @@
  "Fotogrammi {list} molto diversi dagli altri del set: conviene rifarlo": "Fotogramas {list} muy distintos del resto del conjunto: conviene repetirlo",
  "livello {v} % contro {ref} %": "nivel {v} % frente a {ref} %",
  "{name}_data-ora": "{name}_fecha-hora",
- "Salva in {path}: ogni pila ha una cartella nuova, anche con lo stesso nome": "Guarda en {path}: cada pila tiene una carpeta nueva, incluso con el mismo nombre"
+ "Salva in {path}: ogni pila ha una cartella nuova, anche con lo stesso nome": "Guarda en {path}: cada pila tiene una carpeta nueva, incluso con el mismo nombre",
+ "Area durante la misura": "Área durante la medición",
+ "Area fissa: misura sempre lo stesso punto dell'immagine": "Área fija: mide siempre el mismo punto de la imagen",
+ "Area fissa": "Área fija",
+ "Segue il soggetto: l'area si sposta con il soggetto quando l'immagine scorre mentre il fuoco cambia (macro)": "Sigue al sujeto: el área se mueve con el sujeto cuando la imagen se desplaza al cambiar el enfoque (macro)",
+ "Segue il soggetto": "Sigue al sujeto"
 }

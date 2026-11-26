@@ -1626,6 +1626,7 @@ class AutofocusSettings(BaseModel):
     coarse_step: int | None = None  # passo della ricerca ampia (passi)
     settle_ms: int | None = None
     forget_width: bool = False      # dimentica la larghezza del picco imparata per il profilo della sequenza
+    track: bool = False             # l'area segue il soggetto (macro con l'immagine che scorre) invece di restare ferma
 
 
 AF_SOURCES = ("shot", "live")
@@ -1658,7 +1659,7 @@ async def autofocus_start(body: AutofocusStart):
                  settle_ms=int(used["settle_ms"]), overscan=int(used["overscan"]), passes=int(used["passes"]),
                  confirm=int(used["confirm"] or 0), mode=mode, max_travel=int(view["modes"][mode]["travel"]["max"]),
                  direction=1 if int(seq.get("end") or 0) >= int(seq.get("start") or 0) else -1,
-                 profile=app_state.af_profile())
+                 profile=app_state.af_profile(), track=bool(app_state.cfg["autofocus"].get("track")))
     app_state.af.start(p)
     return {"ok": True}
 

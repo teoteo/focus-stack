@@ -991,5 +991,10 @@
  "Fotogrammi {list} molto diversi dagli altri del set: conviene rifarlo": "Frames {list} very unlike the rest of the set: better to redo it",
  "livello {v} % contro {ref} %": "level {v} % vs {ref} %",
  "{name}_data-ora": "{name}_date-time",
- "Salva in {path}: ogni pila ha una cartella nuova, anche con lo stesso nome": "Saves to {path}: every stack gets a new folder, even with the same name"
+ "Salva in {path}: ogni pila ha una cartella nuova, anche con lo stesso nome": "Saves to {path}: every stack gets a new folder, even with the same name",
+ "Area durante la misura": "Area during the measurement",
+ "Area fissa: misura sempre lo stesso punto dell'immagine": "Fixed area: always measures the same spot of the image",
+ "Area fissa": "Fixed area",
+ "Segue il soggetto: l'area si sposta con il soggetto quando l'immagine scorre mentre il fuoco cambia (macro)": "Follows the subject: the area moves with the subject when the image drifts as focus changes (macro)",
+ "Segue il soggetto": "Follows the subject"
 }

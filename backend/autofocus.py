@@ -20,8 +20,10 @@ from __future__ import annotations
 
 import asyncio
 import math
+import shutil
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from statistics import median
 from typing import Awaitable, Callable
 
@@ -44,6 +46,11 @@ MAX_POINTS = 60             # limite di sicurezza per una passata
 MAX_PASSES = 3              # passate fini: ognuna attorno al fuoco della precedente, con metà passo
 VERIFY_MIN = 0.8            # scatto di verifica sotto l'80 % del massimo della curva = probabile gioco
 CONFIRM_EXTRA = 2           # conferma: scatti in più se il fuoco cade sul bordo dei primi
+# Area che segue il soggetto (macro con la slitta non allineata all'asse: l'immagine scorre mentre il fuoco cambia).
+# A ogni immagine il contenuto dell'area si cerca partendo da quella della posizione più vicina già misurata, dove il
+# fuoco è quasi uguale (fs-rawstat --track); per i salti lunghi si prevede lo spostamento da quelli già visti.
+TRACK_MIN = 0.4             # correlazione minima: sotto, il soggetto è perso e l'autofocus si ferma
+TRACK_MARGIN = 0.75         # ricerca entro ± 0,75 volte il lato dell'area attorno alla posizione prevista
 
 # Modi: ognuno con i suoi parametri essenziali (modificabili in Configurazione › Autofocus, salvati per modo). Un valore
 # None = calcolato dalla larghezza del picco (passo e scatti della passata). confirm = scatti veri attorno al fuoco
@@ -121,6 +128,7 @@ class AFParams:
     mode: str = ""
     direction: int = 1                       # verso della pila: +1 passi crescenti, −1 decrescenti
     profile: str = ""
+    track: bool = False                      # l'area segue il soggetto invece di restare ferma nell'immagine
 
 
 @dataclass
@@ -133,7 +141,8 @@ class AFStatus:
     total: int = 0               # scatti previsti nella passata (può crescere se il picco è al bordo)
     target: int | None = None
     step: int = 0
-    roi: list = field(default_factory=list)
+    roi: list = field(default_factory=list)   # area misurata adesso (con l'inseguimento si sposta)
+    track: bool = False
     source: str = "live"
     capture: str = ""            # immagini della misura in corso: live | shot (la conferma usa scatti veri anche in live)
     mode: str = ""
@@ -256,6 +265,8 @@ class AutofocusRunner:
         self._stop = False
         # sorgente di fs-rawstat per live e per scatti: decisa alla prima misura, poi sempre quella
         self._sources = {"live": "auto", "shot": "auto"}
+        self._trk: dict[int, dict] = {}   # area inseguita: posizione → {path, roi, n} dell'ultima immagine lì
+        self._trk_n = 0
 
     @property
     def busy(self) -> bool:
@@ -268,7 +279,8 @@ class AutofocusRunner:
             raise RuntimeError(tr("Focheggiatore non connesso"))
         self._stop = False
         self._sources = {"live": "auto", "shot": "auto"}
-        self.status = AFStatus(state="running", rev=self.status.rev + 1, roi=list(p.roi), source=p.source,
+        self._trk, self._trk_n = {}, 0
+        self.status = AFStatus(state="running", rev=self.status.rev + 1, roi=list(p.roi), source=p.source, track=p.track,
                                started_at=time.time(), message=tr("Autofocus…"), passes=max(1, p.passes),
                                mode=p.mode, max_travel=p.max_travel)
         self._task = asyncio.create_task(self._run(p))
@@ -332,13 +344,85 @@ class AutofocusRunner:
         self.status.capture = source
         path = await self._grab(source, pos)
         self._check()
+        roi = await self._follow(path, pos, source, p) if p.track else p.roi
         try:
-            r = await rawstat.focus(path, p.roi, self._sources[source])
+            r = await rawstat.focus(path, roi, self._sources[source])
         except rawstat.RawStatError as exc:
             raise AutofocusError(str(exc)) from exc
         if self._sources[source] == "auto":
             self._sources[source] = r.get("source") if r.get("source") in ("preview", "raw") else "auto"
         return float(r["focus"])
+
+    def _keep(self, path: str, source: str) -> str:
+        """L'immagine resta come riferimento per l'inseguimento: il fotogramma del live view si copia (il file si
+        riscrive a ogni lettura), gli scatti veri hanno già un nome proprio."""
+        self._trk_n += 1
+        if source != "live":
+            return path
+        src = Path(path)
+        d = src.parent / "af-track"
+        if self._trk_n == 1:
+            shutil.rmtree(d, ignore_errors=True)
+        d.mkdir(parents=True, exist_ok=True)
+        dst = d / f"{self._trk_n:04d}{src.suffix}"
+        shutil.copyfile(src, dst)
+        return str(dst)
+
+    def _remember(self, pos: int, path: str, source: str, roi: list) -> None:
+        self._trk[pos] = {"path": self._keep(path, source), "roi": list(roi), "n": self._trk_n}
+        self.status.roi = list(roi)
+
+    def _drift(self, ref_pos: int, pos: int) -> tuple[float, float]:
+        """Spostamento previsto dell'area fra ref_pos e pos: retta sui centri già trovati (frazioni per passo)."""
+        pts = [(q, (e["roi"][0] + e["roi"][2]) / 2, (e["roi"][1] + e["roi"][3]) / 2) for q, e in self._trk.items()]
+        if len(pts) < 3 or pos == ref_pos:
+            return 0.0, 0.0
+        mx = sum(q for q, _, _ in pts) / len(pts)
+        den = sum((q - mx) ** 2 for q, _, _ in pts)
+        if den <= 0:
+            return 0.0, 0.0
+        out = []
+        for k in (1, 2):
+            my = sum(t[k] for t in pts) / len(pts)
+            out.append(sum((t[0] - mx) * (t[k] - my) for t in pts) / den * (pos - ref_pos))
+        return out[0], out[1]
+
+    async def _track_start(self, pos: int, p: AFParams) -> None:
+        """Riferimento dell'inseguimento: l'immagine alla posizione di partenza, quella su cui si è scelta l'area."""
+        path = await self._grab(p.source, pos)
+        self._check()
+        self._remember(pos, path, p.source, p.roi)
+        self._log(tr("Area che segue il soggetto: riferimento a {pos}", pos=pos))
+
+    async def _follow(self, path: str, pos: int, source: str, p: AFParams) -> list:
+        """Dove è finito il soggetto in questa immagine: si cerca il contenuto dell'area dell'immagine più vicina
+        come posizione (a pari distanza la più recente). L'area mantiene il lato scelto."""
+        if not self._trk:
+            self._remember(pos, path, source, p.roi)
+            return list(p.roi)
+        ref_pos = min(self._trk, key=lambda q: (abs(q - pos), -self._trk[q]["n"]))
+        ref = self._trk[ref_pos]
+        near = self._drift(ref_pos, pos)
+        try:
+            t = await rawstat.track(ref["path"], ref["roi"], path, near=near, margin=TRACK_MARGIN)
+        except rawstat.RawStatError as exc:
+            raise AutofocusError(str(exc)) from exc
+        r0 = ref["roi"]
+        w, h = r0[2] - r0[0], r0[3] - r0[1]
+        if t.get("flat"):
+            cx, cy = (r0[0] + r0[2]) / 2 + near[0], (r0[1] + r0[3]) / 2 + near[1]
+        elif float(t.get("score") or 0) < TRACK_MIN:
+            raise AutofocusError(tr("Soggetto perso a {pos}: l'area non si ritrova più nell'immagine (correlazione {c}). "
+                                    "Scegli un dettaglio più riconoscibile, un'area più grande, oppure «Area fissa»",
+                                    pos=pos, c=f"{float(t.get('score') or 0):.2f}"))
+        else:
+            q = t["roi"]
+            cx, cy = (q[0] + q[2]) / 2, (q[1] + q[3]) / 2
+        cx = min(1 - w / 2, max(w / 2, cx))
+        cy = min(1 - h / 2, max(h / 2, cy))
+        roi = [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2]
+        self._remember(pos, path, source, roi)
+        return roi
 
     async def _confirm(self, center: int, step: int, p: AFParams) -> tuple[int, dict | None]:
         """Conferma con scatti veri: p.confirm scatti attorno al fuoco trovato col live view, a un passo fine l'uno
@@ -445,6 +529,8 @@ class AutofocusRunner:
             st.start_pos, st.visited = here, [here, here]
             self._log(tr("Autofocus: area {w}×{h} % dell'immagine, da {pos}",
                          w=round((p.roi[2] - p.roi[0]) * 100, 1), h=round((p.roi[3] - p.roi[1]) * 100, 1), pos=here))
+            if p.track:
+                await self._track_start(here, p)
             center = here
             if p.coarse:
                 n = 2 * max(1, p.coarse_range // max(1, p.coarse_step)) + 1

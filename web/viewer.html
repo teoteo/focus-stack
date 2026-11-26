@@ -133,6 +133,14 @@
   .af-src .chip-btn[aria-pressed="true"] { color: var(--text); border-color: var(--accent); background: var(--accent-soft); }
   .af-src .chip-btn:disabled { opacity: .45; cursor: not-allowed; }
   .af-hint { color: var(--text-2); margin: 6px 0 4px; line-height: 1.4; }
+  .af-size-row { display: flex; align-items: center; gap: 10px; }
+  .af-size-row .af-size { flex: 1; min-width: 0; }
+  .af-track { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: var(--bg-2); border: 1px solid var(--line); flex: none; }
+  .af-track .ico-btn { width: 30px; height: 26px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--muted);
+    cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+  .af-track .ico-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .af-track .ico-btn[aria-pressed="true"] { background: var(--accent-soft); color: var(--text); box-shadow: inset 0 0 0 1px var(--accent); }
+  .af-track .ico-btn:disabled { opacity: .45; cursor: not-allowed; }
   .af-size { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; flex-direction: row;
     font-size: 13px; color: var(--text-2); margin: 6px 0; }
   .af-size input { width: 100%; min-height: 0; padding: 0; accent-color: var(--accent); }
@@ -255,7 +263,17 @@
     </div>
     <p class="af-mode-sum" id="af-mode-sum"></p>
     <p class="af-hint" id="af-hint">Clic sul dettaglio da mettere a fuoco, poi Avvia.</p>
-    <label class="af-size">Area <input type="range" id="af-size" min="16" max="1024" step="8" aria-label="Lato dell'area in pixel"> <output id="af-size-val"></output></label>
+    <div class="af-size-row">
+      <label class="af-size">Area <input type="range" id="af-size" min="16" max="1024" step="8" aria-label="Lato dell'area in pixel"> <output id="af-size-val"></output></label>
+      <span class="af-track" role="group" aria-label="Area durante la misura">
+        <button class="ico-btn" data-af-track="0" title="Area fissa: misura sempre lo stesso punto dell'immagine" aria-label="Area fissa">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4"/><rect x="8" y="8" width="4" height="4" rx=".5"/></svg>
+        </button>
+        <button class="ico-btn" data-af-track="1" title="Segue il soggetto: l'area si sposta con il soggetto quando l'immagine scorre mentre il fuoco cambia (macro)" aria-label="Segue il soggetto">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4"/><path d="M6.5 13.5l6-6M9 7.5h3.5V11"/></svg>
+        </button>
+      </span>
+    </div>
     <div class="af-travel" id="af-travel">
       <div class="af-bar" id="af-bar" aria-hidden="true">
         <span class="max"></span><span class="plan" id="af-bar-plan"></span><span class="seen" id="af-bar-seen"></span>

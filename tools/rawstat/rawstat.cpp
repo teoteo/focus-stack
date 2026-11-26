@@ -405,6 +405,154 @@ int focus_file(const char *path, const double f[4], const std::string &want) {
   return 0;
 }
 
+// ---------------- inseguimento dell'area (autofocus «segue il soggetto») ----------------
+//
+//   fs-rawstat --track <ref> <x0> <y0> <x1> <y1> <file> [--near <dx> <dy>] [--margin <m>]
+//
+// Cerca in <file> il contenuto dell'area x0..y1 di <ref> (frazioni dell'immagine vista), attorno alla stessa
+// posizione spostata di (dx, dy) (la previsione del chiamante, in frazioni), entro ± m volte il lato dell'area
+// (predefinito 0,75). Le due immagini si riducono alla stessa scala (area di circa TRACK_PX pixel di lato), così
+// si confrontano anche un fotogramma del live view e l'anteprima di uno scatto vero. Confronto: correlazione
+// normalizzata (NCC) della luminosità, che non dipende da esposizione e contrasto; fra due fotogrammi vicini il
+// fuoco cambia poco e la correlazione resta alta. Risposta: {"roi": area trovata, "score": NCC (−1…1), "flat":
+// true se l'area non ha dettagli da inseguire (allora "roi" è la posizione prevista)}.
+// Trame che si ripetono (righe, scacchiere): più posizioni somigliano quasi allo stesso modo; vince la più vicina a
+// quella prevista, con una piccola penalità per la distanza (TRACK_PENALTY per ogni lato dell'area di distanza).
+const int TRACK_PX = 48;
+const double TRACK_PENALTY = 0.15;
+
+void reflip(int flip, const double in[4], double out[4]) { unflip(flip == 5 ? 6 : flip == 6 ? 5 : flip, in, out); }
+
+// immagine intera in grigio: RAW → anteprima incorporata (orientata come il sensore: flip a parte), altri → stb
+bool load_view(const char *path, Gray &g, int &flip, std::string &err) {
+  flip = 0;
+  const double all[4] = {0, 0, 1, 1};
+  LibRaw *rp = new LibRaw;
+  int r = rp->open_file(path);
+  if (r == LIBRAW_SUCCESS) {
+    flip = rp->imgdata.sizes.flip;
+    bool ok = false;
+    if (rp->unpack_thumb() == LIBRAW_SUCCESS) {
+      const auto &th = rp->imgdata.thumbnail;
+      int W = 0, H = 0, comp = 0;
+      if (th.tformat == LIBRAW_THUMBNAIL_JPEG) {
+        unsigned char *px = stbi_load_from_memory((const unsigned char *)th.thumb, (int)th.tlength, &W, &H, &comp, 3);
+        if (px) { g = crop_rgb(px, W, H, 3, all); stbi_image_free(px); ok = true; }
+      } else if (th.tformat == LIBRAW_THUMBNAIL_BITMAP && th.tcolors == 3) {
+        g = crop_rgb((const unsigned char *)th.thumb, th.twidth, th.theight, 3, all);
+        ok = true;
+      }
+    }
+    delete rp;
+    if (!ok) err = "anteprima incorporata non leggibile";
+    return ok;
+  }
+  delete rp;
+  int W, H, comp;
+  unsigned char *px = stbi_load(path, &W, &H, &comp, 3);
+  if (!px) { err = "formato non riconosciuto"; return false; }
+  g = crop_rgb(px, W, H, 3, all);
+  stbi_image_free(px);
+  return true;
+}
+
+// riduzione per media d'area (niente ingrandimenti: con W2 ≥ w si copia)
+Gray resize_area(const Gray &s, int W2, int H2) {
+  if (W2 >= s.w || H2 >= s.h) return s;
+  Gray d;
+  d.w = W2; d.h = H2;
+  d.v.assign((size_t)W2 * H2, 0);
+  double sx = (double)s.w / W2, sy = (double)s.h / H2;
+  for (int y = 0; y < H2; y++) {
+    int ya = (int)(y * sy), yb = std::max(ya + 1, (int)((y + 1) * sy));
+    for (int x = 0; x < W2; x++) {
+      int xa = (int)(x * sx), xb = std::max(xa + 1, (int)((x + 1) * sx));
+      double acc = 0;
+      for (int yy = ya; yy < yb && yy < s.h; yy++)
+        for (int xx = xa; xx < xb && xx < s.w; xx++) acc += s.v[(size_t)yy * s.w + xx];
+      d.v[(size_t)y * W2 + x] = acc / ((double)(std::min(yb, s.h) - ya) * (std::min(xb, s.w) - xa));
+    }
+  }
+  return d;
+}
+
+int track(const char *ref, const double rr[4], const char *cur, double ndx, double ndy, double margin) {
+  Gray A, B;
+  int fa, fb;
+  std::string err;
+  if (!load_view(ref, A, fa, err)) return fail(err.c_str());
+  if (!load_view(cur, B, fb, err)) return fail(err.c_str());
+  double ra[4], pv[4] = {rr[0] + ndx, rr[1] + ndy, rr[2] + ndx, rr[3] + ndy}, pb[4];
+  unflip(fa, rr, ra);
+  unflip(fb, pv, pb);
+  // stessa scala per le due immagini: larghezza comune Wn, area di circa TRACK_PX pixel
+  double wa = std::max(1e-4, std::max(ra[2] - ra[0], (ra[3] - ra[1]) * A.h / A.w));
+  int Wn = std::min(std::min(A.w, B.w), (int)std::lround(TRACK_PX / wa));
+  Wn = std::max(Wn, 16);
+  Gray A2 = resize_area(A, Wn, std::max(1, (int)std::lround((double)Wn * A.h / A.w)));
+  Gray B2 = resize_area(B, Wn, std::max(1, (int)std::lround((double)Wn * B.h / B.w)));
+  int tx0, ty0, tx1, ty1, px0, py0, px1, py1;
+  roi_px(ra, A2.w, A2.h, tx0, ty0, tx1, ty1);
+  roi_px(pb, B2.w, B2.h, px0, py0, px1, py1);
+  int tw = tx1 - tx0, th = ty1 - ty0;
+  // modello: media e deviazione dell'area di riferimento
+  double tm = 0;
+  for (int y = 0; y < th; y++)
+    for (int x = 0; x < tw; x++) tm += A2.v[(size_t)(ty0 + y) * A2.w + tx0 + x];
+  tm /= (double)tw * th;
+  std::vector<double> T((size_t)tw * th);
+  double tv = 0;
+  for (int y = 0; y < th; y++)
+    for (int x = 0; x < tw; x++) {
+      double d = A2.v[(size_t)(ty0 + y) * A2.w + tx0 + x] - tm;
+      T[(size_t)y * tw + x] = d;
+      tv += d * d;
+    }
+  double tsd = std::sqrt(tv / ((double)tw * th));
+  auto out = [&](double x0, double y0, double score, bool flat) {
+    double f[4] = {x0 / B2.w, y0 / B2.h, (x0 + tw) / B2.w, (y0 + th) / B2.h}, o[4];
+    reflip(fb, f, o);
+    for (double &v : o) v = std::min(1.0, std::max(0.0, v));
+    printf("{\"roi\":[%s,%s,%s,%s],\"score\":%s,\"flat\":%s,\"scale_px\":[%d,%d]}\n", num(o[0], 6).c_str(),
+           num(o[1], 6).c_str(), num(o[2], 6).c_str(), num(o[3], 6).c_str(), num(score, 4).c_str(),
+           flat ? "true" : "false", B2.w, B2.h);
+    return 0;
+  };
+  if (tsd < 1.0) return out(px0, py0, 0, true);   // area uniforme: niente da inseguire
+  int M = (int)std::ceil(margin * std::max(tw, th));
+  int best_x = 0, best_y = 0;
+  double best = -2, best_eff = -1e9;
+  std::vector<double> S((size_t)(2 * M + 1) * (2 * M + 1), -2);
+  for (int oy = -M; oy <= M; oy++)
+    for (int ox = -M; ox <= M; ox++) {
+      int bx = px0 + ox, by = py0 + oy;
+      if (bx < 0 || by < 0 || bx + tw > B2.w || by + th > B2.h) continue;
+      double sm = 0, ss = 0, sc = 0;
+      for (int y = 0; y < th; y++) {
+        const double *row = &B2.v[(size_t)(by + y) * B2.w + bx];
+        const double *trow = &T[(size_t)y * tw];
+        for (int x = 0; x < tw; x++) { sm += row[x]; ss += row[x] * row[x]; sc += row[x] * trow[x]; }
+      }
+      double n = (double)tw * th, var = ss - sm * sm / n;
+      if (var <= 1e-9) continue;
+      double ncc = sc / std::sqrt(var * tv);   // la media del modello è zero: sc è già la covarianza
+      S[(size_t)(oy + M) * (2 * M + 1) + ox + M] = ncc;
+      double eff = ncc - TRACK_PENALTY * std::sqrt((double)ox * ox + (double)oy * oy) / std::max(tw, th);
+      if (eff > best_eff) { best_eff = eff; best = ncc; best_x = ox; best_y = oy; }
+    }
+  if (best < -1) return fail("area fuori dall'immagine");
+  // affinamento sub-pixel: parabola sui vicini del massimo
+  auto at = [&](int ox, int oy) {
+    if (ox < -M || ox > M || oy < -M || oy > M) return -2.0;
+    return S[(size_t)(oy + M) * (2 * M + 1) + ox + M];
+  };
+  double fx = 0, fy = 0;
+  double l = at(best_x - 1, best_y), r = at(best_x + 1, best_y), u = at(best_x, best_y - 1), dn = at(best_x, best_y + 1);
+  if (l > -2 && r > -2 && l + r - 2 * best < 0) fx = 0.5 * (l - r) / (l + r - 2 * best);
+  if (u > -2 && dn > -2 && u + dn - 2 * best < 0) fy = 0.5 * (u - dn) / (u + dn - 2 * best);
+  return out(px0 + best_x + fx, py0 + best_y + fy, best, false);
+}
+
 // ---------------- analisi del sensore (curva di trasferimento dei fotoni) ----------------
 // Ritaglio centrale di un canale verde del mosaico, valori grezzi: niente demosaicizzazione né bilanciamento.
 struct Plane {
@@ -490,6 +638,21 @@ int main(int argc, char **argv) {
     if (argc >= 4 && !strcmp(argv[2], "--side")) { side = atoi(argv[3]); first = 4; }
     if (argc - first != 4 || side < 16) return fail("uso: --ptc [--side N] flat1 flat2 dark1 dark2");
     return ptc(argv + first, side);
+  }
+  if (argc >= 2 && !strcmp(argv[1], "--track")) {
+    // --track ref x0 y0 x1 y1 file [--near dx dy] [--margin m]
+    if (argc < 8) return fail("uso: --track ref x0 y0 x1 y1 file [--near dx dy] [--margin m]");
+    double f[4];
+    for (int i = 0; i < 4; i++) f[i] = atof(argv[3 + i]);
+    if (!(f[0] >= 0 && f[1] >= 0 && f[2] <= 1 && f[3] <= 1 && f[2] > f[0] && f[3] > f[1])) return fail("area non valida");
+    double dx = 0, dy = 0, margin = 0.75;
+    for (int i = 8; i < argc; i++) {
+      if (!strcmp(argv[i], "--near") && i + 2 < argc) { dx = atof(argv[i + 1]); dy = atof(argv[i + 2]); i += 2; }
+      else if (!strcmp(argv[i], "--margin") && i + 1 < argc) { margin = atof(argv[++i]); }
+      else return fail("opzione sconosciuta");
+    }
+    if (!(margin > 0 && margin <= 3)) return fail("margine non valido");
+    return track(argv[2], f, argv[7], dx, dy, margin);
   }
   if (argc >= 2 && !strcmp(argv[1], "--focus")) {
     // --focus x0 y0 x1 y1 [--source auto|preview|raw] file

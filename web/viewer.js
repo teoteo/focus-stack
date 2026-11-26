@@ -539,7 +539,7 @@ function setAfSize(px, save = true) {
 // le impostazioni si mandano intere: si parte da quelle del server e si cambia solo il necessario
 function afSaveSettings(change) {
   const a = (lastState && lastState.settings && lastState.settings.autofocus) || {};
-  const keys = ["mode", "roi_px", "coarse", "coarse_range", "coarse_step", "settle_ms", "overscan", "max_travel"];
+  const keys = ["mode", "roi_px", "coarse", "coarse_range", "coarse_step", "settle_ms", "overscan", "max_travel", "track"];
   const body = Object.fromEntries(keys.filter((k) => k in a).map((k) => [k, a[k]]));
   return post("/api/autofocus/settings", { ...body, ...change });
 }
@@ -722,6 +722,10 @@ function renderAf() {
   }
   $("af-coarse-chip").setAttribute("aria-pressed", String(!!cfg.coarse));
   $("af-coarse-chip").disabled = busy;
+  for (const b of document.querySelectorAll("[data-af-track]")) {
+    b.setAttribute("aria-pressed", String((b.dataset.afTrack === "1") === !!cfg.track));
+    b.disabled = busy;
+  }
   const mused = (((a.modes || {})[mode]) || {}).used;
   setText($("af-mode-sum"), afModeSummary(mused));
   renderTravel(a, f, mode);
@@ -828,6 +832,10 @@ function onAfState(st) {
     }
   }
   if (a.rev != null) afRevSeen = a.rev;
+  // con l'area che segue il soggetto, a misura finita l'area scelta diventa quella dove il soggetto è adesso
+  if (prev && prev.busy && !a.busy && a.track && a.roi && a.roi.length === 4) {
+    afRoi = { cx: (a.roi[0] + a.roi[2]) / 2, cy: (a.roi[1] + a.roi[3]) / 2, s: afRoi ? afRoi.s : a.roi[2] - a.roi[0] };
+  }
   renderAf();
 }
 
@@ -836,6 +844,9 @@ $("af-close").onclick = closeAf;
 $("af-size").addEventListener("input", (e) => setAfSize(Number(e.target.value)));
 for (const b of document.querySelectorAll("[data-af-mode]")) {
   b.onclick = () => afSaveSettings({ mode: b.dataset.afMode }).catch((e) => notice(e.message));
+}
+for (const b of document.querySelectorAll("[data-af-track]")) {
+  b.onclick = () => afSaveSettings({ track: b.dataset.afTrack === "1" }).catch((e) => notice(e.message));
 }
 $("af-coarse-chip").onclick = () => {
   const cfg = (lastState && lastState.settings && lastState.settings.autofocus) || {};

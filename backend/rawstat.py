@@ -96,6 +96,30 @@ async def focus(path: str | Path, roi, source: str = "auto", timeout_s: float = 
     return data
 
 
+async def track(ref: str | Path, roi, path: str | Path, near=(0.0, 0.0), margin: float = 0.75,
+                timeout_s: float = 30) -> dict:
+    """Dove è finito in path il contenuto dell'area roi di ref (frazioni dell'immagine vista), cercando attorno a
+    roi spostata di near: {"roi", "score" (correlazione −1…1), "flat" (area senza dettagli)}. Vedi rawstat.cpp, track."""
+    exe = tool_path()
+    if exe is None:
+        raise RawStatError(tr("Strumento di misura fs-rawstat mancante: python3 tools/rawstat/build.py"))
+    args = [str(exe), "--track", str(ref), *(f"{float(v):.6f}" for v in roi), str(path),
+            "--near", f"{float(near[0]):.6f}", f"{float(near[1]):.6f}", "--margin", f"{float(margin):.3f}"]
+    proc = await asyncio.create_subprocess_exec(*args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    try:
+        out, _ = await asyncio.wait_for(proc.communicate(), timeout_s)
+    except asyncio.TimeoutError as exc:
+        proc.kill()
+        raise RawStatError(tr("Misura troppo lenta: {name}", name=Path(path).name)) from exc
+    try:
+        data = json.loads(out.decode("utf-8", "replace").strip().splitlines()[-1])
+    except (IndexError, json.JSONDecodeError) as exc:
+        raise RawStatError(tr("Misura non riuscita: {name}", name=Path(path).name)) from exc
+    if data.get("error"):
+        raise RawStatError(tr("Misura non riuscita ({name}): {err}", name=Path(path).name, err=data["error"]))
+    return data
+
+
 RAW_EXT = (".nef", ".nrw", ".cr2", ".cr3", ".crw", ".arw", ".srf", ".sr2", ".raf", ".orf", ".rw2", ".dng",
            ".pef", ".srw", ".3fr", ".iiq", ".x3f", ".erf", ".mef", ".mos", ".kdc", ".rwl")
 
