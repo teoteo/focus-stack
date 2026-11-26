@@ -529,13 +529,13 @@ add(f"""
     "<b>Status</b>: Ready, Running, Paused, Completed, Error.",
     f"<b>{ui('Nome della pila')}</b>: photos go into a <code>name_date-time</code> subfolder, named <code>name_0001</code>, <code>name_0002</code>…",
     f"<b>{ui('＋ Nuova pila')}</b>: once a stack is finished, prepares the next one (the status goes back to Ready). Even with the same name, every stack goes into a new folder.",
+    f"<b>Folder</b> of the stack, below the name: <code>…/name_date-time</code> in the save folder (hover to see the full path). <span class='ui'>{ui('Scegli…')}</span> changes the save folder with the Finder panel, <span class='ui'>{ui('Apri')}</span> shows it in the Finder.",
     f"<b>{ui('Inizio')}</b> and <b>{ui('Fine')}</b> in steps. <span class='ui'>⌖ {ui('qui')}</span> copies the current position.",
     "<b>Step</b> between one shot and the next, in motor steps (chapter 11).",
     f"<b>Number of shots</b>. If you change {ui('Inizio')}, {ui('Fine')} or Step, the number of shots is recalculated; if you change the number of shots, the step is recalculated. When the step changes on its own it turns orange and shows <span class='ui'>↺ was …</span>: one click undoes the change.",
-    "<b>Settle time after move</b>: time for vibrations to die down before the shot (1–3 s on a microscope).",
     f"<b>{ui('Ottica e filtro (profilo)')}</b>: the objective, filter and illumination profile to record in the stack's data (7.2). <span class='ui'>{ui('Modifica')}</span> opens it in the {ui('Ottica')} tab. Without a profile the stack is recorded as “no filter”. With a macro profile that states the aperture, choosing it also sets the camera's aperture; if the two later differ, the summary says so.",
     "<b>Summary</b>: shots, travel in steps and in µm, step in µm and estimated duration. One click on the summary (▶ on the right) also shows the optics profile used and the calibration that will be linked to the stack. If the sequence goes beyond the limits a red warning appears and the sequence won't start.",
-    f"<b>{ui('Salva in')}</b>: the photo folder. <span class='ui'>{ui('Scegli…')}</span> opens the Finder panel, <span class='ui'>{ui('Apri')}</span> shows it in the Finder.",
+    "<b>Settle time after move</b>, in the collapsible section: time for vibrations to die down before the shot (1–3 s on a microscope).",
     f"<b>{ui('Scatti per posizione')}</b>: how many photos to take at each position (default 1). With several shots the fusion software can average them and reduce noise (7.4).",
     "<b>Pause after shot</b>: time to write to the card and recharge the flash.",
     "<b>Backlash compensation</b>: before the first shot the motor backs off by this many steps and then moves forward, so every shot is reached from the same direction.",
@@ -543,11 +543,11 @@ add(f"""
     "<b>Return to start</b> when the sequence ends.",
     f"<b>{ui('Suono sul Mac a fine sequenza')}</b>: a bright sound if the stack completed, a low one if it stopped because of an error or paused by itself.",
     "<b>Presets</b>: save and recall the sequence settings, for example one per objective.",
-    "<b>Progress</b>: shots taken, time left, position.",
+    "<b>Progress</b>: shots taken out of the total, bar, time left; during the stack the position and messages appear below.",
     f"<b>Start</b>, <b>Pause</b>/<b>{ui('Riprendi')}</b> and <b>Abort</b>.",
-    f"<b>{ui('Apri nel Finder')}</b>: when the sequence ends, opens the stack folder, with the photos, <code>sequence.json</code> and <code>sequence.txt</code> (7.5).",
+    f"<b>{ui('Apri')}</b>, next to the counter when the sequence ends: opens the stack folder, with the photos, <code>sequence.json</code> and <code>sequence.txt</code> (7.5).",
 ])}
-<p>Shots per position, pause after shot, backlash, capture mode, return to start and sound are in the collapsible
+<p>Settle time after move, shots per position, pause after shot, backlash, capture mode, return to start and sound are in the collapsible
 <span class="ui">{ui('Tempi, gioco e scatti per posizione')}</span> section. If the motor coils are off and the app
 does not power them during the sequence, an orange warning appears below it (chapter 12).</p>
 <h2>While the sequence runs</h2>
@@ -821,9 +821,9 @@ a structure. It is useful, for example, to set the start or the end of the stack
   <span class="ui">stack start</span> or <span class="ui">stack end</span> writes the position into the sequence, in the main window.</li>
 </ol>
 {fig("visualizzatore-autofocus", [
-    "<b>⌖ Autofocus</b> (<kbd>A</kbd>): opens the panel; clicking the image chooses the area. <kbd>Esc</kbd> closes it.",
-    "<b>Measured area</b>: dashed while the autofocus runs. It stays on the same spot when you change shot or switch to live view.",
-    "<b>Mode</b>: <i>Fast</i>, <i>Precise</i> (default) or <i>Real shots</i>; below, what it will do. <b>Wide search</b> turns it on for when the whole image is blurred. <b>Area</b>: side of the square in sensor pixels. The <b>travel bar</b> runs from − to + the maximum excursion around the start: in light colour the planned travel, darker the path already covered, the line is the current position.",
+    "<b>⌖ Autofocus</b> (<kbd>A</kbd>): opens the panel; clicking the image chooses the area. <kbd>Esc</kbd> closes it. Drag the title bar to move the panel; double-click the bar to put it back in the corner.",
+    "<b>Measured area</b>: dashed while the autofocus runs. It stays on the same spot when you change shot or switch to live view. With <i>Follows the subject</i> it moves along with the subject during the measurement.",
+    "<b>Mode</b>: <i>Fast</i>, <i>Precise</i> (default) or <i>Real shots</i>; below, what it will do. <b>Wide search</b> turns it on for when the whole image is blurred. <b>Area</b>: side of the square in sensor pixels. The <b>travel bar</b> runs from − to + the maximum excursion around the start: in light colour the planned travel, darker the path already covered, the line is the current position. Next to it, two icons: <b>Fixed area</b> always measures the same spot of the image, <b>Follows the subject</b> moves the area with the subject when the image drifts as focus changes (see below).",
     "<b>Sharpness curve</b>: one point per measurement, the focuser position across; below, the step. Earlier passes stay fainter under the current one, and the chart zooms in on the area of the fine pass. The orange squares are the real confirmation shots, the green line the chosen position, the green diamond the check shot. Hover over a point to read its position and sharpness (in % of the maximum).",
     "<b>Status</b>: pass, current shot and position, then the result with the check and the peak width, or the reason why no focus was found.",
     "<b>Run again</b> and, below, <b>Use the focus as stack start / stack end</b>, as long as the focuser stays on the position found. <b>Run again</b> repeats the autofocus; clicking another point moves the area without closing the panel. While measuring there is <b>Stop</b>.",
@@ -944,6 +944,7 @@ fine focus.</p>
 ])}
 <h2>10.1 The drive train</h2>
 <p>From the motor to the stage the movement passes through a few stages, and each one multiplies or divides:</p>
+<p><b>Fixed area or following the subject.</b> In macro, if the rail is not exactly aligned with the lens axis, the image drifts a little at every step: with a fixed area the chosen detail can leave the box and the measurement ends up on the background, with a curve without a peak or with the wrong one. With <i>Follows the subject</i> each image is compared with the one at the nearest position already measured, where focus is almost the same, and the area goes where the detail went; at the end it stays there. If the detail can no longer be found, autofocus stops with “Subject lost”. On a microscope, or with uniform textures (fine lines, screens), use the fixed area.</p>
 {diagram(DIAGRAM_LABELS)}
 <div class="formula">
   resolution (µm/step) = {frac("travel per knob turn (µm)", "steps per rev × microstep × gear ratio")}

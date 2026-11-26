@@ -8,17 +8,20 @@ Controlla da un'app per Mac o da un browser web un focheggiatore DIY **myFocuser
 microscopio e una fotocamera **Sony / Nikon / Canon** via USB, eseguendo sequenze automatiche
 *muovi → attendi → scatta* pronte da elaborare in **Helicon Focus**.
 
-![Una pila di 368 scatti in corso: schede del focheggiatore, della sequenza e della fotocamera, con l'ultimo scatto](docs/img/session.jpg)
-*Una pila in corso: 368 scatti a 21,5 µm l'uno dall'altro, con un obiettivo macro a 2,8×. A sinistra posizione e fine corsa del focheggiatore, al centro la sequenza, l'avanzamento e il tempo che manca (▶ mostra profilo ottico e calibrazione), a destra le impostazioni della fotocamera e l'ultimo scatto.*
+![La scheda Sessione: focheggiatore, sequenza e fotocamera, con l'ultimo scatto](docs/img/session.jpg)
+*La scheda Sessione: a sinistra posizione e fine corsa del focheggiatore, al centro la sequenza con la cartella della pila, il riepilogo (▶ mostra profilo ottico e calibrazione) e l'avanzamento, a destra le impostazioni della fotocamera e l'ultimo scatto.*
 
 ![Il visualizzatore con un fotogramma RAW della pila a piena risoluzione, il contatore della pila, l'Ispettore e la striscia dei fotogrammi](docs/img/viewer.jpg)
 *Il visualizzatore segue la pila scatto per scatto: avanzamento e dati dello scatto in alto, RAW a piena risoluzione, la striscia della pila in corso sotto, guide di composizione (terzi, centro o entrambi) e l'Ispettore con pixel bruciati e neri, istogramma e valori.*
 
+![L'autofocus su un punto nel visualizzatore: l'area scelta sull'immagine, il pannello con la curva della nitidezza e il fuoco trovato](docs/img/autofocus.jpg)
+*Autofocus su un punto: clic sul dettaglio, la curva della nitidezza si riempie scatto per scatto e il focheggiatore torna sul picco, con uno scatto di verifica. L'area resta fissa o segue il soggetto quando l'immagine scorre (macro); il pannello si trascina dove non copre il soggetto.*
+
 ![La scheda Ottica: indice a sinistra, il profilo dell'obiettivo macro al centro, ingrandimento, scala e profondità di campo a destra](docs/img/optics.jpg)
 *Ottica: un profilo per ogni obiettivo da microscopio o obiettivo macro (obiettivi dal database Lensfun, lenti addizionali, tubi di prolunga). Il riepilogo a destra calcola ingrandimento, µm per pixel sul campione, profondità di campo e passo consigliato.*
 
-![La scheda Calibrazione mentre scatta i flat, con la libreria di calibrazione sotto](docs/img/calibration.jpg)
-*Calibrazione: esposizione della luce misurata sui RAW, dark e flat scattati in automatico, i set che userà la prossima pila e una libreria che collega ogni pila alla calibrazione giusta.*
+![La scheda Calibrazione: esposizione dei light, frame di calibrazione e riepilogo, con la libreria sotto](docs/img/calibration.jpg)
+*Calibrazione: esposizione della luce misurata sui RAW, dark e flat scattati in automatico (un fotogramma diverso dagli altri viene segnalato subito), i set che userà la prossima pila, una libreria che collega ogni pila alla calibrazione giusta e l'analisi del sensore.*
 
 ![Analisi del sensore di una Sony A6400: gamma dinamica e rumore di lettura per ogni ISO da 100 a 102400](docs/img/sensor-chart-it.png)
 *Analisi del sensore (novità della 1.4.0), misurata su una Sony A6400 con coppie di flat e di dark a ogni ISO. ISO 100 ha la gamma dinamica più ampia (13,3 stop). A ISO 400 il sensore passa a un secondo guadagno e il rumore di lettura scende da 3 a 1,2 elettroni: 12,9 stop con tempi quattro volte più brevi. Da lì in su alzare l'ISO toglie solo gamma; meglio evitare ISO 160–320, e oltre 3200 la fotocamera filtra il rumore nel RAW.*
@@ -217,19 +220,19 @@ spostare su un secondo monitor. Se il live view è acceso, il visualizzatore si 
 
 | Comando | Tasto | Effetto |
 |---|---|---|
-| **−** / **+** | <kbd>−</kbd>&nbsp;/&nbsp;<kbd>+</kbd> | zoom |
-| **Adatta** / **Reset** | <kbd>0</kbd>&nbsp;o&nbsp;<kbd>R</kbd> | immagine intera nella finestra |
+| **−**&nbsp;/&nbsp;**+** | <kbd>−</kbd>&nbsp;/&nbsp;<kbd>+</kbd> | zoom |
+| **Adatta**&nbsp;/&nbsp;**Reset** | <kbd>0</kbd>&nbsp;o&nbsp;<kbd>R</kbd> | immagine intera nella finestra |
 | **100%** | <kbd>1</kbd> | un pixel del sensore = un pixel dello schermo. Oltre il 150% i pixel restano netti, senza sfocatura di interpolazione |
-| Trascina con il mouse | — | sposta l'immagine |
-| Rotella (o pinch sul trackpad) | — | zoom centrato sul cursore |
-| Doppio clic | — | alterna adatta ↔ 100% |
-| ◀ ▶ e miniature in basso | <kbd>←</kbd>&nbsp;<kbd>→</kbd> | scatto precedente o successivo |
-| **● Live** | <kbd>L</kbd> | live view della fotocamera con zoom, 100% e spostamento; ◀ ▶ o una miniatura tornano agli scatti |
-| **Segui ultimo** | <kbd>U</kbd> | mostra automaticamente ogni nuovo scatto |
-| **Blocca vista** | <kbd>K</kbd> | mantiene zoom e posizione cambiando scatto, utile per confrontare la messa a fuoco nello stesso punto |
+| Trascina&nbsp;con&nbsp;il&nbsp;mouse | — | sposta l'immagine |
+| Rotella&nbsp;/&nbsp;pinch | — | zoom centrato sul cursore |
+| Doppio&nbsp;clic | — | alterna adatta ↔ 100% |
+| ◀&nbsp;▶,&nbsp;miniature | <kbd>←</kbd>&nbsp;<kbd>→</kbd> | scatto precedente o successivo |
+| **●&nbsp;Live** | <kbd>L</kbd> | live view della fotocamera con zoom, 100% e spostamento; ◀ ▶ o una miniatura tornano agli scatti |
+| **Segui&nbsp;ultimo** | <kbd>U</kbd> | mostra automaticamente ogni nuovo scatto |
+| **Blocca&nbsp;vista** | <kbd>K</kbd> | mantiene zoom e posizione cambiando scatto, utile per confrontare la messa a fuoco nello stesso punto |
 | **Ispettore** | <kbd>I</kbd> | pannello laterale in sola lettura: istogrammi R, G, B e luminosità, pixel bruciati (canali a 255) e neri (canali a 0) secondo una regola a scelta, segni rossi/blu sull'immagine, valori sotto il puntatore e min/max/media/mediana dell'immagine intera. Funziona anche sul live view (aggiornato due volte al secondo) |
-| **⌖ Autofocus** | <kbd>A</kbd>,&nbsp;<kbd>[</kbd>&nbsp;<kbd>]</kbd>,&nbsp;<kbd>Esc</kbd> | autofocus su un punto: clic sul dettaglio, poi Avvia. Il focheggiatore scorre nella direzione della pila, la curva della nitidezza (gradiente di Sobel nell'area) si riempie scatto per scatto e il focheggiatore torna sulla posizione più nitida dalla stessa parte (sovracorsa per il gioco), con uno scatto di verifica. Modi: Veloce (live view), Preciso (live view, poi 3 scatti veri di conferma; predefinito) e Scatti veri, ognuno con i suoi parametri; non si allontana dalla partenza più dell'escursione massima; ricerca ampia quando tutto è sfocato; impostazioni in Configurazione › Autofocus |
-| Schermo intero | <kbd>F</kbd> | — |
+| **⌖&nbsp;Autofocus** | <kbd>A</kbd>,&nbsp;<kbd>[</kbd>&nbsp;<kbd>]</kbd>,&nbsp;<kbd>Esc</kbd> | autofocus su un punto: clic sul dettaglio, poi Avvia. Il focheggiatore scorre nella direzione della pila, la curva della nitidezza (gradiente di Sobel nell'area) si riempie scatto per scatto e il focheggiatore torna sulla posizione più nitida dalla stessa parte (sovracorsa per il gioco), con uno scatto di verifica. Modi: Veloce (live view), Preciso (live view, poi 3 scatti veri di conferma; predefinito) e Scatti veri, ognuno con i suoi parametri; non si allontana dalla partenza più dell'escursione massima; ricerca ampia quando tutto è sfocato; l'area resta fissa o segue il soggetto se l'immagine scorre durante la scansione (macro); il pannello si sposta dove serve; impostazioni in Configurazione › Autofocus |
+| Schermo&nbsp;intero | <kbd>F</kbd> | — |
 
 L'Ispettore misura l'immagine a 8 bit mostrata a schermo: per uno scatto RAW è la conversione per lo schermo,
 e il RAW ha più margine nelle luci e nelle ombre (il pannello lo ricorda).
@@ -341,7 +344,7 @@ Il tab **Calibrazione** ha quattro parti:
 - **Frame di calibrazione**: dark (tappo, stessi ISO e tempo dei light), flat (campo illuminato in modo uniforme,
   tempo trovato da solo per un livello medio obiettivo, predefinito 50 %) e dark dei flat (tappo, ISO e tempo dei
   flat). Prima dei dark l'app chiede di mettere il tappo.
-- **Libreria di calibrazione**: i set in `<cartella di salvataggio>/_calibrazione/` e quali userebbe la prossima pila.
+- **Libreria di calibrazione**: i set in `<cartella di salvataggio>/_calibrazione/` e quali userebbe la prossima pila. Un fotogramma molto diverso dagli altri del set (luce spenta o cambiata nei flat, luce che entra nei dark) viene segnalato subito durante la serie e poi nella tabella.
 - **Analisi del sensore** (una volta per fotocamera): una procedura guidata scatta due flat a ogni ISO, chiede di
   mettere il tappo, scatta due dark con gli stessi ISO e tempi e misura guadagno, rumore di lettura, pieno pozzetto e
   gamma dinamica sui valori grezzi (curva di trasferimento dei fotoni). Consiglia l'ISO con la gamma più ampia, l'ISO

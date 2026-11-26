@@ -356,13 +356,13 @@ add(f"""
     f"<b>Status</b>: {ui('Pronta')}, {ui('In corso')}, {ui('In pausa')}, {ui('Completata')}, {ui('Errore')}.",
     f"<b>{ui('Nome della pila')}</b>: Unterordner <code>Name_Datum-Uhrzeit</code>, Dateien <code>Name_0001</code>, <code>Name_0002</code> …",
     f"<b>{ui('＋ Nuova pila')}</b>: bereitet nach einem Stapel den nächsten vor (der Status wird wieder {ui('Pronta')}). Auch mit demselben Namen kommt jeder Stapel in einen neuen Ordner.",
+    f"<b>Ordner</b> des Stapels, unter dem Namen: <code>…/Name_Datum-Uhrzeit</code> im Speicherordner (beim Darüberfahren erscheint der ganze Pfad). <span class='ui'>{ui('Scegli…')}</span> ändert den Speicherordner über das Finder-Fenster, <span class='ui'>{ui('Apri')}</span> zeigt ihn im Finder.",
     f"<b>{ui('Inizio')}</b> und <b>{ui('Fine')}</b> in Schritten. <span class='ui'>⌖ {ui('qui')}</span> übernimmt die aktuelle Position.",
     "<b>Schrittweite</b> zwischen zwei Aufnahmen, in Motorschritten (Kapitel 11).",
     f"<b>{ui('Numero di scatti')}</b>. Ändern Sie {ui('Inizio')}, {ui('Fine')} oder die Schrittweite, wird die Anzahl der Aufnahmen neu berechnet; ändern Sie die Anzahl der Aufnahmen, wird die Schrittweite neu berechnet. Ändert sich die Schrittweite von selbst, wird sie orange und zeigt <span class='ui'>↺ war …</span>: Ein Klick macht die Änderung rückgängig.",
-    "<b>Wartezeit nach Bewegung</b>: zum Abklingen der Vibrationen vor der Aufnahme (1–3 s am Mikroskop).",
     f"<b>{ui('Ottica e filtro (profilo)')}</b>: das Profil für Objektiv, Filter und Beleuchtung, das in die Daten des Stapels geschrieben wird (7.2). <span class='ui'>{ui('Modifica')}</span> öffnet es im Bereich {ui('Ottica')}. Ohne Profil wird der Stapel als „{ui('nessun filtro')}“ vermerkt. Bei einem Makroprofil mit Blendenangabe stellt die Auswahl auch die Blende der Kamera ein; weichen die beiden später ab, weist die Übersicht darauf hin.",
     "<b>Übersicht</b>: Aufnahmen, Bereich in Schritten und µm, Schrittweite in µm und geschätzte Dauer. Ein Klick auf die Übersicht (▶ rechts) zeigt auch das verwendete Optikprofil und die Kalibrierung, die mit dem Stapel verknüpft wird. Liegt die Serie außerhalb der Grenzen, erscheint ein roter Hinweis und sie startet nicht.",
-    f"<b>{ui('Salva in')}</b>: der Ordner für die Fotos. <span class='ui'>{ui('Scegli…')}</span> öffnet das Finder-Fenster, <span class='ui'>{ui('Apri')}</span> zeigt ihn im Finder.",
+    "<b>Wartezeit nach Bewegung</b>, im einklappbaren Abschnitt: zum Abklingen der Vibrationen vor der Aufnahme (1–3 s am Mikroskop).",
     f"<b>{ui('Scatti per posizione')}</b>: wie viele Fotos an jeder Position entstehen (Standard 1). Bei mehreren Aufnahmen kann die Fusionssoftware sie mitteln und so das Rauschen verringern (7.4).",
     "<b>Pause nach Aufnahme</b>: zum Schreiben auf die Karte und Laden des Blitzes.",
     "<b>Spielausgleich</b>: Vor der ersten Aufnahme fährt der Motor so viele Schritte zurück und wieder vor, damit jede Aufnahme aus derselben Richtung angefahren wird.",
@@ -370,11 +370,11 @@ add(f"""
     f"<b>{TORNA}</b>.",
     f"<b>{ui('Suono sul Mac a fine sequenza')}</b>: ein heller Ton, wenn der Stapel abgeschlossen ist, ein tiefer, wenn er wegen eines Fehlers angehalten wurde oder von selbst pausiert hat.",
     f"<b>{ui('Preset')}</b>: speichert und lädt die Einstellungen der Serie, z. B. eines pro Objektiv.",
-    "<b>Fortschritt</b>: erstellte Aufnahmen, verbleibende Zeit, Position.",
+    "<b>Fortschritt</b>: erstellte Aufnahmen von allen, Balken, verbleibende Zeit; während der Serie erscheinen darunter Position und Meldungen.",
     f"<b>{ui('▶ Avvia sequenza')}</b>, <b>{ui('❚❚ Pausa')}</b>/<b>{ui('Riprendi')}</b> und <b>{ui('■ Interrompi')}</b>.",
-    f"<b>{ui('Apri nel Finder')}</b>: öffnet nach der Serie den Ordner des Stapels mit den Fotos, <code>sequence.json</code> und <code>sequence.txt</code> (7.5).",
+    f"<b>{ui('Apri')}</b>, neben dem Zähler nach der Serie: öffnet den Ordner des Stapels mit den Fotos, <code>sequence.json</code> und <code>sequence.txt</code> (7.5).",
 ])}
-<p>Aufnahmen pro Position, Pause nach der Aufnahme, Spiel, Modus, Rückkehr zum Anfang und Ton befinden sich im
+<p>Wartezeit nach Bewegung, Aufnahmen pro Position, Pause nach der Aufnahme, Spiel, Modus, Rückkehr zum Anfang und Ton befinden sich im
 einklappbaren Abschnitt <span class="ui">{ui('Tempi, gioco e scatti per posizione')}</span>. Sind die Spulen des Motors
 ausgeschaltet und bestromt die App sie während der Serie nicht, erscheint darunter ein orangefarbener Hinweis
 (Kapitel 12).</p>
@@ -656,9 +656,9 @@ festlegen.</p>
   <span class="ui">Stapelanfang</span> oder <span class="ui">Stapelende</span> die Position im Hauptfenster in die Sequenz ein.</li>
 </ol>
 {fig("visualizzatore-autofocus", [
-    "<b>⌖ Autofokus</b> (<kbd>A</kbd>): öffnet das Feld; ein Klick ins Bild wählt den Bereich. <kbd>Esc</kbd> schließt es.",
-    "<b>Gemessener Bereich</b>: gestrichelt, solange der Autofokus läuft. Er bleibt an derselben Stelle, wenn man die Aufnahme wechselt oder zum Live-View geht.",
-    "<b>Modus</b>: <i>Schnell</i>, <i>Präzise</i> (Standard) oder <i>Echte Aufnahmen</i>; darunter, was er tun wird. <b>Weite Suche</b> schaltet sie ein, wenn das ganze Bild unscharf ist. <b>Bereich</b>: Seitenlänge des Quadrats in Sensorpixeln. Der <b>Wegbalken</b> reicht von − bis + zum maximalen Verfahrweg um den Start: hell der geplante Weg, dunkler der schon zurückgelegte, der Strich ist die aktuelle Position.",
+    "<b>⌖ Autofokus</b> (<kbd>A</kbd>): öffnet das Feld; ein Klick ins Bild wählt den Bereich. <kbd>Esc</kbd> schließt es. Das Feld lässt sich an der Titelleiste verschieben; Doppelklick auf die Leiste: zurück in die Ecke.",
+    "<b>Gemessener Bereich</b>: gestrichelt, solange der Autofokus läuft. Er bleibt an derselben Stelle, wenn man die Aufnahme wechselt oder zum Live-View geht. Mit <i>Folgt dem Motiv</i> wandert er während der Messung mit dem Motiv.",
+    "<b>Modus</b>: <i>Schnell</i>, <i>Präzise</i> (Standard) oder <i>Echte Aufnahmen</i>; darunter, was er tun wird. <b>Weite Suche</b> schaltet sie ein, wenn das ganze Bild unscharf ist. <b>Bereich</b>: Seitenlänge des Quadrats in Sensorpixeln. Der <b>Wegbalken</b> reicht von − bis + zum maximalen Verfahrweg um den Start: hell der geplante Weg, dunkler der schon zurückgelegte, der Strich ist die aktuelle Position. Daneben zwei Symbole: <b>Fester Bereich</b> misst immer dieselbe Stelle des Bildes, <b>Folgt dem Motiv</b> verschiebt den Bereich mit dem Motiv, wenn das Bild beim Fokussieren wandert (siehe unten).",
     "<b>Schärfekurve</b>: ein Punkt pro Messung, waagerecht die Position des Fokussierers; darunter die Schrittweite. Frühere Durchläufe bleiben blasser unter dem laufenden, und das Diagramm zoomt auf den Bereich des feinen Durchlaufs. Die orangen Quadrate sind die echten Bestätigungsaufnahmen, die grüne Linie die gewählte Position, die grüne Raute die Kontrollaufnahme. Mit dem Mauszeiger auf einem Punkt liest man Position und Schärfe (in % des Maximums).",
     "<b>Status</b>: Durchlauf, laufende Aufnahme und Position, dann das Ergebnis mit Kontrolle und Spitzenbreite oder der Grund, warum kein Fokus gefunden wurde.",
     "<b>Wiederholen</b> und darunter <b>Fokus verwenden als Stapelanfang / Stapelende</b>, solange der Fokussierer auf der gefundenen Position bleibt. <b>Wiederholen</b> startet den Autofokus erneut; ein Klick auf einen anderen Punkt verschiebt den Bereich, ohne das Feld zu schließen. Während der Messung gibt es <b>Stopp</b>.",
@@ -783,6 +783,7 @@ mit dem Feintrieb gekoppelt ist.</p>
 ])}
 <h2>10.1 Der Antriebsstrang</h2>
 <p>Vom Motor bis zum Objekttisch durchläuft die Bewegung mehrere Stufen, und jede multipliziert oder teilt:</p>
+<p><b>Fester Bereich oder Motiv folgen.</b> Ist der Schlitten im Makrobereich nicht genau auf die Objektivachse ausgerichtet, wandert das Bild bei jedem Schritt ein wenig: mit festem Bereich kann das gewählte Detail das Feld verlassen und die Messung landet auf dem Hintergrund, mit einer Kurve ohne Spitze oder mit der falschen. Mit <i>Folgt dem Motiv</i> wird jedes Bild mit dem der nächsten bereits gemessenen Position verglichen, wo der Fokus fast gleich ist, und der Bereich geht dorthin, wo das Detail hingewandert ist; am Ende bleibt er dort. Ist das Detail nicht mehr auffindbar, hält der Autofokus mit „Motiv verloren“ an. Am Mikroskop oder bei gleichförmigen Strukturen (feine Linien, Raster) ist der feste Bereich besser.</p>
 {diagram(DIAGRAM_LABELS)}
 <div class="formula">
   Auflösung (µm/Schritt) = {frac("Weg pro Knopfumdrehung (µm)", "Schritte/Umdr. × Mikroschritt × Untersetzung")}

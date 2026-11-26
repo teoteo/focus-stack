@@ -14,6 +14,7 @@ impostazioni vere; se è aperta, lo script le modificherebbe. Lo script si ferma
 import argparse
 import json
 import re
+import shutil
 import sys
 import time
 import urllib.error
@@ -27,6 +28,7 @@ ap.add_argument("base", nargs="?", default="http://127.0.0.1:8797")
 ap.add_argument("seq_dir", nargs="?", default=None, help="cartella per la sequenza di prova")
 ap.add_argument("--lang", choices=("it", "en", "fr", "de", "es"), default="it")
 ap.add_argument("--only", default="", help="rifà solo queste figure (nomi separati da virgole); le altre restano")
+ap.add_argument("--readme", action="store_true", help="con --lang en salva anche le schermate del README in docs/img/")
 ARGS = ap.parse_args()
 BASE, LANG = ARGS.base, ARGS.lang
 OUT = Path(__file__).parent / "img" / LANG
@@ -117,6 +119,30 @@ def save_shot(page, name: str, **kw) -> None:
     out = OUT / f"{name}.{'jpg' if jpg else 'png'}"
     page.screenshot(path=str(out), **({"type": "jpeg", "quality": 72} if jpg else {}), **kw)
     (OUT / f"{name}.{'png' if jpg else 'jpg'}").unlink(missing_ok=True)
+README_IMG = Path(__file__).resolve().parent.parent / "img"
+
+
+def readme_shot(page, name: str, height: int | None = None) -> None:
+    """Schermata del README (docs/img/<name>.jpg, 1800 px di larghezza): la finestra intera, con --readme e --lang en."""
+    if not (ARGS.readme and LANG == "en"):
+        return
+    from PIL import Image
+    vp = page.viewport_size
+    if height:
+        page.set_viewport_size({"width": vp["width"], "height": height})
+        page.wait_for_timeout(600)
+    tmp = README_IMG / f".{name}.png"
+    page.screenshot(path=str(tmp))
+    if height:
+        page.set_viewport_size(vp)
+        page.wait_for_timeout(300)
+    im = Image.open(tmp).convert("RGB")
+    im = im.resize((1800, round(im.height * 1800 / im.width)), Image.LANCZOS)
+    im.save(README_IMG / f"{name}.jpg", quality=82, optimize=True, progressive=True)
+    tmp.unlink(missing_ok=True)
+    print("ok README", name)
+
+
 _kinds: dict[int, str] = {}
 
 
@@ -238,6 +264,8 @@ with sync_playwright() as p:
                   "lens_magnification": 0.5, "f_number": 8, "extension_mm": 0,
                   "closeup": [{"name": "Raynox DCR-250", "diopters": 8}]}}})
     Path(SEQ_DIR).mkdir(parents=True, exist_ok=True)
+    # libreria pulita: i set dei giri in altre lingue avrebbero il nome della fotocamera simulata in quella lingua
+    shutil.rmtree(Path(SEQ_DIR) / "_calibrazione", ignore_errors=True)
     post("/api/settings", {"output_root": SEQ_DIR})
     # libreria di calibrazione d'esempio (pochi fotogrammi): flat e dark dei flat, poi l'esposizione dei light e
     # i dark allo stesso tempo di posa, così tutti e tre i set risultano adatti alla prossima pila
@@ -273,11 +301,16 @@ with sync_playwright() as p:
       const set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
       set('f-info', '""" + SAMPLE["f_info"] + """');
       set('c-info', 'Nikon DSC D5600');
-      set('s-root-label', '\u200e~/Pictures/FocusStack\u200e');
+      const rl = document.getElementById('s-root-label');   // cartella della pila: …/nome_data-ora nella lingua
+      if (rl && !rl.textContent.startsWith('\u200e~/Pictures/')) rl.textContent = '\u200e~/Pictures/FocusStack/' + rl.textContent.split('/').pop();
       set('sum-phonex', new URL(window.FAKE_URL).host);   // riepilogo della Configurazione: niente indirizzo vero
       const root = document.getElementById('k-root');
       if (root && root.textContent.includes(SEQ)) root.textContent = root.textContent.replace(SEQ, '~/Pictures/FocusStack');
       document.querySelectorAll('#k-table td').forEach((td) => { if (td.textContent === SIM) td.textContent = 'Nikon DSC D5600'; });
+      const kp = document.getElementById('k-progress');   // percorso della cartella del set: niente percorso vero
+      if (kp && kp.textContent.includes(SEQ)) kp.textContent = kp.textContent.replace(SEQ, '~/Pictures/FocusStack');
+      const ki = document.getElementById('k-info');
+      if (ki && ki.innerHTML.includes(SIM)) ki.innerHTML = ki.innerHTML.replace(SIM, 'Nikon DSC D5600');
     }"""
     page.evaluate(f"window.SEQ = {json.dumps(SEQ_DIR)}; window.SIM = {json.dumps(state()['camera']['model'])}; "
                   f"window.FAKE_URL = {json.dumps(FAKE_URL)}; window.FAKE_QR = {json.dumps(FAKE_QR)};")
@@ -288,6 +321,12 @@ with sync_playwright() as p:
     page.evaluate("window.scrollTo(0, 0)")
     if not ONLY or "sessione" in ONLY:
         save_shot(page, "sessione")
+    if ARGS.readme and LANG == "en":   # README: dettagli della sequenza chiusi, si vedono avanzamento e pulsanti
+        page.evaluate("document.getElementById('s-more').open = false")
+        page.wait_for_timeout(300)
+        readme_shot(page, "session")
+        page.evaluate("document.getElementById('s-more').open = true")
+        page.wait_for_timeout(300)
     notes["sessione"] = {"w": 1440, "h": 1000, "marks": []}
     print("ok sessione")
 
@@ -300,17 +339,17 @@ with sync_playwright() as p:
         (5, "#rail", "l"), (6, "#jog-size", "l"), (7, "#jog-um", "l"), (8, ".jog-buttons", "l"),
         (9, ".row.goto", "l"), (10, "#f-halt", "l")))
     # «＋ Nuova pila» compare solo a pila finita: nella figura si mostra lo stesso
-    keep_new = page.add_style_tag(content="#s-new.hidden { display: inline-flex !important; }")
+    keep_new = page.add_style_tag(content="#s-new.hidden, #s-finder.hidden { display: inline-flex !important; }")
     page.wait_for_timeout(100)
     # riepilogo aperto: nella figura si vedono anche le righe del profilo ottico e della calibrazione
     page.evaluate("document.getElementById('s-sum-more').open || document.querySelector('#s-sum-more > summary').click()")
     page.wait_for_timeout(100)
     shot(page, "sequenza", "#card-seq", m(
-        (1, "#s-chip", "r"), (2, "#s-name", "l"), (3, "#s-new", "r"), (4, "#s-start", "l"), (5, "#s-step", "l"),
-        (6, "#s-count", "l"), (7, "#s-settle", "l"), (8, "#s-optics", "l"), (9, "#s-summary", "l"), (10, "#s-folder", "l"),
+        (1, "#s-chip", "r"), (2, "#s-name", "l"), (3, "#s-new", "r"), (4, "#s-folder", "l"), (5, "#s-start", "l"),
+        (6, "#s-step", "l"), (7, "#s-count", "l"), (8, "#s-optics", "l"), (9, "#s-summary", "l"), (10, "#s-settle", "l"),
         (11, "#s-repeats", "l"), (12, "#s-post", "l"), (13, "#s-backlash", "l"), (14, "#s-mode", "l"),
         (15, "label.check:has(#s-return)", "r"), (16, "#s-sound", "l"), (17, "#s-preset", "l"), (18, "#card-seq .progress-box", "l"),
-        (19, "#card-seq .seq-actions", "l"), (20, "#s-finder", "l")))
+        (19, "#card-seq .seq-actions", "l"), (20, "#s-finder", "r")))
     keep_new.evaluate("e => e.remove()")
     shot(page, "fotocamera", "#card-camera", m(
         (1, "#c-chip", "r"), (2, "#c-connected-line", "l"), (3, "#c-shutter", "l"), (4, "#c-aperture", "l"),
@@ -360,6 +399,8 @@ with sync_playwright() as p:
         (1, "#o-kind", "l"), (2, "#m-search", "l"), (3, "#m-maker", "r"), (4, "#m-focal", "l"), (5, "#m-lens-add", "r"),
         (6, "#m-mag", "l"), (7, "#m-fnum", "r"), (8, "#m-ext", "l"), (9, "#m-closeups", "r"), (10, "#o-pxresult", "l")))
     page.evaluate(hide_tools.format(v=""))
+    page.evaluate("window.scrollTo(0, 0)")
+    readme_shot(page, "optics", height=1130)
     page.select_option("#o-profile", PROFILE); page.dispatch_event("#o-profile", "change")
     page.wait_for_timeout(300)
 
@@ -389,6 +430,13 @@ with sync_playwright() as p:
                                                         (4, "#ssum-dr", "l")), pad=4)
     shot(page, "calibrazione-sensore", "#card-sensor", m(
         (1, "#sn-steps", "l"), (2, "#sn-charts", "l"), (3, "#sn-reco", "l"), (4, "#sn-table-box summary", "l"), (5, "#sn-export", "r")))
+    if ARGS.readme and LANG == "en":   # README: ISO dei dark (così i tre set risultano adatti), poi di nuovo 400
+        post("/api/camera/settings", {"name": "iso", "value": "100"})
+        page.wait_for_timeout(2500)
+        page.evaluate("window.scrollTo(0, 0)")
+        readme_shot(page, "calibration", height=1300)
+        post("/api/camera/settings", {"name": "iso", "value": "400"})
+        page.wait_for_timeout(1500)
 
     # ---- configurazione ----
     page.click(".tabs button[data-tab=config]")
@@ -495,6 +543,7 @@ with sync_playwright() as p:
     shot(vw, "visualizzatore-autofocus", "body", m(
         (1, "#af-btn", "r"), (2, "#af-roi", "t"), (3, ".af-src", "l"), (4, "#af-chart", "l"), (5, "#af-status", "l"),
         (6, "#af-start", "l")))
+    readme_shot(vw, "autofocus")
     post("/api/autofocus/settings", {"mode": "precise", "roi_px": 256, "coarse": False})
     vw.close()
 

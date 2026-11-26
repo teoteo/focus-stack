@@ -340,13 +340,13 @@ add(f"""
     "<b>Stato</b>: Pronta, In corso, In pausa, Completata, Errore.",
     "<b>Nome della pila</b>: le foto vanno in una sottocartella <code>nome_data-ora</code>, con nomi <code>nome_0001</code>, <code>nome_0002</code>…",
     "<b>＋ Nuova pila</b>: finita una pila, prepara la successiva (lo stato torna Pronta). Anche con lo stesso nome, ogni pila va in una cartella nuova.",
+    "<b>Cartella</b> della pila, sotto il nome: <code>…/nome_data-ora</code> nella cartella di salvataggio (passandoci sopra si vede il percorso intero). <span class='ui'>Scegli…</span> cambia la cartella di salvataggio con il pannello del Finder, <span class='ui'>Apri</span> la mostra nel Finder.",
     "<b>Inizio</b> e <b>Fine</b> in passi. <span class='ui'>⌖ qui</span> copia la posizione attuale.",
     "<b>Passo</b> fra uno scatto e il successivo, in passi del motore (capitolo 11).",
     "<b>Numero di scatti</b>. Se cambi Inizio, Fine o Passo si ricalcola il numero di scatti; se cambi il numero di scatti si ricalcola il passo. Quando il passo cambia da solo diventa arancione e mostra <span class='ui'>↺ era …</span>: un clic annulla la modifica.",
-    "<b>Attesa dopo il movimento</b>: tempo per far smorzare le vibrazioni prima dello scatto (1–3 s al microscopio).",
     "<b>Ottica e filtro (profilo)</b>: il profilo di obiettivo, filtro e illuminazione da scrivere nei dati della pila (7.2). <span class='ui'>Modifica</span> lo apre nella scheda Ottica. Senza profilo la pila risulta «nessun filtro». Con un profilo macro che indica il diaframma, sceglierlo imposta anche il diaframma della fotocamera; se poi i due non coincidono, il riepilogo lo segnala.",
     "<b>Riepilogo</b>: scatti, escursione in passi e in µm, passo in µm e durata stimata. Un clic sul riepilogo (▶ a destra) mostra anche il profilo ottico usato e la calibrazione che verrà collegata alla pila. Se la sequenza esce dai fine corsa compare un avviso rosso e la sequenza non parte.",
-    "<b>Salva in</b>: la cartella delle foto. <span class='ui'>Scegli…</span> apre il pannello del Finder, <span class='ui'>Apri</span> la mostra nel Finder.",
+    "<b>Attesa dopo il movimento</b>, nel riquadro richiudibile: tempo per far smorzare le vibrazioni prima dello scatto (1–3 s al microscopio).",
     "<b>Scatti per posizione</b>: quante foto fare a ogni posizione (predefinito 1). Con più scatti il software di fusione può farne la media e ridurre il rumore (7.4).",
     "<b>Pausa dopo lo scatto</b>: tempo per scrivere sulla scheda e ricaricare il flash.",
     "<b>Compensazione gioco</b>: prima del primo scatto il motore arretra di questi passi e poi avanza, così ogni scatto viene raggiunto dalla stessa direzione.",
@@ -354,11 +354,11 @@ add(f"""
     "<b>Torna all'inizio</b> a fine sequenza.",
     "<b>Suono sul Mac a fine sequenza</b>: un suono chiaro se la pila è completata, uno grave se si è fermata per un errore o è andata in pausa da sola.",
     "<b>Preset</b>: salva e richiama le impostazioni della sequenza, per esempio uno per obiettivo.",
-    "<b>Avanzamento</b>: scatti fatti, tempo che resta, posizione.",
+    "<b>Avanzamento</b>: scatti fatti sul totale, barra, tempo che resta; durante la pila sotto compaiono posizione e messaggi.",
     "<b>Avvia</b>, <b>Pausa</b>/<b>Riprendi</b> e <b>Interrompi</b>.",
-    "<b>Apri nel Finder</b>: a fine sequenza apre la cartella della pila, con le foto, <code>sequence.json</code> e <code>sequence.txt</code> (7.5).",
+    "<b>Apri</b>, accanto al contatore a fine sequenza: apre la cartella della pila, con le foto, <code>sequence.json</code> e <code>sequence.txt</code> (7.5).",
 ])}
-<p>Scatti per posizione, pausa dopo lo scatto, gioco, modalità, ritorno all'inizio e suono sono nel riquadro
+<p>Attesa dopo il movimento, scatti per posizione, pausa dopo lo scatto, gioco, modalità, ritorno all'inizio e suono sono nel riquadro
 richiudibile <span class="ui">Tempi, gioco e scatti per posizione</span>. Se le bobine del motore sono spente e
 l'app non le alimenta durante la sequenza, sotto compare un avviso arancione (capitolo 12).</p>
 <h2>Durante la sequenza</h2>
@@ -632,9 +632,9 @@ pelo, il bordo di una struttura. Serve per esempio a fissare con precisione l'in
   <span class="ui">Inizio pila</span> o <span class="ui">Fine pila</span> scrive la posizione nella sequenza, nella finestra principale.</li>
 </ol>
 {fig("visualizzatore-autofocus", [
-    "<b>⌖ Autofocus</b> (<kbd>A</kbd>): apre il pannello; il clic sull'immagine sceglie l'area. <kbd>Esc</kbd> lo chiude.",
-    "<b>Area misurata</b>: tratteggiata durante l'autofocus. Resta sullo stesso punto anche cambiando scatto o passando al live.",
-    "<b>Modo</b>: <i>Veloce</i>, <i>Preciso</i> (predefinito) o <i>Scatti veri</i>; sotto, che cosa farà. <b>Ricerca ampia</b> la accende per quando l'immagine è tutta sfocata. <b>Area</b>: lato del quadrato in pixel del sensore. La <b>barra della corsa</b> va da − a + l'escursione massima attorno alla partenza: in chiaro la corsa prevista, più scuro il tratto già percorso, la linea è la posizione attuale.",
+    "<b>⌖ Autofocus</b> (<kbd>A</kbd>): apre il pannello; il clic sull'immagine sceglie l'area. <kbd>Esc</kbd> lo chiude. Il pannello si sposta trascinando la barra del titolo; doppio clic sulla barra: torna nell'angolo.",
+    "<b>Area misurata</b>: tratteggiata durante l'autofocus. Resta sullo stesso punto anche cambiando scatto o passando al live. Con <i>Segue il soggetto</i> si sposta insieme al soggetto durante la misura.",
+    "<b>Modo</b>: <i>Veloce</i>, <i>Preciso</i> (predefinito) o <i>Scatti veri</i>; sotto, che cosa farà. <b>Ricerca ampia</b> la accende per quando l'immagine è tutta sfocata. <b>Area</b>: lato del quadrato in pixel del sensore. La <b>barra della corsa</b> va da − a + l'escursione massima attorno alla partenza: in chiaro la corsa prevista, più scuro il tratto già percorso, la linea è la posizione attuale. Accanto, due icone: <b>Area fissa</b> misura sempre lo stesso punto dell'immagine, <b>Segue il soggetto</b> sposta l'area con il soggetto quando l'immagine scorre mentre il fuoco cambia (vedi sotto).",
     "<b>Curva della nitidezza</b>: un punto per misura, in orizzontale la posizione del focheggiatore; sotto, il passo. Le passate precedenti restano più tenui sotto quella in corso, e il grafico si ingrandisce sulla zona della passata fine. I quadrati arancioni sono gli scatti veri di conferma, la linea verde la posizione scelta, il rombo verde lo scatto di verifica. Con il puntatore su un punto si leggono posizione e nitidezza (in % del massimo).",
     "<b>Stato</b>: passata, scatto in corso e posizione, poi il risultato con la verifica e la larghezza del picco, oppure il motivo per cui non ha trovato il fuoco.",
     "<b>Rifai</b> e, sotto, <b>Usa il fuoco come Inizio pila / Fine pila</b>, finché il focheggiatore resta sulla posizione trovata. <b>Rifai</b> ripete l'autofocus; un clic su un altro punto sposta l'area senza chiudere il pannello. Durante la misura c'è <b>Ferma</b>.",
@@ -755,6 +755,7 @@ micrometri vale un passo. Questo numero si chiama <b>risoluzione</b> (µm/passo)
 ])}
 <h2>10.1 La catena della trasmissione</h2>
 <p>Dal motore al tavolino il movimento passa per alcuni stadi, e ognuno moltiplica o divide:</p>
+<p><b>Area fissa o che segue il soggetto.</b> In macro, se la slitta non è proprio allineata all'asse dell'obiettivo, l'immagine scorre un po' a ogni passo: con l'area fissa il dettaglio scelto può uscire dal riquadro e la misura finire sullo sfondo, con una curva senza picco o con il picco sbagliato. Con <i>Segue il soggetto</i> ogni immagine si confronta con quella della posizione più vicina già misurata, dove il fuoco è quasi uguale, e l'area va dove è andato il dettaglio; alla fine resta lì. Se il dettaglio non si ritrova più, l'autofocus si ferma con «Soggetto perso». Al microscopio, o con trame tutte uguali (righe fitte, retini), conviene l'area fissa.</p>
 {diagram(DIAGRAM_LABELS)}
 <div class="formula">
   risoluzione (µm/passo) = {frac("corsa per giro della manopola (µm)", "passi per giro × microstep × rapporto di riduzione")}

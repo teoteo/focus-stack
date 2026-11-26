@@ -1,0 +1,106 @@
+{
+  "format": "focus-stack-calibration",
+  "version": 1,
+  "software": "Focus Stack 1.4.2",
+  "type": "flat_dark",
+  "state": "completed",
+  "created": "2026-11-26T18:47:19.896+01:00",
+  "updated": "2026-11-26T18:47:25.990+01:00",
+  "frames": [
+    {
+      "index": 0,
+      "time": "2026-11-26T18:47:21.405+01:00",
+      "files": [
+        "flat-dark_0001.png"
+      ],
+      "temperature_c": 21.41,
+      "stats": {
+        "mean_pct": {
+          "R": 0.062,
+          "G": 0.062,
+          "B": 0.092
+        },
+        "p99_5_pct": 0.098,
+        "burnt_pct": 0.0006,
+        "linear": false,
+        "center_mean_pct": 0.064
+      }
+    },
+    {
+      "index": 1,
+      "time": "2026-11-26T18:47:22.927+01:00",
+      "files": [
+        "flat-dark_0002.png"
+      ],
+      "temperature_c": 21.41,
+      "stats": {
+        "mean_pct": {
+          "R": 0.062,
+          "G": 0.062,
+          "B": 0.092
+        },
+        "p99_5_pct": 0.098,
+        "burnt_pct": 0.0006,
+        "linear": false,
+        "center_mean_pct": 0.064
+      }
+    },
+    {
+      "index": 2,
+      "time": "2026-11-26T18:47:24.449+01:00",
+      "files": [
+        "flat-dark_0003.png"
+      ],
+      "temperature_c": 21.41,
+      "stats": {
+        "mean_pct": {
+          "R": 0.062,
+          "G": 0.062,
+          "B": 0.092
+        },
+        "p99_5_pct": 0.098,
+        "burnt_pct": 0.0006,
+        "linear": false,
+        "center_mean_pct": 0.064
+      }
+    },
+    {
+      "index": 3,
+      "time": "2026-11-26T18:47:25.970+01:00",
+      "files": [
+        "flat-dark_0004.png"
+      ],
+      "temperature_c": 21.41,
+      "stats": {
+        "mean_pct": {
+          "R": 0.062,
+          "G": 0.062,
+          "B": 0.092
+        },
+        "p99_5_pct": 0.098,
+        "burnt_pct": 0.0006,
+        "linear": false,
+        "center_mean_pct": 0.064
+      }
+    }
+  ],
+  "flat_set": "flat_20261126-184709",
+  "camera": {
+    "model": "Simulated camera",
+    "iso": "100",
+    "shutterspeed": "1/30",
+    "aperture": "f/8",
+    "imageformat": "RAW"
+  },
+  "temperature_c": {
+    "min": 21.41,
+    "max": 21.41,
+    "mean": 21.41
+  },
+  "mean_level_pct": {
+    "R": 0.062,
+    "G": 0.062,
+    "B": 0.092
+  },
+  "finished": "2026-11-26T18:47:25.990+01:00"
+}

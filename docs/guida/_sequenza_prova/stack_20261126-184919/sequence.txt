@@ -1,0 +1,46 @@
+Focus Stack 1.4.2 · status: interrupted
+Start: 2026-11-26 18:49:19
+End: 2026-11-26 18:49:36 (duration 16 s)
+
+SEQUENCE
+--------
+Positions: 24 · shots per position: 1 · shots taken: 7 of 24
+From 24000 to 26000 steps, step 87 steps = 7.25 µm · travel 166.67 µm
+Direction of travel: toward the objective
+Backlash compensation: 200 steps
+Wait after move: 800 ms · pause after shot: 200 ms
+Capture mode: Download to the Mac
+Temperature: 21.2 °C
+z axis: 0 = first frame, positive values toward the objective
+
+FOCUSER
+-------
+Simulator · firmware SIM
+Scale: 0.0833 µm/step (computed from the mechanics) · microstep 1
+
+CAMERA
+------
+Simulated camera
+ISO 400 · Shutter speed 1/60 · Aperture f/8 · Format RAW
+
+OPTICS
+------
+Profile: 10× GFP
+Objective: Plan 10×/0.25
+Magnification on the sensor: 10×
+NA 0.25 · Immersion: Air (dry)
+Pixel on the specimen: 0.39 µm (sensor pixel 3.9 µm ÷ magnification)
+Filter: GFP, Band pass, 525/50 nm
+Illumination: Epifluorescence · 80 %
+Notes: butterfly wing
+
+CALIBRATION
+-----------
+Darks: no suitable set in the library
+Flats: no suitable set in the library
+Flat darks: no suitable set in the library
+
+FILES
+-----
+stack_0001.png … stack_0007.png  (7 files)
+Complete data for the fusion software: sequence.json

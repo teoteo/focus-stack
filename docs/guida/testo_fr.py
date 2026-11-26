@@ -362,13 +362,13 @@ add(f"""
     f"<b>État</b> : {ui('Pronta')}, {ui('In corso')}, {ui('In pausa')}, {ui('Completata')}, {ui('Errore')}.",
     f"<b>{ui('Nome della pila')}</b> : les photos vont dans un sous-dossier <code>nom_date-heure</code>, avec les noms <code>nom_0001</code>, <code>nom_0002</code>…",
     f"<b>{ui('＋ Nuova pila')}</b> : une fois une pile terminée, prépare la suivante (l'état redevient {ui('Pronta')}). Même avec le même nom, chaque pile va dans un nouveau dossier.",
+    f"<b>Dossier</b> de la pile, sous le nom : <code>…/nom_date-heure</code> dans le dossier d'enregistrement (au survol, le chemin complet). <span class='ui'>{ui('Scegli…')}</span> change le dossier d'enregistrement avec le Finder, <span class='ui'>{ui('Apri')}</span> l'affiche dans le Finder.",
     f"<b>{ui('Inizio')}</b> et <b>{ui('Fine')}</b> en pas. <span class='ui'>⌖ {ui('qui')}</span> copie la position actuelle.",
     "<b>Pas</b> entre deux photos, en pas moteur (chapitre 11).",
     f"<b>{ui('Numero di scatti')}</b>. Si vous modifiez {ui('Inizio')}, {ui('Fine')} ou Pas, le nombre de photos est recalculé ; si vous modifiez le nombre de photos, c'est le pas qui est recalculé. Quand le pas change tout seul, il devient orange et affiche <span class='ui'>↺ était …</span> : un clic annule la modification.",
-    "<b>Attente après le mouvement</b> : laisse les vibrations s'amortir avant la photo (1 à 3 s au microscope).",
     f"<b>{ui('Ottica e filtro (profilo)')}</b> : le profil d'objectif, de filtre et d'éclairage à écrire dans les données de la pile (7.2). <span class='ui'>{ui('Modifica')}</span> l'ouvre dans l'onglet {ui('Ottica')}. Sans profil, la pile est notée « aucun filtre ». Avec un profil macro qui indique le diaphragme, le choisir règle aussi le diaphragme de l'appareil ; si les deux diffèrent ensuite, le récapitulatif le signale.",
     "<b>Récapitulatif</b> : photos, course en pas et en µm, pas en µm et durée estimée. Un clic sur le récapitulatif (▶ à droite) affiche aussi le profil optique utilisé et la calibration qui sera associée à la pile. Si la séquence sort des limites, un avertissement rouge apparaît et elle ne démarre pas.",
-    f"<b>{ui('Salva in')}</b> : le dossier des photos. <span class='ui'>{ui('Scegli…')}</span> ouvre le Finder, <span class='ui'>{ui('Apri')}</span> y affiche le dossier.",
+    "<b>Attente après le mouvement</b>, dans la section repliable : laisse les vibrations s'amortir avant la photo (1 à 3 s au microscope).",
     f"<b>{ui('Scatti per posizione')}</b> : combien de photos prendre à chaque position (1 par défaut). Avec plusieurs prises, le logiciel de fusion peut en faire la moyenne et réduire le bruit (7.4).",
     "<b>Pause après la photo</b> : écriture sur la carte, recharge du flash.",
     "<b>Compensation du jeu</b> : avant la première photo, le moteur recule de ce nombre de pas puis avance ; chaque photo est ainsi atteinte dans le même sens.",
@@ -376,11 +376,11 @@ add(f"""
     f"<b>{TORNA}</b>.",
     f"<b>{ui('Suono sul Mac a fine sequenza')}</b> : un son clair si la pile est terminée, un son grave si elle s'est arrêtée sur une erreur ou s'est mise en pause toute seule.",
     "<b>Préréglages</b> : enregistrent et rappellent les réglages de la séquence, par exemple un par objectif.",
-    "<b>Progression</b> : photos prises, temps restant, position.",
+    "<b>Progression</b> : photos prises sur le total, barre, temps restant ; pendant la pile, la position et les messages apparaissent dessous.",
     f"<b>{ui('▶ Avvia sequenza')}</b>, <b>{ui('Pausa')}</b>/<b>{ui('Riprendi')}</b>, <b>{ui('■ Interrompi')}</b>.",
-    f"<b>{ui('Apri nel Finder')}</b> : en fin de séquence, ouvre le dossier de la pile, avec les photos, <code>sequence.json</code> et <code>sequence.txt</code> (7.5).",
+    f"<b>{ui('Apri')}</b>, à côté du compteur en fin de séquence : ouvre le dossier de la pile, avec les photos, <code>sequence.json</code> et <code>sequence.txt</code> (7.5).",
 ])}
-<p>Les prises par position, la pause après la photo, le jeu, le mode, le retour au début et le son se trouvent dans la
+<p>L'attente après le mouvement, les prises par position, la pause après la photo, le jeu, le mode, le retour au début et le son se trouvent dans la
 section repliable <span class="ui">{ui('Tempi, gioco e scatti per posizione')}</span>. Si les bobines du moteur sont
 éteintes et que l'app ne les alimente pas pendant la séquence, un avertissement orange apparaît en dessous
 (chapitre 12).</p>
@@ -663,9 +663,9 @@ d'une structure. Il sert par exemple à fixer avec précision le début ou la fi
   <span class="ui">début de pile</span> ou <span class="ui">fin de pile</span> écrit la position dans la séquence, dans la fenêtre principale.</li>
 </ol>
 {fig("visualizzatore-autofocus", [
-    "<b>⌖ Autofocus</b> (<kbd>A</kbd>) : ouvre le panneau ; un clic sur l'image choisit la zone. <kbd>Échap</kbd> le ferme.",
-    "<b>Zone mesurée</b> : en pointillés pendant l'autofocus. Elle reste au même endroit si l'on change de prise ou si l'on passe à la visée en direct.",
-    "<b>Mode</b> : <i>Rapide</i>, <i>Précis</i> (par défaut) ou <i>Vraies prises</i> ; en dessous, ce qu'il va faire. <b>Recherche large</b> l'active quand l'image est entièrement floue. <b>Zone</b> : côté du carré en pixels du capteur. La <b>barre de course</b> va de − à + l'excursion maximale autour du départ : en clair la course prévue, plus foncé le trajet déjà parcouru, le trait est la position actuelle.",
+    "<b>⌖ Autofocus</b> (<kbd>A</kbd>) : ouvre le panneau ; un clic sur l'image choisit la zone. <kbd>Échap</kbd> le ferme. Le panneau se déplace en faisant glisser sa barre de titre ; double-clic sur la barre : retour dans le coin.",
+    "<b>Zone mesurée</b> : en pointillés pendant l'autofocus. Elle reste au même endroit si l'on change de prise ou si l'on passe à la visée en direct. Avec <i>Suit le sujet</i>, elle se déplace avec le sujet pendant la mesure.",
+    "<b>Mode</b> : <i>Rapide</i>, <i>Précis</i> (par défaut) ou <i>Vraies prises</i> ; en dessous, ce qu'il va faire. <b>Recherche large</b> l'active quand l'image est entièrement floue. <b>Zone</b> : côté du carré en pixels du capteur. La <b>barre de course</b> va de − à + l'excursion maximale autour du départ : en clair la course prévue, plus foncé le trajet déjà parcouru, le trait est la position actuelle. À côté, deux icônes : <b>Zone fixe</b> mesure toujours le même point de l'image, <b>Suit le sujet</b> déplace la zone avec le sujet quand l'image glisse pendant la mise au point (voir plus bas).",
     "<b>Courbe de netteté</b> : un point par mesure, la position du focuser en horizontal ; en dessous, le pas. Les passes précédentes restent plus pâles sous la passe en cours, et le graphique zoome sur la zone de la passe fine. Les carrés orange sont les vraies prises de confirmation, la ligne verte la position choisie, le losange vert la prise de vérification. En survolant un point on lit sa position et sa netteté (en % du maximum).",
     "<b>État</b> : passe, prise en cours et position, puis le résultat avec la vérification et la largeur du pic, ou la raison pour laquelle la mise au point n'a pas été trouvée.",
     "<b>Recommencer</b> et, en dessous, <b>Utiliser la mise au point comme début de pile / fin de pile</b>, tant que le focuser reste sur la position trouvée. <b>Recommencer</b> relance l'autofocus ; un clic sur un autre point déplace la zone sans fermer le panneau. Pendant la mesure il y a <b>Arrêter</b>.",
@@ -789,6 +789,7 @@ moteur est couplé à la vis micrométrique.</p>
 ])}
 <h2>10.1 La chaîne de transmission</h2>
 <p>Du moteur à la platine, le mouvement passe par plusieurs étages, et chacun multiplie ou divise :</p>
+<p><b>Zone fixe ou qui suit le sujet.</b> En macro, si le rail n'est pas exactement aligné sur l'axe de l'objectif, l'image glisse un peu à chaque pas : avec la zone fixe, le détail choisi peut sortir du cadre et la mesure finir sur le fond, avec une courbe sans pic ou avec le mauvais pic. Avec <i>Suit le sujet</i>, chaque image est comparée à celle de la position la plus proche déjà mesurée, où la mise au point est presque la même, et la zone va là où le détail est allé ; à la fin elle y reste. Si le détail n'est plus retrouvé, l'autofocus s'arrête avec « Sujet perdu ». Au microscope, ou avec des textures uniformes (lignes fines, trames), préférez la zone fixe.</p>
 {diagram(DIAGRAM_LABELS)}
 <div class="formula">
   résolution (µm/pas) = {frac("course par tour de molette (µm)", "pas par tour × micropas × rapport de réduction")}

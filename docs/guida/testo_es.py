@@ -347,13 +347,13 @@ add(f"""
     f"<b>Estado</b>: {ui('Pronta')}, {ui('In corso')}, {ui('In pausa')}, {ui('Completata')}, {ui('Errore')}.",
     f"<b>{ui('Nome della pila')}</b>: las fotos van a una subcarpeta <code>nombre_fecha-hora</code>, con nombres <code>nombre_0001</code>, <code>nombre_0002</code>…",
     f"<b>{ui('＋ Nuova pila')}</b>: terminada una pila, prepara la siguiente (el estado vuelve a {ui('Pronta')}). Aunque tenga el mismo nombre, cada pila va a una carpeta nueva.",
+    f"<b>Carpeta</b> de la pila, bajo el nombre: <code>…/nombre_fecha-hora</code> en la carpeta de guardado (al pasar por encima se ve la ruta completa). <span class='ui'>{ui('Scegli…')}</span> cambia la carpeta de guardado con el panel del Finder, <span class='ui'>{ui('Apri')}</span> la muestra en el Finder.",
     f"<b>{ui('Inizio')}</b> y <b>{ui('Fine')}</b> en pasos. <span class='ui'>⌖ {ui('qui')}</span> copia la posición actual.",
     "<b>Paso</b> entre una foto y la siguiente, en pasos del motor (cap. 11).",
     f"<b>{ui('Numero di scatti')}</b>. Si cambias {ui('Inizio')}, {ui('Fine')} o Paso, se recalcula el número de fotos; si cambias el número de fotos, se recalcula el paso. Cuando el paso cambia solo, se vuelve naranja y muestra <span class='ui'>↺ era …</span>: un clic deshace el cambio.",
-    "<b>Espera tras el movimiento</b>: deja que se amortigüen las vibraciones antes del disparo (1–3 s en el microscopio).",
     f"<b>{ui('Ottica e filtro (profilo)')}</b>: el perfil de objetivo, filtro e iluminación que se escribe en los datos de la pila (7.2). <span class='ui'>{ui('Modifica')}</span> lo abre en la pestaña {ui('Ottica')}. Sin perfil, la pila figura como «{ui('nessun filtro')}». Con un perfil macro que indica el diafragma, elegirlo ajusta también el diafragma de la cámara; si después no coinciden, el resumen lo avisa.",
     "<b>Resumen</b>: fotos, recorrido en pasos y µm, paso en µm y duración estimada. Un clic en el resumen (▶ a la derecha) muestra también el perfil óptico usado y la calibración que se vinculará a la pila. Si la secuencia sale de los límites, aparece un aviso rojo y no se inicia.",
-    f"<b>{ui('Salva in')}</b>: carpeta de las fotos. <span class='ui'>{ui('Scegli…')}</span> abre el panel del Finder, <span class='ui'>{ui('Apri')}</span> la muestra en el Finder.",
+    "<b>Espera tras el movimiento</b>, en la sección plegable: deja que se amortigüen las vibraciones antes del disparo (1–3 s en el microscopio).",
     f"<b>{ui('Scatti per posizione')}</b>: cuántas fotos se toman en cada posición (por defecto 1). Con varias, el software de fusión puede promediarlas y reducir el ruido (7.4).",
     "<b>Pausa tras el disparo</b>: tiempo para escribir en la tarjeta y recargar el flash.",
     "<b>Compensación de holgura</b>: antes de la primera foto el motor retrocede estos pasos y luego avanza, para llegar a cada foto desde la misma dirección.",
@@ -361,11 +361,11 @@ add(f"""
     "<b>Volver al inicio</b> al terminar.",
     f"<b>{ui('Suono sul Mac a fine sequenza')}</b>: un sonido claro si la pila se ha completado, uno grave si se ha detenido por un error o se ha puesto en pausa sola.",
     f"<b>{ui('Preset')}</b>: guarda y recupera los ajustes de la secuencia, p. ej. uno por objetivo.",
-    "<b>Progreso</b>: fotos tomadas, tiempo restante, posición.",
+    "<b>Progreso</b>: fotos tomadas del total, barra, tiempo restante; durante la pila debajo aparecen la posición y los mensajes.",
     f"<b>{ui('▶ Avvia sequenza')}</b>, <b>{ui('❚❚ Pausa')}</b>/<b>{ui('Riprendi')}</b> e <b>{ui('■ Interrompi')}</b>.",
-    f"<b>{ui('Apri nel Finder')}</b>: al terminar, abre la carpeta de la pila, con las fotos, <code>sequence.json</code> y <code>sequence.txt</code> (7.5).",
+    f"<b>{ui('Apri')}</b>, junto al contador al terminar: abre la carpeta de la pila, con las fotos, <code>sequence.json</code> y <code>sequence.txt</code> (7.5).",
 ])}
-<p>Las fotos por posición, la pausa tras el disparo, la holgura, el modo, la vuelta al inicio y el sonido están en la
+<p>La espera tras el movimiento, las fotos por posición, la pausa tras el disparo, la holgura, el modo, la vuelta al inicio y el sonido están en la
 sección plegable <span class="ui">{ui('Tempi, gioco e scatti per posizione')}</span>. Si las bobinas del motor están
 apagadas y la app no las alimenta durante la secuencia, debajo aparece un aviso naranja (capítulo 12).</p>
 <h2>Durante la secuencia</h2>
@@ -641,9 +641,9 @@ pila.</p>
   <span class="ui">inicio de la pila</span> o <span class="ui">fin de la pila</span> escribe la posición en la secuencia, en la ventana principal.</li>
 </ol>
 {fig("visualizzatore-autofocus", [
-    "<b>⌖ Autoenfoque</b> (<kbd>A</kbd>): abre el panel; el clic en la imagen elige el área. <kbd>Esc</kbd> lo cierra.",
-    "<b>Área medida</b>: discontinua mientras funciona el autoenfoque. Se queda en el mismo punto aunque cambies de toma o pases a la vista en vivo.",
-    "<b>Modo</b>: <i>Rápido</i>, <i>Preciso</i> (predeterminado) o <i>Tomas reales</i>; debajo, lo que hará. <b>Búsqueda amplia</b> la activa para cuando toda la imagen está desenfocada. <b>Área</b>: lado del cuadrado en píxeles del sensor. La <b>barra del recorrido</b> va de − a + la excursión máxima alrededor de la partida: en claro el recorrido previsto, más oscuro el tramo ya recorrido, la línea es la posición actual.",
+    "<b>⌖ Autoenfoque</b> (<kbd>A</kbd>): abre el panel; el clic en la imagen elige el área. <kbd>Esc</kbd> lo cierra. El panel se mueve arrastrando la barra del título; doble clic en la barra: vuelve a la esquina.",
+    "<b>Área medida</b>: discontinua mientras funciona el autoenfoque. Se queda en el mismo punto aunque cambies de toma o pases a la vista en vivo. Con <i>Sigue al sujeto</i> se mueve junto con el sujeto durante la medición.",
+    "<b>Modo</b>: <i>Rápido</i>, <i>Preciso</i> (predeterminado) o <i>Tomas reales</i>; debajo, lo que hará. <b>Búsqueda amplia</b> la activa para cuando toda la imagen está desenfocada. <b>Área</b>: lado del cuadrado en píxeles del sensor. La <b>barra del recorrido</b> va de − a + la excursión máxima alrededor de la partida: en claro el recorrido previsto, más oscuro el tramo ya recorrido, la línea es la posición actual. Al lado, dos iconos: <b>Área fija</b> mide siempre el mismo punto de la imagen, <b>Sigue al sujeto</b> mueve el área con el sujeto cuando la imagen se desplaza al cambiar el enfoque (ver abajo).",
     "<b>Curva de nitidez</b>: un punto por medida, en horizontal la posición del enfocador; debajo, el paso. Las pasadas anteriores quedan más tenues bajo la que está en curso, y el gráfico se amplía en la zona de la pasada fina. Los cuadrados naranjas son las tomas reales de confirmación, la línea verde la posición elegida, el rombo verde la toma de verificación. Con el puntero sobre un punto se leen su posición y su nitidez (en % del máximo).",
     "<b>Estado</b>: pasada, toma en curso y posición, luego el resultado con la verificación y la anchura del pico, o el motivo por el que no encontró el enfoque.",
     "<b>Repetir</b> y, debajo, <b>Usar el enfoque como inicio / fin de la pila</b>, mientras el enfocador siga en la posición encontrada. <b>Repetir</b> vuelve a hacer el autoenfoque; un clic en otro punto mueve el área sin cerrar el panel. Durante la medida está <b>Detener</b>.",
@@ -765,6 +765,7 @@ motor al enfoque fino.</p>
 ])}
 <h2>10.1 La cadena de transmisión</h2>
 <p>Del motor a la platina el movimiento pasa por varias etapas, y cada una multiplica o divide:</p>
+<p><b>Área fija o que sigue al sujeto.</b> En macro, si el carril no está exactamente alineado con el eje del objetivo, la imagen se desplaza un poco en cada paso: con el área fija el detalle elegido puede salir del recuadro y la medición acabar en el fondo, con una curva sin pico o con el pico equivocado. Con <i>Sigue al sujeto</i> cada imagen se compara con la de la posición más cercana ya medida, donde el enfoque es casi igual, y el área va adonde ha ido el detalle; al final se queda ahí. Si el detalle ya no se encuentra, el autofocus se detiene con «Sujeto perdido». En el microscopio, o con texturas uniformes (líneas finas, tramas), conviene el área fija.</p>
 {diagram(DIAGRAM_LABELS)}
 <div class="formula">
   resolución (µm/paso) = {frac("recorrido por vuelta del mando (µm)", "pasos por vuelta × micropaso × relación de reducción")}

@@ -10,17 +10,20 @@ microscope and a **Sony / Nikon / Canon** camera over USB, running automatic
 
 The app and its PDF user guide are available in **Italian, English, French, German and Spanish**.
 
-![A 368-shot stack in progress: focuser, sequence and camera cards, with the latest shot](docs/img/session.jpg)
-*A stack in progress: 368 shots, 21.5 µm apart, with a macro lens at 2.8×. Focuser position and limits on the left, sequence, progress and time left in the middle (▶ shows the optics profile and calibration), camera settings and the latest shot on the right.*
+![The Session tab: focuser, sequence and camera cards, with the latest shot](docs/img/session.jpg)
+*The Session tab: focuser position and limits on the left, the sequence with the stack folder, the summary (▶ shows the optics profile and calibration) and progress in the middle, camera settings and the latest shot on the right.*
 
 ![The viewer showing a full-resolution RAW frame of the stack, with the stack counter, the Inspector and the strip of frames](docs/img/viewer.jpg)
 *The viewer follows the stack shot by shot: progress and data of the shot at the top, full-resolution RAW, the strip of the current stack below, composition guides (thirds, centre or both) and the Inspector with clipped pixels, histogram and values.*
 
+![Autofocus on a point in the viewer: the chosen area on the image, the panel with the sharpness curve and the focus found](docs/img/autofocus.jpg)
+*Autofocus on a point: click the detail, the sharpness curve fills in shot by shot and the focuser returns to the peak, with a check shot. The area stays fixed or follows the subject when the image drifts (macro); drag the panel wherever it doesn't cover the subject.*
+
 ![The Optics tab: index on the left, the macro lens profile in the middle, magnification, scale and depth of field on the right](docs/img/optics.jpg)
 *Optics: one profile per microscope objective or macro lens (lenses from the Lensfun database, close-up lenses, extension tubes). The summary on the right computes magnification, µm per pixel on the specimen, depth of field and the recommended step.*
 
-![The Calibration tab taking flat frames, with the calibration library below](docs/img/calibration.jpg)
-*Calibration: light exposure measured on the RAWs, darks and flats taken automatically, the sets the next stack will use, and a library that links each stack to the right calibration set.*
+![The Calibration tab: light exposure, calibration frames and summary, with the library below](docs/img/calibration.jpg)
+*Calibration: light exposure measured on the RAWs, darks and flats taken automatically (a frame unlike the others is flagged right away), the sets the next stack will use, a library that links each stack to the right calibration set, and the sensor analysis.*
 
 ![Sensor analysis of a Sony A6400: dynamic range and read noise for each ISO from 100 to 102400](docs/img/sensor-chart-en.png)
 *Sensor analysis (new in 1.4.0), measured on a Sony A6400 with pairs of flats and darks at each ISO. ISO 100 has the widest dynamic range (13.3 stops). At ISO 400 the sensor switches to a second conversion gain and read noise drops from 3 to 1.2 electrons: 12.9 stops with exposures four times shorter. Above that, raising the ISO only costs range; ISO 160–320 are best avoided, and above 3200 the camera filters noise in the RAW.*
@@ -215,19 +218,19 @@ second monitor. If the live view is on, the viewer opens straight on the live vi
 
 | Control | Key | Effect |
 |---|---|---|
-| **−** / **+** | <kbd>−</kbd>&nbsp;/&nbsp;<kbd>+</kbd> | zoom |
-| **Fit** / **Reset** | <kbd>0</kbd>&nbsp;or&nbsp;<kbd>R</kbd> | whole image in the window |
+| **−**&nbsp;/&nbsp;**+** | <kbd>−</kbd>&nbsp;/&nbsp;<kbd>+</kbd> | zoom |
+| **Fit**&nbsp;/&nbsp;**Reset** | <kbd>0</kbd>&nbsp;or&nbsp;<kbd>R</kbd> | whole image in the window |
 | **100%** | <kbd>1</kbd> | one sensor pixel = one screen pixel. Above 150% pixels stay sharp, without interpolation blur |
-| Drag with the mouse | — | pan |
-| Scroll wheel (or trackpad pinch) | — | zoom centred on the pointer |
+| Drag&nbsp;with&nbsp;the&nbsp;mouse | — | pan |
+| Scroll&nbsp;wheel&nbsp;/&nbsp;pinch | — | zoom centred on the pointer |
 | Double-click | — | toggle fit ↔ 100% |
-| ◀ ▶ and thumbnails at the bottom | <kbd>←</kbd>&nbsp;<kbd>→</kbd> | previous or next shot |
-| **● Live** | <kbd>L</kbd> | camera live view with zoom, 100% and pan; ◀ ▶ or a thumbnail go back to the shots |
-| **Follow latest** | <kbd>U</kbd> | show every new shot automatically |
-| **Lock view** | <kbd>K</kbd> | keep zoom and position when changing shot, to compare focus at the same spot |
+| ◀&nbsp;▶,&nbsp;thumbnails | <kbd>←</kbd>&nbsp;<kbd>→</kbd> | previous or next shot |
+| **●&nbsp;Live** | <kbd>L</kbd> | camera live view with zoom, 100% and pan; ◀ ▶ or a thumbnail go back to the shots |
+| **Follow&nbsp;latest** | <kbd>U</kbd> | show every new shot automatically |
+| **Lock&nbsp;view** | <kbd>K</kbd> | keep zoom and position when changing shot, to compare focus at the same spot |
 | **Inspector** | <kbd>I</kbd> | side panel, read only: R, G, B and brightness histograms, burnt (channels at 255) and black (channels at 0) pixels under a chosen rule, red/blue marks on the image, values under the pointer and min/max/mean/median of the whole image. It also works on the live view (updated twice a second) |
-| **⌖ Autofocus** | <kbd>A</kbd>,&nbsp;<kbd>[</kbd>&nbsp;<kbd>]</kbd>,&nbsp;<kbd>Esc</kbd> | autofocus on a point: click the detail, then Start. The focuser scans in the direction of the stack, the sharpness curve (Sobel gradient in the area) fills in shot by shot, and the focuser returns to the sharpest position from the same side (backlash overshoot) and takes a check shot. Modes: Fast (live view), Precise (live view, then 3 real confirmation shots; default) and Real shots, each with its own settings; it never moves further from the start than the maximum excursion; wide search when everything is blurred; settings in Configuration › Autofocus |
-| Full screen | <kbd>F</kbd> | — |
+| **⌖&nbsp;Autofocus** | <kbd>A</kbd>,&nbsp;<kbd>[</kbd>&nbsp;<kbd>]</kbd>,&nbsp;<kbd>Esc</kbd> | autofocus on a point: click the detail, then Start. The focuser scans in the direction of the stack, the sharpness curve (Sobel gradient in the area) fills in shot by shot, and the focuser returns to the sharpest position from the same side (backlash overshoot) and takes a check shot. Modes: Fast (live view), Precise (live view, then 3 real confirmation shots; default) and Real shots, each with its own settings; it never moves further from the start than the maximum excursion; wide search when everything is blurred; the area stays fixed or follows the subject when the image drifts during the scan (macro); the panel can be dragged anywhere; settings in Configuration › Autofocus |
+| Full&nbsp;screen | <kbd>F</kbd> | — |
 
 The Inspector measures the 8-bit image on screen: for a RAW shot that is the conversion for the screen,
 and the RAW itself has more headroom in highlights and shadows (the panel says so).
@@ -332,7 +335,7 @@ The **Calibration** tab has four parts:
 - **Calibration frames**: darks (lens cap, same ISO and shutter speed as the lights), flats (evenly lit field,
   shutter speed found automatically for a target mean level, default 50 %) and flat darks (lens cap, the
   flats' ISO and shutter speed). The app asks to fit the cap before darks.
-- **Calibration library**: the sets in `<save folder>/_calibrazione/`, and which ones the next stack would use.
+- **Calibration library**: the sets in `<save folder>/_calibrazione/`, and which ones the next stack would use. A frame very unlike the rest of its set (light off or changed in the flats, light leaking into the darks) is flagged right away during the series and then in the table.
 - **Sensor analysis** (once per camera): a guided procedure takes two flats at each ISO, asks for the lens cap,
   takes two darks at the same ISO and shutter speed, and measures gain, read noise, full well and dynamic range
   from the raw values (photon transfer). It recommends the ISO with the widest range, the ISO from which read noise
