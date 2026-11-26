@@ -527,6 +527,12 @@ habían quitado.</p>
 <code>docs/calibration-json.md</code>). Al iniciar una pila, <code>sequence.json</code> indica los conjuntos adecuados más
 recientes: para los darks, misma cámara, ISO y tiempo; para los flats, también el mismo perfil óptico. Los fotogramas no
 se copian. Es la misma biblioteca que usa <b>Focus Fusion</b>, que guarda en ella, al lado, sus «masters».</p>
+<p><b>Fotogramas distintos de los demás.</b> Un conjunto solo sirve si sus fotogramas se parecen: un flat tomado
+después de que la luz se apagara o cambiara, o un dark sin la tapa, estropea la media. Durante la serie la app compara
+cada fotograma con los ya tomados y, si es muy distinto (flats a más de ±10 % del nivel de los demás, darks más de un
+punto más claros), lo avisa enseguida en la tarjeta y en el Registro, cuando aún puedes detenerte. En la tabla el
+conjunto muestra ⚠ y cuántos junto al número de fotogramas (al pasar por encima, cuáles); los resúmenes también lo
+avisan. Conviene repetir el conjunto: los fotogramas se quedan en la carpeta, marcados en <code>calibration.json</code>.</p>
 
 <p>A la derecha, el <b>resumen</b> queda a la vista mientras trabajas en la pestaña.</p>
 {fig("calibrazione-riepilogo", [

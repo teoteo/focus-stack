@@ -519,6 +519,12 @@ l'avevano tolta.</p>
 <code>docs/calibration-json.md</code>). All'avvio di una pila, <code>sequence.json</code> indica i set più recenti
 adatti: per i dark stessa fotocamera, ISO e tempo; per i flat anche lo stesso profilo ottico. I fotogrammi non vengono
 copiati. È la stessa libreria che usa <b>Focus Fusion</b>, che ci salva accanto i suoi «master».</p>
+<p><b>Fotogrammi diversi dagli altri.</b> Un set va bene solo se i fotogrammi si somigliano: un flat scattato dopo che la
+luce si è spenta o è cambiata, o un dark con il tappo tolto, rovina la media. Durante la serie l'app confronta ogni
+fotogramma con quelli già fatti e, se è molto diverso (flat oltre ±10 % dal livello degli altri, dark più chiari di
+oltre un punto), lo dice subito nella card e nel Registro, quando ti puoi ancora fermare. Nella tabella il set mostra
+accanto al numero di fotogrammi ⚠ e quanti sono (passando sopra, quali); anche i riepiloghi lo segnalano. Conviene
+rifare il set: i fotogrammi restano nella cartella, segnati in <code>calibration.json</code>.</p>
 
 <p>A destra, il <b>riepilogo</b> resta in vista mentre lavori nella scheda.</p>
 {fig("calibrazione-riepilogo", [

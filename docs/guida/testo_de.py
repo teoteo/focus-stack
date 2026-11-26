@@ -540,6 +540,12 @@ Licht zurück, das Vignettierung und Staubschatten weggenommen hatten.</p>
 <code>docs/calibration-json.md</code>). Beim Start eines Stapels verweist <code>sequence.json</code> auf die neuesten
 passenden Sätze: für Darks gleiche Kamera, ISO und Zeit; für Flats zusätzlich dasselbe Optikprofil. Die Bilder werden
 nicht kopiert. Es ist dieselbe Bibliothek, die <b>Focus Fusion</b> verwendet und in der es seine „Master“ ablegt.</p>
+<p><b>Aufnahmen, die aus der Reihe fallen.</b> Ein Satz taugt nur, wenn sich seine Aufnahmen gleichen: ein Flat nach
+erloschenem oder verändertem Licht oder ein Dark ohne Deckel verdirbt den Mittelwert. Während der Serie vergleicht die
+App jede Aufnahme mit den bisherigen und meldet eine stark abweichende (Flats mehr als ±10 % vom Pegel der übrigen,
+Darks mehr als einen Punkt heller) sofort in der Karte und im Protokoll, solange man noch anhalten kann. In der
+Tabelle zeigt der Satz neben der Zahl der Aufnahmen ⚠ und wie viele (beim Darüberfahren welche); auch die Übersichten
+weisen darauf hin. Besser den Satz neu aufnehmen: die Aufnahmen bleiben im Ordner, markiert in <code>calibration.json</code>.</p>
 
 <p>Rechts bleibt die <b>Übersicht</b> sichtbar, während Sie im Bereich arbeiten.</p>
 {fig("calibrazione-riepilogo", [

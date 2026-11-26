@@ -546,6 +546,13 @@ le vignetage et les ombres de poussière avaient enlevée.</p>
 plus récents : pour les darks, même appareil photo, même ISO et même temps de pose ; pour les flats, également le même
 profil optique. Les images ne sont pas copiées. C'est la même bibliothèque que celle qu'utilise <b>Focus Fusion</b>, qui y
 enregistre ses « masters » à côté.</p>
+<p><b>Images différentes des autres.</b> Un lot n'est bon que si ses images se ressemblent : un flat pris après
+que la lumière s'est éteinte ou a changé, ou un dark sans bouchon, gâche la moyenne. Pendant la série, l'app compare
+chaque image à celles déjà prises et, si elle est très différente (flats à plus de ±10 % du niveau des autres, darks
+plus clairs de plus d'un point), le signale aussitôt dans la carte et dans le Journal, quand vous pouvez encore
+vous arrêter. Dans le tableau, le lot affiche ⚠ et leur nombre à côté du nombre d'images (au survol, lesquelles) ;
+les récapitulatifs le signalent aussi. Mieux vaut refaire le lot : les images restent dans le dossier, marquées dans
+<code>calibration.json</code>.</p>
 
 <p>À droite, le <b>récapitulatif</b> reste visible pendant que vous travaillez dans l'onglet.</p>
 {fig("calibrazione-riepilogo", [

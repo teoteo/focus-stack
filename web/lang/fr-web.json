@@ -986,5 +986,8 @@
  "La fotocamera non offre {f} con l'obiettivo di ora: imposta il diaframma a mano": "L'appareil ne propose pas {f} avec l'objectif actuel : réglez le diaphragme à la main",
  "Diaframma della fotocamera impostato a {f}, come nel profilo «{name}»": "Diaphragme de l'appareil réglé sur {f}, comme dans le profil « {name} »",
  "⚠ La fotocamera è a {cur}, il profilo dice {f}": "⚠ L'appareil est à {cur}, le profil indique {f}",
- "Imposta {f}": "Régler {f}"
+ "Imposta {f}": "Régler {f}",
+ "{k} diversi dagli altri": "{k} différents des autres",
+ "Fotogrammi {list} molto diversi dagli altri del set: conviene rifarlo": "Images {list} très différentes du reste du lot : mieux vaut le refaire",
+ "livello {v} % contro {ref} %": "niveau {v} % contre {ref} %"
 }

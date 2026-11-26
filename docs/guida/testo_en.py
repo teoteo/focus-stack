@@ -709,6 +709,12 @@ taken away.</p>
 <code>docs/calibration-json.md</code>). When a stack starts, <code>sequence.json</code> lists the most recent matching
 sets: for darks the same camera, ISO and shutter speed; for flats the same optics profile as well. The frames are not
 copied. It is the same library used by <b>Focus Fusion</b>, which saves its “masters” next to them.</p>
+<p><b>Frames unlike the others.</b> A set is only good if its frames look alike: a flat taken after the light went
+off or changed, or a dark with the cap off, spoils the mean. While shooting, the app compares each frame with the
+ones already taken and, if it is very different (flats more than ±10 % from the others' level, darks more than one
+point brighter), says so at once in the card and in the Log, while you can still stop. In the table the set shows ⚠
+and how many next to the frame count (hover to see which); the summaries flag it too. Better to redo the set: the
+frames stay in the folder, marked in <code>calibration.json</code>.</p>
 
 <p>On the right, the <b>summary</b> stays in view while you work in the tab.</p>
 {fig("calibrazione-riepilogo", [

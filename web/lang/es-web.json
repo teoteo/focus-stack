@@ -986,5 +986,8 @@
  "La fotocamera non offre {f} con l'obiettivo di ora: imposta il diaframma a mano": "La cámara no ofrece {f} con el objetivo actual: ajusta el diafragma a mano",
  "Diaframma della fotocamera impostato a {f}, come nel profilo «{name}»": "Diafragma de la cámara ajustado a {f}, como en el perfil «{name}»",
  "⚠ La fotocamera è a {cur}, il profilo dice {f}": "⚠ La cámara está a {cur}, el perfil dice {f}",
- "Imposta {f}": "Ajustar {f}"
+ "Imposta {f}": "Ajustar {f}",
+ "{k} diversi dagli altri": "{k} distintos de los demás",
+ "Fotogrammi {list} molto diversi dagli altri del set: conviene rifarlo": "Fotogramas {list} muy distintos del resto del conjunto: conviene repetirlo",
+ "livello {v} % contro {ref} %": "nivel {v} % frente a {ref} %"
 }

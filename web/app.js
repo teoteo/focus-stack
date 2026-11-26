@@ -1872,7 +1872,8 @@ function matchText(m) {
   if (!m) return t("Connetti la fotocamera per sapere quali set userebbe la prossima pila");
   const part = (key, label) => {
     const e = m[key];
-    return e ? `${label} ✓ <span class="muted">(${escapeHtml(t("{n} fotogrammi", { n: e.frames }))} · ${escapeHtml(shortDate(e.created))})</span>`
+    return e ? `${label} ✓ <span class="muted">(${escapeHtml(t("{n} fotogrammi", { n: e.frames }))} · ${escapeHtml(shortDate(e.created))})</span>` +
+      (e.outliers ? ` <span class="warn-t" title="${escapeHtml(outlierTitle(e.outliers))}">⚠ ${escapeHtml(t("{k} diversi dagli altri", { k: e.outliers.length }))}</span>` : "")
       : `${label} —`;
   };
   return `${part("darks", t("Dark"))} · ${part("flats", t("Flat"))} · ${part("flat_darks", t("Dark dei flat"))}`;
@@ -1891,10 +1892,20 @@ function renderCalibSummary(m) {
     const e = m && m[key], b = $(id), x = $(id + "x");
     b.textContent = !m ? "—" : e ? "✓ " + shortDate(e.created) : t("manca");
     b.className = !m ? "" : e ? "ok-t" : "warn-t";
-    x.textContent = e ? t("{n} fotogrammi", { n: e.frames }) : !m ? t("connetti la fotocamera") : "";
+    x.textContent = e ? t("{n} fotogrammi", { n: e.frames }) + (e.outliers ? " · ⚠ " + t("{k} diversi dagli altri", { k: e.outliers.length }) : "")
+      : !m ? t("connetti la fotocamera") : "";
+    x.className = e && e.outliers ? "warn-t" : "";
+    x.title = e && e.outliers ? outlierTitle(e.outliers) : "";
   };
   one("darks", "ksum-dark"); one("flats", "ksum-flat"); one("flat_darks", "ksum-fdark");
   $("k-dot").classList.toggle("hidden", !m || (!!m.darks && !!m.flats));
+}
+
+// fotogrammi di un set molto diversi dagli altri (luce cambiata nei flat, luce che entra nei dark)
+function outlierTitle(list, median) {
+  const nums = list.map((o) => (typeof o === "object" ? o.n : o)).join(", ");
+  return t("Fotogrammi {list} molto diversi dagli altri del set: conviene rifarlo", { list: nums }) +
+    (median != null ? " · " + t("livello {v} % contro {ref} %", { v: [...new Set(list.map((o) => fmtNum(o.level_pct, 1)))].join(" · "), ref: fmtNum(median, 1) }) : "");
 }
 
 function renderLibrary() {
@@ -1918,7 +1929,8 @@ function renderLibrary() {
       s.type === "flat" ? (s.optics_profile || t("nessuno")) : "—", s.frames, lv == null ? "—" : `${fmtNum(lv, 1)} %`, temp];
     const del = `<td><button class="btn ghost small" data-del="${escapeHtml(s.name)}" data-frames="${s.frames}" title="${escapeHtml(t("Sposta nel Cestino la cartella di questo set"))}">${escapeHtml(t("Elimina"))}</button></td>`;
     // data-label: nelle finestre strette ogni riga diventa una scheda con le etichette delle colonne (style.css)
-    const td = (v, i) => `<td${WRAP_COLS[i] ? ` class="${WRAP_COLS[i]}"` : ""} data-label="${escapeHtml(heads[i] || "")}">${i ? escapeHtml(String(v))
+    const odd = s.outliers ? ` <span class="warn-t" title="${escapeHtml(outlierTitle(s.outliers.frames, s.outliers.median_pct))}">⚠ ${s.outliers.frames.length}</span>` : "";
+    const td = (v, i) => `<td${WRAP_COLS[i] ? ` class="${WRAP_COLS[i]}"` : ""} data-label="${escapeHtml(heads[i] || "")}">${i ? escapeHtml(String(v)) + (i === 6 ? odd : "")
       : `<label class="lib-sel"><input type="checkbox" data-sel="${escapeHtml(s.name)}"${libSel.has(s.name) ? " checked" : ""} aria-label="${escapeHtml(t("Seleziona"))}"><span>${escapeHtml(String(v))}</span></label>`}</td>`;
     return `<tr title="${escapeHtml(s.path)}">${cells.map(td).join("")}${del}</tr>`;
   });
@@ -1984,6 +1996,10 @@ function renderCalibration(c, run) {
   $("k-bar").style.width = `${mine && k.total ? (k.index / k.total) * 100 : 0}%`;
   $("k-level").textContent = mine && k.level_pct != null ? t("livello {v} %", { v: fmtNum(k.level_pct, 1) }) : "";
   $("k-progress").textContent = mine ? [CALIB_LABELS()[k.kind], k.message, k.state !== "running" && k.folder ? k.folder : ""].filter(Boolean).join(" · ") : "";
+  // fotogrammi molto diversi dagli altri: l'avviso resta visibile durante la serie, quando ci si può ancora fermare
+  const kw = mine && k.state === "running" && k.warning ? "⚠ " + k.warning : "";
+  $("k-warn").textContent = kw;
+  $("k-warn").classList.toggle("hidden", !kw);
 }
 
 function bindCalibration() {

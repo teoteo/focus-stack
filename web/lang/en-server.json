@@ -371,5 +371,8 @@
   "Analisi ISO {iso}…": "Analysing ISO {iso}…",
   "Analisi del sensore salvata: {n} ISO": "Sensor analysis saved: {n} ISO values",
   "Analisi del sensore interrotta": "Sensor analysis aborted",
-  "ERRORE analisi del sensore: {exc}": "Sensor analysis ERROR: {exc}"
+  "ERRORE analisi del sensore: {exc}": "Sensor analysis ERROR: {exc}",
+  "Calibrazione completata: {n} fotogrammi, {k} diversi dagli altri ({list}): rifai il set": "Calibration complete: {n} frames, {k} unlike the others ({list}): redo the set",
+  "Fotogramma {i}: livello {v} % contro {ref} % degli altri: la luce è cambiata?": "Frame {i}: level {v} % vs {ref} % for the others: has the light changed?",
+  "Fotogramma {i} più chiaro degli altri ({v} % contro {ref} %): entra luce? Controlla tappo e mirino": "Frame {i} brighter than the others ({v} % vs {ref} %): is light getting in? Check the cap and viewfinder"
 }

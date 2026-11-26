@@ -30,8 +30,9 @@ the **most recent suitable completed set** of each type (paths relative to the s
 | `calibration.flat_darks` | same camera model, ISO and shutter speed as the chosen flats |
 
 Each entry: `set` (folder name), `path` (e.g. `../_calibrazione/dark_20261116-172039`), `frames`, `created`,
-`iso`, `shutterspeed`, `aperture`, `bulb_s`, `temperature_c` (`{min, max, mean}`), `optics_profile` (flats).
-A missing key means no suitable set was found.
+`iso`, `shutterspeed`, `aperture`, `bulb_s`, `temperature_c` (`{min, max, mean}`), `optics_profile` (flats),
+`outliers` (Focus Stack 1.4.2+: 1-based numbers of the frames very unlike the rest of the set, see below; also for
+sets made before the check existed). A missing key means no suitable set was found.
 
 ## `calibration.json`
 
@@ -48,9 +49,17 @@ A missing key means no suitable set was found.
 | `optics_profile`, `optics`, `illumination` | flats: as in `sequence.json` |
 | `flat_set` | flat darks: folder name of the flat set they match |
 | `temperature_c` | `{min, max, mean}` from the focuser probe, when present |
-| `mean_level_pct` | mean level per channel `{R, G, B}` over all frames |
-| `frames[]` | `index`, `time`, `files` (names in the folder), `temperature_c`, `stats` |
+| `mean_level_pct` | mean level per channel `{R, G, B}` over all frames (from 1.4.2: without the `outlier` frames) |
+| `outliers` | 1.4.2+, only when some frames are unlike the others: their 1-based numbers |
+| `frames[]` | `index`, `time`, `files` (names in the folder), `temperature_c`, `stats`, `outlier` (1.4.2+, `true` when present) |
 | `frames[].stats` | `mean_pct` per channel, `p99_5_pct` (brightest channel), `burnt_pct`, `center_mean_pct`, `linear` |
+
+**Frames unlike the others** (1.4.2+). A set is only good if its frames look alike: a flat taken after the
+light went off or changed, or a dark with the cap off or light entering through the viewfinder, spoils the mean.
+With at least 3 measured frames, a frame is an outlier when its level (`stats.mean_pct`, brightest channel)
+differs from the median of the set by more than ±10 % of it (flats) or is more than 1 percentage point above it
+(darks, flat darks). Focus Stack warns while shooting, marks the frames when the set completes and shows them in
+the library; the files stay in the folder and in `frames[]`, so a reader can leave them out or reject the set.
 
 Levels are percentages between the black level and the saturation level of the sensor, measured on the
 RAW data (no demosaicing) by `fs-rawstat`, built from LibRaw 0.22.3 — the same version Focus Fusion uses

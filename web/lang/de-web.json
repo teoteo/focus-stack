@@ -986,5 +986,8 @@
  "La fotocamera non offre {f} con l'obiettivo di ora: imposta il diaframma a mano": "Die Kamera bietet {f} mit dem aktuellen Objektiv nicht an: Blende von Hand einstellen",
  "Diaframma della fotocamera impostato a {f}, come nel profilo «{name}»": "Kamerablende auf {f} gestellt, wie im Profil „{name}“",
  "⚠ La fotocamera è a {cur}, il profilo dice {f}": "⚠ Die Kamera steht auf {cur}, das Profil sagt {f}",
- "Imposta {f}": "{f} einstellen"
+ "Imposta {f}": "{f} einstellen",
+ "{k} diversi dagli altri": "{k} anders als die übrigen",
+ "Fotogrammi {list} molto diversi dagli altri del set: conviene rifarlo": "Aufnahmen {list} weichen stark vom Rest des Satzes ab: besser neu aufnehmen",
+ "livello {v} % contro {ref} %": "Pegel {v} % statt {ref} %"
 }

@@ -20,6 +20,7 @@ import asyncio
 import json
 import math
 import re
+import statistics
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -96,6 +97,8 @@ class CalibStatus:
     target_pct: float | None = None
     exposure: dict | None = None   # ultimo risultato dell'esposizione automatica
     history: list = field(default_factory=list)   # tentativi dell'esposizione automatica
+    outliers: list = field(default_factory=list)  # fotogrammi della serie in corso molto diversi dagli altri (da 1)
+    warning: str = ""                             # avviso sull'ultimo di questi
 
 
 class CalibrationRunner:
@@ -142,6 +145,25 @@ class CalibrationRunner:
                 await asyncio.sleep(wait)
         await asyncio.sleep(max(MIN_PAUSE_S, self.pause_s))
         return files
+
+    def _check_frame(self, kind: str, i: int, frame: dict, previous: list[dict]) -> None:
+        """Subito dopo lo scatto: il fotogramma confrontato con la mediana di quelli già fatti (non segnati).
+        Se è molto diverso lo si dice nel registro e nella card, mentre si è ancora in tempo a fermarsi."""
+        lv = frame_level(frame)
+        prev = [v for v in (frame_level(f) for f in previous if not f.get("outlier")) if v is not None]
+        if lv is None or not prev:
+            return
+        ref = statistics.median(prev)
+        if not is_outlier(kind, lv, ref):
+            return
+        frame["outlier"] = True
+        self.status.outliers.append(i + 1)
+        msg = (tr("Fotogramma {i}: livello {v} % contro {ref} % degli altri: la luce è cambiata?", i=i + 1, v=pct(lv), ref=pct(ref))
+               if kind == "flat" else
+               tr("Fotogramma {i} più chiaro degli altri ({v} % contro {ref} %): entra luce? Controlla tappo e mirino",
+                  i=i + 1, v=pct(lv), ref=pct(ref)))
+        self.status.warning = msg
+        self._log(msg, "warn")
 
     async def _set_shutter(self, cam, value: str) -> None:
         """Imposta il tempo e controlla che la fotocamera l'abbia preso (Sony a volte lo ignora)."""
@@ -343,6 +365,7 @@ class CalibrationRunner:
             self.status.folder = str(folder)
             self._log(tr("Calibrazione {kind}: {n} fotogrammi in {path}", kind=kind, n=count, path=folder))
             temps = []
+            self.status.outliers, self.status.warning = [], ""
             for i in range(count):
                 if self._stop:
                     raise asyncio.CancelledError
@@ -361,20 +384,41 @@ class CalibrationRunner:
                         self.status.level_pct = round(rawstat.level(st, "mean"), 2)
                     except rawstat.RawStatError as exc:
                         frame["stats_error"] = str(exc)
+                    self._check_frame(kind, i, frame, meta["frames"])
                 meta["frames"].append({k: v for k, v in frame.items() if v is not None})
                 self._on_shot(files, "calibration")
                 self.status.index = i + 1
                 if temps:
                     meta["temperature_c"] = {"min": min(temps), "max": max(temps), "mean": round(sum(temps) / len(temps), 2)}
-                levels = [fr["stats"]["mean_pct"] for fr in meta["frames"] if fr.get("stats")]
+                levels = mean_levels(meta["frames"])
                 if levels:
-                    meta["mean_level_pct"] = {k: round(sum(l[k] for l in levels) / len(levels), 3) for k in levels[0]}
+                    meta["mean_level_pct"] = levels
                 meta["updated"] = now_iso()
                 write_atomic(folder / "calibration.json", meta)
+            # a set finito, con tutti i fotogrammi: si segnano quelli diversi dagli altri (Focus Fusion può lasciarli
+            # fuori) e la media del set si rifà senza di loro
+            odd = frame_outliers(kind, meta["frames"])
+            for fr in meta["frames"]:
+                fr.pop("outlier", None)
+            if odd:
+                bad = {o["n"] for o in odd["frames"]}
+                for i, fr in enumerate(meta["frames"]):
+                    if i + 1 in bad:
+                        fr["outlier"] = True
+                meta["outliers"] = sorted(bad)
+                levels = mean_levels(meta["frames"])
+                if levels:
+                    meta["mean_level_pct"] = levels
             meta["state"] = "completed"
             self.status.state = "done"
-            self.status.message = tr("Calibrazione completata: {n} fotogrammi", n=count)
-            self._log(self.status.message)
+            if odd:
+                self.status.outliers = meta["outliers"]
+                self.status.message = tr("Calibrazione completata: {n} fotogrammi, {k} diversi dagli altri ({list}): rifai il set",
+                                         n=count, k=len(meta["outliers"]), list=", ".join(map(str, meta["outliers"])))
+                self._log(self.status.message, "warn")
+            else:
+                self.status.message = tr("Calibrazione completata: {n} fotogrammi", n=count)
+                self._log(self.status.message)
         except asyncio.CancelledError:
             meta["state"] = "interrupted"
             self.status.state = "idle"
@@ -397,6 +441,48 @@ class CalibrationRunner:
                     pass
 
 
+# ---------------- fotogrammi diversi dagli altri ----------------
+# Un set va bene solo se i fotogrammi si somigliano: un flat scattato con la luce spenta o cambiata, o un dark con
+# il tappo tolto o la luce che entra dal mirino, rovina la media. Il controllo usa i livelli già misurati a ogni
+# scatto (stats in calibration.json), quindi vale anche per i set fatti prima che esistesse.
+OUTLIER_FLAT = 0.10   # flat: livello oltre ±10 % dalla mediana degli altri
+OUTLIER_DARK = 1.0    # dark e dark dei flat: oltre 1 punto percentuale sopra la mediana
+
+
+def frame_level(frame: dict) -> float | None:
+    """Livello medio di un fotogramma in % del bianco (il canale più alto: nei flat il verde)."""
+    m = (frame.get("stats") or {}).get("mean_pct") or {}
+    vals = [v for v in m.values() if isinstance(v, (int, float))]
+    return max(vals) if vals else None
+
+
+def is_outlier(kind: str, level: float, ref: float) -> bool:
+    if kind == "flat":
+        return ref > 0 and abs(level / ref - 1) > OUTLIER_FLAT
+    return level - ref > OUTLIER_DARK
+
+
+def frame_outliers(kind: str, frames: list[dict]) -> dict | None:
+    """Fotogrammi molto diversi dagli altri del set: {"frames": [{"n": da 1, "level_pct"}], "median_pct"}, o None.
+    Servono almeno 3 fotogrammi misurati (con 2 non si sa quale dei due è quello sbagliato)."""
+    lv = [(i, frame_level(f)) for i, f in enumerate(frames)]
+    lv = [(i, v) for i, v in lv if v is not None]
+    if len(lv) < 3:
+        return None
+    ref = statistics.median(v for _, v in lv)
+    odd = [{"n": i + 1, "level_pct": round(v, 2)} for i, v in lv if is_outlier(kind, v, ref)]
+    return {"frames": odd, "median_pct": round(ref, 2)} if odd else None
+
+
+def mean_levels(frames: list[dict]) -> dict | None:
+    """Livello medio per canale del set, senza i fotogrammi segnati come diversi dagli altri."""
+    levels = [fr["stats"]["mean_pct"] for fr in frames if fr.get("stats") and not fr.get("outlier")] \
+        or [fr["stats"]["mean_pct"] for fr in frames if fr.get("stats")]
+    if not levels:
+        return None
+    return {k: round(sum(l[k] for l in levels) / len(levels), 3) for k in levels[0]}
+
+
 # ---------------- libreria ----------------
 def list_library(output_root: str) -> list[dict]:
     """Set di calibrazione nella libreria, dal più recente."""
@@ -412,10 +498,15 @@ def list_library(output_root: str) -> list[dict]:
         if m.get("format") != FORMAT:
             continue
         frames = m.get("frames") or []
+        odd = frame_outliers(m.get("type") or "", frames)
+        if odd and not m.get("outliers"):   # set fatto prima del controllo: la media si rifà senza i fotogrammi diversi
+            bad = {o["n"] for o in odd["frames"]}
+            m["mean_level_pct"] = mean_levels([{**fr, "outlier": i + 1 in bad} for i, fr in enumerate(frames)]) or m.get("mean_level_pct")
         out.append({"name": meta_file.parent.name, "path": str(meta_file.parent), "type": m.get("type"),
                     "state": m.get("state"), "created": m.get("created"), "camera": m.get("camera") or {},
                     "bulb_s": m.get("bulb_s"), "optics_profile": m.get("optics_profile"), "frames": len(frames),
                     "mean_level_pct": m.get("mean_level_pct"), "temperature_c": m.get("temperature_c"),
+                    "outliers": odd,
                     "flat_set": m.get("flat_set"), "exposure": m.get("exposure")})
     out.sort(key=lambda x: x.get("created") or "", reverse=True)
     return out
@@ -463,6 +554,8 @@ def match(library: list[dict], camera: dict | None, optics_profile: str, bulb_s:
             e["temperature_c"] = s["temperature_c"]
         if s.get("optics_profile"):
             e["optics_profile"] = s["optics_profile"]
+        if s.get("outliers"):
+            e["outliers"] = [o["n"] for o in s["outliers"]["frames"]]
         return e
 
     darks = [s for s in same_cam if s["type"] == "dark" and s["camera"].get("iso") == cam.get("iso")
