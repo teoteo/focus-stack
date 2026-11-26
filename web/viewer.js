@@ -714,6 +714,7 @@ function renderAf() {
   $("af-btn").disabled = !ready && !busy && !afPanelOpen;
   stage.classList.toggle("af-mode", afPanelOpen && !busy);
   $("af-panel").classList.toggle("hidden", !(afPanelOpen || busy));
+  placeAfPanel();
   const cfg = (lastState && lastState.settings && lastState.settings.autofocus) || {};
   const mode = a.mode || "precise";
   for (const b of document.querySelectorAll("[data-af-mode]")) {
@@ -889,6 +890,57 @@ $("af-chart").addEventListener("pointermove", (e) => {
   if (best !== afHover) { afHover = best; drawAfChart(); }
 });
 $("af-chart").addEventListener("pointerleave", () => { if (afHover != null) { afHover = null; drawAfChart(); } });
+// Pannello spostabile: si trascina dalla barra del titolo; la posizione (distanza dal bordo destro e da quello in
+// basso, così resta al suo posto quando la finestra cambia) si ricorda. Doppio clic sulla barra: torna nell'angolo.
+const AF_PANEL_GAP = 12;
+let afPanelPos = null;   // {right, bottom} in pixel, o null = angolo in basso a destra
+try { const v = JSON.parse(localStorage.getItem("fs-af-panel") || "null"); if (v && isFinite(v.right) && isFinite(v.bottom)) afPanelPos = v; } catch { /* opzionale */ }
+function placeAfPanel() {
+  const panel = $("af-panel");
+  if (panel.classList.contains("hidden")) return;
+  const r = stage.getBoundingClientRect(), w = panel.offsetWidth, h = panel.offsetHeight;
+  const pos = afPanelPos || { right: AF_PANEL_GAP, bottom: AF_PANEL_GAP };
+  const right = Math.max(0, Math.min(r.width - w, pos.right)), bottom = Math.max(0, Math.min(r.height - h, pos.bottom));
+  panel.style.right = `${right}px`;
+  panel.style.bottom = `${bottom}px`;
+}
+(() => {
+  const head = $("af-head"), panel = $("af-panel");
+  let drag = null;
+  head.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 || e.target.closest("button")) return;
+    const r = stage.getBoundingClientRect(), pr = panel.getBoundingClientRect();
+    drag = { id: e.pointerId, dx: e.clientX - pr.left, dy: e.clientY - pr.top, r };
+    head.setPointerCapture(e.pointerId);
+    panel.classList.add("dragging");
+    e.preventDefault();
+  });
+  head.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { r } = drag, w = panel.offsetWidth, h = panel.offsetHeight;
+    const left = e.clientX - r.left - drag.dx, top = e.clientY - r.top - drag.dy;
+    afPanelPos = { right: r.width - w - left, bottom: r.height - h - top };
+    placeAfPanel();
+  });
+  const end = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    drag = null;
+    panel.classList.remove("dragging");
+    try { localStorage.setItem("fs-af-panel", JSON.stringify(afPanelPos)); } catch { /* opzionale */ }
+  };
+  head.addEventListener("pointerup", end);
+  head.addEventListener("pointercancel", end);
+  head.addEventListener("dblclick", (e) => {
+    if (e.target.closest("button")) return;
+    afPanelPos = null;
+    try { localStorage.removeItem("fs-af-panel"); } catch { /* opzionale */ }
+    placeAfPanel();
+  });
+  // il pannello cambia altezza (grafico, messaggi) e la finestra cambia misura: resta sempre dentro
+  new ResizeObserver(placeAfPanel).observe(panel);
+  new ResizeObserver(placeAfPanel).observe(stage);
+})();
+
 // i clic sul pannello non spostano l'immagine
 $("af-panel").addEventListener("pointerdown", (e) => e.stopPropagation());
 $("af-panel").addEventListener("dblclick", (e) => e.stopPropagation());

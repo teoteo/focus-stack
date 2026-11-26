@@ -110,7 +110,10 @@
   .af-panel { position: absolute; right: 12px; bottom: 12px; width: 430px; max-width: calc(100% - 24px); z-index: 5;
     background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 12px;
     box-shadow: 0 8px 28px rgba(0,0,0,.45); font-size: 13.5px; cursor: default; }
-  .af-head { display: flex; align-items: center; gap: 8px; }
+  .af-head { display: flex; align-items: center; gap: 8px; cursor: grab; touch-action: none; user-select: none;
+    -webkit-user-select: none; margin: -10px -12px 0; padding: 10px 12px 0; }
+  .af-panel.dragging, .af-panel.dragging .af-head { cursor: grabbing; }
+  .af-panel.dragging { box-shadow: 0 12px 36px rgba(0,0,0,.55); }
   .af-head b { font-size: 15px; }
   .af-head .grow { flex: 1; }
   .af-x { font: inherit; font-size: 20px; line-height: 1; width: 30px; height: 30px; border-radius: 8px; border: 0; cursor: pointer;
@@ -249,7 +252,7 @@
   <div class="help">Trascina per spostare · rotella o pinch per lo zoom · doppio clic: adatta ↔ 100%</div>
   <div class="af-roi hidden" id="af-roi" aria-hidden="true"></div>
   <div class="af-panel hidden" id="af-panel" role="region" aria-label="Autofocus">
-    <div class="af-head">
+    <div class="af-head" id="af-head" title="Trascina per spostare il pannello · doppio clic: torna nell'angolo">
       <b>Autofocus</b>
       <span class="grow"></span>
       <button class="af-x" id="af-close" title="Chiudi l'autofocus (Esc)" aria-label="Chiudi l'autofocus">×</button>

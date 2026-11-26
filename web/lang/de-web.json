@@ -996,5 +996,6 @@
  "Area fissa: misura sempre lo stesso punto dell'immagine": "Fester Bereich: misst immer dieselbe Stelle des Bildes",
  "Area fissa": "Fester Bereich",
  "Segue il soggetto: l'area si sposta con il soggetto quando l'immagine scorre mentre il fuoco cambia (macro)": "Folgt dem Motiv: der Bereich wandert mit dem Motiv, wenn das Bild beim Fokussieren wandert (Makro)",
- "Segue il soggetto": "Folgt dem Motiv"
+ "Segue il soggetto": "Folgt dem Motiv",
+ "Trascina per spostare il pannello · doppio clic: torna nell'angolo": "Ziehen, um das Feld zu verschieben · Doppelklick: zurück in die Ecke"
 }
