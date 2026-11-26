@@ -54,6 +54,17 @@ CALIB_LABELS = {
     "note2": 'sans flats, pas de division.',
 }
 
+# grafico d'esempio dell'analisi del sensore (7.6)
+SENSOR_LABELS = {
+    "title_dr": 'Plage dynamique (IL)',
+    "title_rn": 'Bruit de lecture (électrons)',
+    "unreliable": 'pas fiable',
+    "stops": 'IL',
+    "dcg1": 'double gain :',
+    "dcg2": 'de 3,0 à 1,2 e-',
+    "dec": ',',
+}
+
 # tableau de la profondeur de champ (noms des objectifs dans la langue du guide)
 OBJ_NAMES = ["4× / 0,10", "10× / 0,25", "20× / 0,40", "40× / 0,65", "60× / 0,85", "100× / 1,25 huile"]
 dof_rows = []
@@ -541,7 +552,41 @@ enregistre ses « masters » à côté.</p>
     f"<b>{ui('Per la prossima pila')}</b> : pour les darks, les flats et les darks des flats, ✓ avec la date du jeu qui serait utilisé, ou <i>{ui('manca')}</i> en orange. S'il manque un jeu, un point orange apparaît aussi à côté de <i>{ui('Libreria')}</i> dans l'index.",
     "<b>Température</b> actuelle de la sonde.",
     "Évolution sur les <b>60 dernières minutes</b> : comparez-la avec la température des darks dans le tableau.",
+    f"<b>{ui('Sensore')}</b> : plage dynamique attendue à l'ISO réglé, avec le graphique (ISO conseillés en vert, l'actuel entouré). Apparaît après l'analyse du capteur.",
 ], layout="side narrow")}
+
+<h3>{ui('Analisi del sensore')}</h3>
+<p>Une fois par appareil, <b>{ui('Calibrazione')} › {ui('Sensore')} › {ui('Analisi del sensore')}</b> mesure comment se
+comporte le capteur à chaque ISO : <b>gain</b> (combien d'électrons vaut une unité du RAW), <b>bruit de lecture</b>,
+<b>puits plein</b> (quelle quantité de lumière un pixel recueille avant de saturer) et <b>plage dynamique</b> en IL. Pour
+19 ISO, il faut environ 20 minutes.</p>
+<ol>
+<li><b>{ui('Prepara')}</b> : devant l'objectif, le diffuseur éclairé, comme pour les flats ; appareil en RAW et mise au
+  point manuelle. Choisissez la plage d'ISO (de 100 à 6400 par tiers d'IL est un bon début) et le nombre de vues par ISO (2 suffisent).</li>
+<li><b>Flat</b> : pour chaque ISO, l'app trouve le temps pour un flat à 50 % et déclenche. Les ISO refusés par l'appareil sont barrés.</li>
+<li><b>{ui('Tappo')}</b> : l'app s'arrête et demande de mettre le bouchon ; appuyez alors sur <i>{ui('Ho messo il tappo: scatta i dark')}</i>.</li>
+<li><b>Dark</b> : mêmes ISO et temps, dans le noir.</li>
+<li><b>{ui('Risultato')}</b> : deux graphiques, plage dynamique et bruit de lecture par ISO, et les ISO conseillés.</li>
+</ol>
+{fig("calibrazione-sensore", [
+    'Les <b>étapes</b> de la procédure : celle en cours en bleu, celles terminées cochées.',
+    "<b>Graphiques</b> de plage dynamique et de bruit de lecture par ISO : ISO conseillés en vert, l'ISO réglé sur l'appareil entouré, bande grise et ligne pointillée pour les ISO pas fiables.",
+    '<b>Conseillé</b>, <b>Conseillé avec peu de lumière</b> et <b>À éviter</b>, chacun avec la raison.',
+    '<b>Tableau</b> : pour chaque ISO le temps des flats, la plage, le bruit, le puits plein et le gain.',
+    "<b>Exporter en CSV</b> enregistre le tableau dans Téléchargements ; <b>Refaire l'analyse</b> repart de la préparation.",
+], layout="full")}
+<figure class="shot">{sensor_chart(SENSOR_LABELS)}<figcaption>Analyse du capteur d'un Sony A6400 : 19 ISO de 100 à 102400, 2 flats et 2 darks chacun. ISO 400 entouré.</figcaption></figure>
+<p>Comment le lire, avec l'exemple d'un Sony A6400. ISO 100 a la plage la plus large, 13,3 IL, parce qu'il recueille le plus
+de lumière. À ISO 400, le capteur passe à un second gain et le bruit de lecture descend de 3 à 1,2 électron : 12,9 IL
+avec des temps quatre fois plus courts. Au-delà, le bruit ne baisse plus et chaque doublement de l'ISO coûte un IL : si
+la lumière manque, restez à 400 et éclaircissez ensuite. Les ISO de 160 à 320 donnent moins de plage qu'ISO 400 avec des
+temps plus longs : mieux vaut les éviter. Au-delà de 3200, l'appareil filtre déjà le bruit dans le RAW, et ces valeurs
+sont marquées comme pas fiables.</p>
+<p>Le résultat est enregistré comme <b>profil du capteur</b> de l'appareil, dans <code>_calibrazione/_sensore</code>. Le
+récapitulatif de la Calibration et celui de la séquence montrent la plage dynamique attendue à l'ISO réglé, avec le point
+sur le graphique ; chaque pile écrit dans son <code>sequence.json</code> les valeurs de son ISO (<code>"sensor"</code>),
+que Focus Fusion peut utiliser. Les images de l'analyse sont dans le même dossier, hors de la bibliothèque des jeux, et ne
+sont jamais choisies pour une pile. Refaites l'analyse si vous changez d'appareil ou en mettez à jour le firmware.</p>
 
 <h2>7.7 Suivi sur smartphone</h2>
 <p>Pour suivre une longue pile loin du Mac, <span class="ui">{ui('Configurazione')} › {ui('Avanzamento da smartphone')}</span>

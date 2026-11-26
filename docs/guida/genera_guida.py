@@ -245,6 +245,59 @@ CALIB_DIAGRAM = """
 STATIC_FIGS = [HERE / "esempio-calibrazione" / "calibrazione-esempio.jpg"]
 
 
+# esempio vero di analisi del sensore (Sony A6400, 7.6): dati in esempio-sensore/ILCE-6400.json
+SENSOR_EXAMPLE = HERE / "esempio-sensore" / "ILCE-6400.json"
+
+
+def sensor_chart(labels):
+    """Due grafici affiancati (gamma dinamica e rumore di lettura per ISO, asse logaritmico) dai dati veri;
+    gli ISO non affidabili sono tratteggiati su fondo grigio, ISO 400 è cerchiato. labels: SENSOR_LABELS."""
+    import math
+    rows = json.loads(SENSOR_EXAMPLE.read_text(encoding="utf-8"))["iso"]
+    dec = labels.get("dec", ",")
+    fmt = lambda v, d=1: f"{v:.{d}f}".replace(".", dec)
+    BLUE, TXT, SEC, GRID, BAND = "#2f81f7", "#0f1c2e", "#5b6b80", "#dfe5ee", "#eef2f7"
+
+    def panel(x0, key, title, ymin, ymax, ystep, unit, note=None):
+        W, H, L, R, T, B = 370, 250, 34, 10, 34, 40
+        lo, hi = 80, 130000
+        lx = lambda v: x0 + L + (math.log10(v) - math.log10(lo)) / (math.log10(hi) - math.log10(lo)) * (W - L - R)
+        ly = lambda v: T + (1 - (min(max(v, ymin), ymax) - ymin) / (ymax - ymin)) * (H - T - B)
+        bad = next(r for r in rows if not r["reliable"])
+        prev = rows[rows.index(bad) - 1]
+        xb = (lx(prev["iso"]) + lx(bad["iso"])) / 2
+        o = [f'<text x="{x0 + 4}" y="16" font-size="13" font-weight="700" fill="{TXT}">{title}</text>',
+             f'<rect x="{xb:.1f}" y="{T}" width="{x0 + W - R - xb:.1f}" height="{H - T - B}" fill="{BAND}"/>',
+             f'<text x="{xb + 5:.1f}" y="{H - B - 7}" font-size="10.5" fill="{SEC}">{labels["unreliable"]}</text>']
+        v = ymin
+        while v <= ymax + 1e-9:
+            o.append(f'<line x1="{x0 + L}" x2="{x0 + W - R}" y1="{ly(v):.1f}" y2="{ly(v):.1f}" stroke="{GRID}"/>')
+            o.append(f'<text x="{x0 + L - 6}" y="{ly(v) + 4:.1f}" font-size="10.5" fill="{SEC}" text-anchor="end">{fmt(v, 0) if ystep >= 1 else fmt(v)}</text>')
+            v += ystep
+        for t in (100, 400, 1600, 6400, 25600, 102400):
+            o.append(f'<text x="{lx(t):.1f}" y="{H - B + 15}" font-size="10" fill="{SEC}" text-anchor="middle">{t}</text>')
+        o.append(f'<text x="{x0 + L + (W - L - R) / 2:.1f}" y="{H - 6}" font-size="10.5" fill="{SEC}" text-anchor="middle">ISO</text>')
+        pts = [(lx(r["iso"]), ly(r[key]), r) for r in rows]
+        path = lambda ps: "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y, _ in ps)
+        i0 = rows.index(bad)
+        o.append(f'<path d="{path(pts[:i0])}" fill="none" stroke="{BLUE}" stroke-width="2"/>')
+        o.append(f'<path d="{path(pts[i0 - 1:])}" fill="none" stroke="{BLUE}" stroke-width="2" stroke-dasharray="4 4" opacity=".5"/>')
+        for x, y, r in pts:
+            o.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.6" fill="{BLUE}"{"" if r["reliable"] else " opacity=" + chr(34) + ".5" + chr(34)}/>')
+        sel = next(p for p in pts if p[2]["iso"] == 400)
+        o.append(f'<circle cx="{sel[0]:.1f}" cy="{sel[1]:.1f}" r="7.5" fill="none" stroke="{TXT}" stroke-width="2"/>')
+        o.append(f'<text x="{sel[0] + 11:.1f}" y="{sel[1] - 9:.1f}" font-size="11.5" font-weight="700" fill="{TXT}">ISO 400: {fmt(sel[2][key])} {unit}</text>')
+        if note:
+            o.append(note(lx, ly))
+        return "\n".join(o)
+
+    note = lambda lx, ly: (f'<text x="{lx(330) + 6:.1f}" y="{ly(2.2):.1f}" font-size="10.5" fill="{SEC}">{labels["dcg1"]}</text>'
+                           f'<text x="{lx(330) + 6:.1f}" y="{ly(2.2) + 13:.1f}" font-size="10.5" fill="{SEC}">{labels["dcg2"]}</text>')
+    return (f'<svg class="diagram" viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Helvetica, Arial">'
+            + panel(0, "dynamic_range_stops", labels["title_dr"], 5, 14, 1, labels["stops"])
+            + panel(390, "read_noise_e", labels["title_rn"], 0, 4, 1, "e-", note) + "</svg>")
+
+
 def calib_diagram(labels):
     return CALIB_DIAGRAM.format(**labels)
 
@@ -307,7 +360,7 @@ def parts(lang):
             shutil.copy2(src, dst)
     seq_txt = HERE / img_dir / "sequence.txt"   # esempio di riepilogo, prodotto da cattura_schermate.py
     seq_txt = html_escape(seq_txt.read_text(encoding="utf-8")) if seq_txt.exists() else ""
-    ns = {"fig": make_fig(notes, img_dir), "frac": frac, "table": table, "num": make_num(lang), "diagram": diagram, "calib_diagram": calib_diagram,
+    ns = {"fig": make_fig(notes, img_dir), "frac": frac, "table": table, "num": make_num(lang), "diagram": diagram, "calib_diagram": calib_diagram, "sensor_chart": sensor_chart,
           "APP": app_strings(lang),
           "VERSION": VERSION, "ICON": ICON, "IMG": img_dir, "UA": UA, "UB": UB, "GEAR17": GEAR17,
           "um_step": um_step, "dof": dof, "OBJ": OBJ, "SEQ_TXT": seq_txt}

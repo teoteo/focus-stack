@@ -20,6 +20,9 @@ microscopio e una fotocamera **Sony / Nikon / Canon** via USB, eseguendo sequenz
 ![La scheda Calibrazione mentre scatta i flat, con la libreria di calibrazione sotto](docs/img/calibration.jpg)
 *Calibrazione: esposizione della luce misurata sui RAW, dark e flat scattati in automatico, i set che userà la prossima pila e una libreria che collega ogni pila alla calibrazione giusta.*
 
+![Analisi del sensore di una Sony A6400: gamma dinamica e rumore di lettura per ogni ISO da 100 a 102400](docs/img/sensor-chart-it.png)
+*Analisi del sensore (novità della 1.4.0), misurata su una Sony A6400 con coppie di flat e di dark a ogni ISO. ISO 100 ha la gamma dinamica più ampia (13,3 stop). A ISO 400 il sensore passa a un secondo guadagno e il rumore di lettura scende da 3 a 1,2 elettroni: 12,9 stop con tempi quattro volte più brevi. Da lì in su alzare l'ISO toglie solo gamma; meglio evitare ISO 160–320, e oltre 3200 la fotocamera filtra il rumore nel RAW.*
+
 *Le immagini mostrano l'interfaccia in inglese; l'app è anche in italiano.*
 
 ## Focheggiatori supportati
@@ -214,19 +217,19 @@ spostare su un secondo monitor. Se il live view è acceso, il visualizzatore si 
 
 | Comando | Tasto | Effetto |
 |---|---|---|
-| **−** / **+** | − / + | zoom |
-| **Adatta** / **Reset** | 0 o R | immagine intera nella finestra |
-| **100%** | 1 | un pixel del sensore = un pixel dello schermo. Oltre il 150% i pixel restano netti, senza sfocatura di interpolazione |
+| **−** / **+** | <kbd>−</kbd>&nbsp;/&nbsp;<kbd>+</kbd> | zoom |
+| **Adatta** / **Reset** | <kbd>0</kbd>&nbsp;o&nbsp;<kbd>R</kbd> | immagine intera nella finestra |
+| **100%** | <kbd>1</kbd> | un pixel del sensore = un pixel dello schermo. Oltre il 150% i pixel restano netti, senza sfocatura di interpolazione |
 | Trascina con il mouse | — | sposta l'immagine |
 | Rotella (o pinch sul trackpad) | — | zoom centrato sul cursore |
 | Doppio clic | — | alterna adatta ↔ 100% |
-| ◀ ▶ e miniature in basso | ← → | scatto precedente o successivo |
-| **● Live** | L | live view della fotocamera con zoom, 100% e spostamento; ◀ ▶ o una miniatura tornano agli scatti |
-| **Segui ultimo** | U | mostra automaticamente ogni nuovo scatto |
-| **Blocca vista** | K | mantiene zoom e posizione cambiando scatto, utile per confrontare la messa a fuoco nello stesso punto |
-| **Ispettore** | I | pannello laterale in sola lettura: istogrammi R, G, B e luminosità, pixel bruciati (canali a 255) e neri (canali a 0) secondo una regola a scelta, segni rossi/blu sull'immagine, valori sotto il puntatore e min/max/media/mediana dell'immagine intera. Funziona anche sul live view (aggiornato due volte al secondo) |
-| **⌖ Autofocus** | A, [ ], Esc | autofocus su un punto: clic sul dettaglio, poi Avvia. Il focheggiatore scorre nella direzione della pila, la curva della nitidezza (gradiente di Sobel nell'area) si riempie scatto per scatto e il focheggiatore torna sulla posizione più nitida dalla stessa parte (sovracorsa per il gioco), con uno scatto di verifica. Modi: Veloce (live view), Preciso (live view, poi 3 scatti veri di conferma; predefinito) e Scatti veri, ognuno con i suoi parametri; non si allontana dalla partenza più dell'escursione massima; ricerca ampia quando tutto è sfocato; impostazioni in Configurazione › Autofocus |
-| Schermo intero | F | — |
+| ◀ ▶ e miniature in basso | <kbd>←</kbd>&nbsp;<kbd>→</kbd> | scatto precedente o successivo |
+| **● Live** | <kbd>L</kbd> | live view della fotocamera con zoom, 100% e spostamento; ◀ ▶ o una miniatura tornano agli scatti |
+| **Segui ultimo** | <kbd>U</kbd> | mostra automaticamente ogni nuovo scatto |
+| **Blocca vista** | <kbd>K</kbd> | mantiene zoom e posizione cambiando scatto, utile per confrontare la messa a fuoco nello stesso punto |
+| **Ispettore** | <kbd>I</kbd> | pannello laterale in sola lettura: istogrammi R, G, B e luminosità, pixel bruciati (canali a 255) e neri (canali a 0) secondo una regola a scelta, segni rossi/blu sull'immagine, valori sotto il puntatore e min/max/media/mediana dell'immagine intera. Funziona anche sul live view (aggiornato due volte al secondo) |
+| **⌖ Autofocus** | <kbd>A</kbd>,&nbsp;<kbd>[</kbd>&nbsp;<kbd>]</kbd>,&nbsp;<kbd>Esc</kbd> | autofocus su un punto: clic sul dettaglio, poi Avvia. Il focheggiatore scorre nella direzione della pila, la curva della nitidezza (gradiente di Sobel nell'area) si riempie scatto per scatto e il focheggiatore torna sulla posizione più nitida dalla stessa parte (sovracorsa per il gioco), con uno scatto di verifica. Modi: Veloce (live view), Preciso (live view, poi 3 scatti veri di conferma; predefinito) e Scatti veri, ognuno con i suoi parametri; non si allontana dalla partenza più dell'escursione massima; ricerca ampia quando tutto è sfocato; impostazioni in Configurazione › Autofocus |
+| Schermo intero | <kbd>F</kbd> | — |
 
 L'Ispettore misura l'immagine a 8 bit mostrata a schermo: per uno scatto RAW è la conversione per lo schermo,
 e il RAW ha più margine nelle luci e nelle ombre (il pannello lo ricorda).
@@ -330,7 +333,7 @@ stanno nelle impostazioni e un aggiornamento non li tocca.
 
 ## Frame di calibrazione ed esposizione automatica
 
-Il tab **Calibrazione** ha tre card:
+Il tab **Calibrazione** ha quattro parti:
 
 - **Esposizione dei light**: con il focheggiatore a metà della pila, scatta qualche foto di prova, misura i RAW
   e imposta il tempo di posa perché il canale più chiaro arrivi al livello obiettivo (predefinito: 99,5° percentile
@@ -339,6 +342,14 @@ Il tab **Calibrazione** ha tre card:
   tempo trovato da solo per un livello medio obiettivo, predefinito 50 %) e dark dei flat (tappo, ISO e tempo dei
   flat). Prima dei dark l'app chiede di mettere il tappo.
 - **Libreria di calibrazione**: i set in `<cartella di salvataggio>/_calibrazione/` e quali userebbe la prossima pila.
+- **Analisi del sensore** (una volta per fotocamera): una procedura guidata scatta due flat a ogni ISO, chiede di
+  mettere il tappo, scatta due dark con gli stessi ISO e tempi e misura guadagno, rumore di lettura, pieno pozzetto e
+  gamma dinamica sui valori grezzi (curva di trasferimento dei fotoni). Consiglia l'ISO con la gamma più ampia, l'ISO
+  da cui il rumore di lettura non scende più e quelli da evitare; oltre l'ISO da cui la fotocamera filtra il rumore
+  nel RAW i valori sono segnati come non affidabili. Il risultato è il profilo del sensore della fotocamera in
+  `<cartella di salvataggio>/_calibrazione/_sensore/`: i riepiloghi mostrano la gamma dinamica attesa all'ISO
+  impostato e il `sequence.json` di ogni pila riporta i valori del suo ISO (`"sensor"`). Formato:
+  [docs/sensor-json.md](docs/sensor-json.md).
 
 I set sono condivisi da tutte le pile: il `sequence.json` di ogni pila indica i set più recenti adatti (stessa
 fotocamera, ISO e tempo per i dark; stesso profilo ottico per i flat). Formato: [docs/calibration-json.md](docs/calibration-json.md).

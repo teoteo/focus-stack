@@ -50,6 +50,17 @@ CALIB_LABELS = {
     "note2": 'senza flat la divisione.',
 }
 
+# grafico d'esempio dell'analisi del sensore (7.6)
+SENSOR_LABELS = {
+    "title_dr": 'Gamma dinamica (stop)',
+    "title_rn": 'Rumore di lettura (elettroni)',
+    "unreliable": 'non affidabile',
+    "stops": 'stop',
+    "dcg1": 'doppio guadagno:',
+    "dcg2": 'da 3,0 a 1,2 e-',
+    "dec": ',',
+}
+
 # tabella della profondità di campo (nomi degli obiettivi nella lingua della guida)
 OBJ_NAMES = ["4× / 0,10", "10× / 0,25", "20× / 0,40", "40× / 0,65", "60× / 0,85", "100× / 1,25 olio"]
 dof_rows = []
@@ -514,7 +525,40 @@ copiati. È la stessa libreria che usa <b>Focus Fusion</b>, che ci salva accanto
     "<b>Per la prossima pila</b>: per dark, flat e dark dei flat, ✓ con la data del set che verrebbe usato, oppure <i>manca</i> in arancione. Se manca un set, un pallino arancione compare anche accanto a <i>Libreria</i> nell'indice.",
     "<b>Temperatura</b> attuale della sonda.",
     "Andamento degli <b>ultimi 60 minuti</b>: confrontalo con la temperatura dei dark nella tabella.",
+    "<b>Sensore</b>: gamma dinamica attesa all'ISO impostato, con il grafico (punti verdi gli ISO consigliati, cerchiato quello attuale). Compare dopo l'analisi del sensore.",
 ], layout="side narrow")}
+
+<h3>Analisi del sensore</h3>
+<p>Una volta per fotocamera, la procedura <b>Calibrazione › Sensore › Analisi del sensore</b> misura come si comporta il
+sensore a ogni ISO: <b>guadagno</b> (quanti elettroni vale un'unità del RAW), <b>rumore di lettura</b>, <b>pieno
+pozzetto</b> (quanta luce raccoglie un pixel prima di saturare) e <b>gamma dinamica</b> in stop. Per 19 ISO ci vogliono
+circa 20 minuti.</p>
+<ol>
+<li><b>Prepara</b>: davanti all'obiettivo il diffusore illuminato, come per i flat; fotocamera in RAW e messa a fuoco
+  manuale. Scegli l'intervallo di ISO (da 100 a 6400 a terzi di stop è un buon inizio) e quanti scatti per ISO (2 bastano).</li>
+<li><b>Flat</b>: per ogni ISO l'app trova il tempo per un flat al 50% e scatta. Gli ISO che la fotocamera rifiuta compaiono barrati.</li>
+<li><b>Tappo</b>: l'app si ferma e chiede di mettere il tappo; poi premi <i>Ho messo il tappo: scatta i dark</i>.</li>
+<li><b>Dark</b>: stessi ISO e tempi, al buio.</li>
+<li><b>Risultato</b>: due grafici, gamma dinamica e rumore di lettura per ISO, e gli ISO consigliati.</li>
+</ol>
+{fig("calibrazione-sensore", [
+    '<b>Passi</b> della procedura: quello in corso in blu, quelli fatti con la spunta.',
+    "<b>Grafici</b> di gamma dinamica e rumore di lettura per ISO: punti verdi gli ISO consigliati, cerchiato l'ISO impostato sulla fotocamera, fascia grigia e linea tratteggiata gli ISO non affidabili.",
+    '<b>Consigliato</b>, <b>Consigliato con poca luce</b> e <b>Da evitare</b>, ognuno con il perché.',
+    '<b>Tabella</b>: per ogni ISO il tempo dei flat, la gamma, il rumore, il pieno pozzetto e il guadagno.',
+    "<b>Esporta CSV</b> salva la tabella in Download; <b>Rifai l'analisi</b> riparte dalla preparazione.",
+], layout="full")}
+<figure class="shot">{sensor_chart(SENSOR_LABELS)}<figcaption>Analisi del sensore di una Sony A6400: 19 ISO da 100 a 102400, 2 flat e 2 dark ciascuno. Cerchiato ISO 400.</figcaption></figure>
+<p>Come si legge, con l'esempio di una Sony A6400. ISO 100 ha la gamma più ampia, 13,3 stop, perché raccoglie più luce.
+A ISO 400 il sensore passa a un secondo guadagno e il rumore di lettura scende da 3 a 1,2 elettroni: 12,9 stop con tempi
+quattro volte più brevi. Da lì in su il rumore non scende più e ogni raddoppio di ISO toglie uno stop: se manca luce
+conviene restare a 400 e schiarire dopo. Gli ISO da 160 a 320 danno meno gamma di ISO 400 con tempi più lunghi: meglio
+evitarli. Oltre 3200 la fotocamera filtra il rumore già nel RAW, e quei valori sono segnati come non affidabili.</p>
+<p>Il risultato si salva come <b>profilo del sensore</b> della fotocamera, in <code>_calibrazione/_sensore</code>. Il riepilogo
+della Calibrazione e quello della sequenza mostrano la gamma dinamica attesa all'ISO impostato, con il punto sul grafico;
+ogni pila scrive nel suo <code>sequence.json</code> i valori del suo ISO (<code>"sensor"</code>), che Focus Fusion può usare.
+I fotogrammi dell'analisi stanno nella stessa cartella, fuori dalla libreria dei set, e non vengono mai scelti per una
+pila. Rifai l'analisi se cambi fotocamera o ne aggiorni il firmware.</p>
 
 <h2>7.7 Avanzamento da smartphone</h2>
 <p>Per seguire una pila lunga lontano dal Mac, in <span class="ui">Configurazione › Avanzamento da smartphone</span> si

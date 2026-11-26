@@ -607,6 +607,8 @@
     <a href="#card-calib">Frame di calibrazione</a>
     <span class="set-h">Libreria</span>
     <a href="#card-library">Libreria<span class="set-dot dot-warn hidden" id="k-dot" title="Manca un set per la prossima pila"></span></a>
+    <span class="set-h">Sensore</span>
+    <a href="#card-sensor">Analisi del sensore</a>
   </nav>
 
   <div class="set-main" id="cal-main">
@@ -680,6 +682,7 @@
       </section>
     </div>
 
+
   </div>
 
   <div class="set-side">
@@ -695,6 +698,13 @@
       <div class="temp-big" id="t-value">—</div>
       <svg class="spark" id="t-spark" viewBox="0 0 300 70" preserveAspectRatio="none"></svg>
       <p class="hint" id="t-range" data-i18n-html>Ultimi 60 minuti. La temperatura di ogni scatto viene salvata in <code>sequence.json</code>.</p>
+    </div>
+    <div class="sum-sensor hidden" id="sum-sensor">
+      <hr>
+      <h4 id="ssum-title">Sensore</h4>
+      <div class="sum-kv"><span>Gamma dinamica attesa</span><b class="big" id="ssum-dr">—</b><em id="ssum-drx"></em></div>
+      <div id="ssum-chart"></div>
+      <div class="sum-kv"><em class="sum-ok" id="ssum-tip"></em></div>
     </div>
   </aside>
   </div>
@@ -717,6 +727,62 @@
           <details class="set-details">
             <summary>Dettagli</summary>
             <p data-i18n-html>Ogni set ha la sua cartella con i fotogrammi e <code>calibration.json</code>. All'avvio di una pila, il suo <code>sequence.json</code> indica i set più recenti adatti (stessa fotocamera, ISO e tempo per i dark; stesso profilo ottico per i flat): i fotogrammi non vengono copiati. <b>Elimina</b> sposta la cartella del set nel Cestino.</p>
+          </details>
+        </div>
+      </section>
+    </div>
+  </div>
+
+
+  <!-- sotto la libreria, larga come lei: si usa una volta per fotocamera -->
+  <div class="set-wide set-wide-2">
+    <!-- analisi del sensore: procedura guidata (flat per ISO → tappo → dark → risultato), vedi backend/sensor.py -->
+    <h3 class="set-group">Sensore</h3>
+    <div class="set-card">
+      <section class="set-sec" id="card-sensor">
+        <header class="card-head"><h2>Analisi del sensore</h2><span class="chip" id="sn-chip">—</span></header>
+        <div class="sn-steps" id="sn-steps">
+          <span class="sn-step" data-step="prep"><b>1</b>Prepara</span>
+          <span class="sn-step" data-step="flats"><b>2</b>Flat</span>
+          <span class="sn-step" data-step="cap"><b>3</b>Tappo</span>
+          <span class="sn-step" data-step="darks"><b>4</b>Dark</span>
+          <span class="sn-step" data-step="done"><b>5</b>Risultato</span>
+        </div>
+        <div class="set-box">
+          <div id="sn-setup">
+            <p class="set-note top">Misura guadagno, rumore di lettura e gamma dinamica della fotocamera a ogni ISO, da coppie di flat e di dark. Davanti all'obiettivo il diffusore illuminato, come per i flat; fotocamera in RAW e messa a fuoco manuale. Poi l'app chiede di mettere il tappo.</p>
+            <div class="set-rows">
+              <div class="set-row"><span class="set-lbl">Fotocamera</span><span class="set-ctl"><span class="ro" id="sn-cam">—</span></span></div>
+              <div class="set-row"><span class="set-lbl">ISO</span><span class="set-ctl">
+                <span class="sn-range">da <select id="sn-from" aria-label="ISO più basso"></select> a <select id="sn-to" aria-label="ISO più alto"></select></span>
+                <span class="seg" id="sn-step" role="radiogroup" aria-label="Passo"><button data-step="third">1/3 di stop</button><button data-step="full">1 stop</button></span>
+                <span class="set-help" id="sn-count"></span></span></div>
+              <div class="set-row"><span class="set-lbl">Per ogni ISO</span><span class="set-ctl"><input type="number" class="num" id="sn-frames" min="2" max="10" step="1" aria-label="Flat e dark per ISO"><span class="set-help">flat e altrettanti dark, al 50% della saturazione: il tempo lo trova l'app</span></span></div>
+            </div>
+          </div>
+          <div class="sn-cap hidden" id="sn-cap" role="alert">
+            <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="20" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="22" cy="22" r="13" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".6"/><rect x="12" y="19" width="20" height="6" rx="3" fill="currentColor" opacity=".7"/></svg>
+            <div><h3>Metti il tappo sull'obiettivo</h3><p id="sn-cap-text"></p></div>
+          </div>
+          <div class="sn-isos hidden" id="sn-isos"></div>
+          <p class="set-note" id="sn-note"></p>
+          <div id="sn-result" class="hidden">
+            <div class="sn-charts" id="sn-charts"></div>
+            <div class="sn-reco" id="sn-reco"></div>
+            <details class="set-details" id="sn-table-box"><summary>Tabella</summary><div class="table-wrap"><table class="sn-table" id="sn-table"></table></div></details>
+            <p class="set-note" id="sn-saved"></p>
+          </div>
+          <div class="set-actions">
+            <button class="btn primary" id="sn-start">▶  Avvia l'analisi</button>
+            <button class="btn primary hidden" id="sn-capbtn">Ho messo il tappo: scatta i dark</button>
+            <button class="btn ghost hidden" id="sn-redo">Rifai l'analisi</button>
+            <button class="btn ghost hidden" id="sn-back">Torna al risultato</button>
+            <button class="btn ghost hidden" id="sn-export">Esporta CSV</button>
+            <button class="btn danger hidden" id="sn-stop">■  Interrompi</button>
+          </div>
+          <details class="set-details">
+            <summary>Dettagli</summary>
+            <p data-i18n-html>Per ogni ISO l'app confronta due flat e due dark scattati con le stesse impostazioni, sui valori grezzi del RAW (un canale verde, al centro). La differenza fra due scatti uguali toglie polvere, vignettatura e pixel caldi e lascia solo il rumore: da qui il <b>guadagno</b> (elettroni per unità), il <b>rumore di lettura</b>, il <b>pieno pozzetto</b> e la <b>gamma dinamica</b> in stop. Il risultato è il profilo del sensore della fotocamera, in <code>_calibrazione/_sensore</code>: lo usano il riepilogo, il <code>sequence.json</code> di ogni pila e Focus Fusion. Sopra un certo ISO molte fotocamere filtrano il rumore già nel RAW: quei valori sono segnati come non affidabili.</p>
           </details>
         </div>
       </section>

@@ -19,6 +19,12 @@ UI = {
     "Configurazione": "Configuration",
     "Registro": "Log",
     "Esporta": "Export",
+    "Analisi del sensore": "Sensor analysis",
+    "Sensore": "Sensor",
+    "Prepara": "Prepare",
+    "Tappo": "Cap",
+    "Risultato": "Result",
+    "Ho messo il tappo: scatta i dark": "The cap is on: shoot the darks",
     "Simulatore": "Simulator",
     "Connetti": "Connect",
     "Disconnetti": "Disconnect",
@@ -232,6 +238,17 @@ CALIB_LABELS = {
     "fusion": 'alignment and fusion',
     "note1": 'Without darks the subtraction is skipped,',
     "note2": 'without flats the division.',
+}
+
+# grafico d'esempio dell'analisi del sensore (7.6)
+SENSOR_LABELS = {
+    "title_dr": 'Dynamic range (stops)',
+    "title_rn": 'Read noise (electrons)',
+    "unreliable": 'not reliable',
+    "stops": 'stops',
+    "dcg1": 'dual gain:',
+    "dcg2": 'from 3.0 to 1.2 e-',
+    "dec": '.',
 }
 
 # depth-of-field table (objective names in the guide's language)
@@ -698,7 +715,40 @@ copied. It is the same library used by <b>Focus Fusion</b>, which saves its “m
     "<b>For the next stack</b>: for darks, flats and flat darks, ✓ with the date of the set that would be used, or <i>missing</i> in orange. If a set is missing, an orange dot also appears next to <i>Library</i> in the index.",
     "Current probe <b>temperature</b>.",
     "The <b>last 60 minutes</b>: compare it with the temperature of the darks in the table.",
+    f"<b>{ui('Sensore')}</b>: expected dynamic range at the current ISO, with the chart (recommended ISO values in green, the current one circled). It appears after the sensor analysis.",
 ], layout="side narrow")}
+
+<h3>{ui('Analisi del sensore')}</h3>
+<p>Once per camera, <b>{ui('Calibrazione')} › {ui('Sensore')} › {ui('Analisi del sensore')}</b> measures how the sensor
+behaves at every ISO: <b>gain</b> (how many electrons one RAW unit is worth), <b>read noise</b>, <b>full well</b> (how
+much light a pixel collects before it saturates) and <b>dynamic range</b> in stops. For 19 ISO values it takes about
+20 minutes.</p>
+<ol>
+<li><b>{ui('Prepara')}</b>: the lit diffuser in front of the lens, as for flats; camera in RAW and manual focus. Choose the
+  ISO range (100 to 6400 in thirds of a stop is a good start) and the shots per ISO (2 are enough).</li>
+<li><b>Flat</b>: for each ISO the app finds the exposure for a 50% flat and shoots. ISO values the camera refuses are struck through.</li>
+<li><b>{ui('Tappo')}</b>: the app stops and asks you to put the cap on; then press <i>{ui('Ho messo il tappo: scatta i dark')}</i>.</li>
+<li><b>Dark</b>: same ISO values and exposures, in the dark.</li>
+<li><b>{ui('Risultato')}</b>: two charts, dynamic range and read noise per ISO, and the recommended ISO values.</li>
+</ol>
+{fig("calibrazione-sensore", [
+    "The procedure's <b>steps</b>: the current one in blue, the finished ones ticked.",
+    '<b>Charts</b> of dynamic range and read noise per ISO: recommended ISO values in green, the ISO set on the camera circled, grey band and dashed line for ISO values that are not reliable.',
+    '<b>Recommended</b>, <b>Recommended in low light</b> and <b>Best avoided</b>, each with the reason.',
+    "<b>Table</b>: for each ISO the flats' exposure, the range, the noise, the full well and the gain.",
+    '<b>Export CSV</b> saves the table in Downloads; <b>Redo the analysis</b> starts again from the preparation.',
+], layout="full")}
+<figure class="shot">{sensor_chart(SENSOR_LABELS)}<figcaption>Sensor analysis of a Sony A6400: 19 ISO values from 100 to 102400, 2 flats and 2 darks each. ISO 400 circled.</figcaption></figure>
+<p>How to read it, with a Sony A6400 as the example. ISO 100 has the widest range, 13.3 stops, because it collects the most
+light. At ISO 400 the sensor switches to a second gain and read noise drops from 3 to 1.2 electrons: 12.9 stops with
+exposures four times shorter. Above that, noise no longer falls and every doubling of ISO costs one stop: if light is
+short, stay at 400 and brighten later. ISO 160 to 320 give less range than ISO 400 with longer exposures: best avoided.
+Above 3200 the camera already filters noise in the RAW, and those values are marked as not reliable.</p>
+<p>The result is saved as the camera's <b>sensor profile</b>, in <code>_calibrazione/_sensore</code>. The Calibration
+summary and the sequence summary show the expected dynamic range at the current ISO, with the point on the chart; every
+stack writes the values for its ISO into its <code>sequence.json</code> (<code>"sensor"</code>), which Focus Fusion can use.
+The analysis frames live in the same folder, outside the library of sets, and are never chosen for a stack. Redo the
+analysis if you change camera or update its firmware.</p>
 
 <h2>7.7 {ui('Avanzamento da smartphone')}</h2>
 <p>To follow a long stack away from the Mac, turn on a <b>read-only</b> page on the local network in

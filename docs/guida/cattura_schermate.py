@@ -363,6 +363,16 @@ with sync_playwright() as p:
     page.select_option("#o-profile", PROFILE); page.dispatch_event("#o-profile", "change")
     page.wait_for_timeout(300)
 
+    # ---- analisi del sensore: profilo d'esempio (dati veri di una Sony A6400, esempio-sensore/ILCE-6400.json)
+    # salvato come profilo della fotocamera simulata, che così mostra il risultato; ISO 400 (il punto cerchiato)
+    cam_model = state()["camera"].get("model") or "fotocamera"
+    key = re.sub(r"\s*\([^)]*\)\s*$", "", cam_model).strip()
+    sdir = Path(SEQ_DIR) / "_calibrazione" / "_sensore"
+    sdir.mkdir(parents=True, exist_ok=True)
+    example = json.loads((Path(__file__).parent / "esempio-sensore" / "ILCE-6400.json").read_text(encoding="utf-8"))
+    (sdir / (re.sub(r"[^A-Za-z0-9._-]+", "_", key).strip("_") + ".json")).write_text(json.dumps(example), encoding="utf-8")
+    post("/api/camera/settings", {"name": "iso", "value": "400"})
+
     # ---- calibrazione: esposizione, frame, libreria (set veri fatti col simulatore) ----
     page.click(".tabs button[data-tab=calib]")
     page.wait_for_timeout(1200)
@@ -375,7 +385,10 @@ with sync_playwright() as p:
         (1, "#k-kind", "l"), (2, "#k-count", "r"), (3, "#k-target", "l"), (4, "#card-calib .progress-box", "l"),
         (5, "#card-calib .set-actions", "l")))
     shot(page, "calibrazione-libreria", "#card-library", m((1, "#k-open", "l"), (2, "#k-match", "l"), (3, "#k-table", "l")))
-    shot(page, "calibrazione-riepilogo", "#cal-sum", m((1, "#ksum-dark", "l"), (2, "#t-value", "l"), (3, "#t-spark", "l")), pad=4)
+    shot(page, "calibrazione-riepilogo", "#cal-sum", m((1, "#ksum-dark", "l"), (2, "#t-value", "l"), (3, "#t-spark", "l"),
+                                                        (4, "#ssum-dr", "l")), pad=4)
+    shot(page, "calibrazione-sensore", "#card-sensor", m(
+        (1, "#sn-steps", "l"), (2, "#sn-charts", "l"), (3, "#sn-reco", "l"), (4, "#sn-table-box summary", "l"), (5, "#sn-export", "r")))
 
     # ---- configurazione ----
     page.click(".tabs button[data-tab=config]")

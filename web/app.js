@@ -175,12 +175,14 @@ function render() {
   $("alarm-text").textContent = alarm;
 
   safe("focheggiatore", () => renderFocuser(f, run));
-  const calBusy = !!(S.calibration && S.calibration.busy);   // calibrazione o esposizione automatica in corso
+  // calibrazione, esposizione automatica o analisi del sensore in corso: la fotocamera non si tocca
+  const calBusy = !!(S.calibration && S.calibration.busy) || !!(S.sensor && S.sensor.busy);
   safe("fotocamera", () => renderCamera(c, run || calBusy));
   safe("sequenza", () => renderSequence(f, c, q, run));
   safe("ultimo scatto", renderLastShot);
   safe("live view", () => renderLive(c, run || calBusy));
   safe("calibrazione", () => renderCalibration(c, run));
+  safe("sensore", () => renderSensor(c, run));
   safe("configurazione", () => renderConfig(f));
   safe("iphone", renderRemote);
   safe("preset", renderPresets);
@@ -770,10 +772,254 @@ function updateSummary() {
     ? t("⚠ La sequenza (con la compensazione del gioco) esce dai fine corsa {lo} – {hi}", lim)
     : t("⚠ La sequenza esce dai fine corsa {lo} – {hi}", lim)}</span>`;
   if (p.capture_mode === "trigger") html += `<span class="warn-text">${t("In modalità trigger imposta la destinazione su scheda.")}</span>`;
+  html = sensorSummaryRow() + html;
   $("s-summary").innerHTML = html;
   // sequenza ferma e mai avviata: il contatore segue i campi (prima si aggiornava solo all'arrivo dello stato)
   const q = S.sequence || {};
   if (q.state === "idle" && !q.total) $("s-count-label").textContent = `0 / ${n}`;
+}
+
+// ---------------- analisi del sensore (Calibrazione › Sensore) ----------------
+// Procedura guidata: Prepara → Flat (per ogni ISO) → Tappo → Dark → Risultato. Il server (backend/sensor.py) scatta
+// e misura; qui si mostrano avanzamento, grafici e raccomandazioni, e il riepilogo della gamma dinamica attesa
+// all'ISO impostato (Calibrazione e Sessione).
+let sensorRedo = false;       // «Rifai l'analisi»: si torna alla preparazione anche se c'è già un profilo
+let sensorSig = "";
+const SN_STEPS = ["prep", "flats", "cap", "darks", "done"];
+const fmtIso = (v) => String(v);
+const isoShort = (v) => (v >= 1000 ? `${fmtNum(v / 1000, v % 1000 ? 1 : 0)}k` : String(v));
+
+// grafico di una grandezza rispetto all'ISO (asse logaritmico); il punto dell'ISO attuale è cerchiato,
+// gli ISO non affidabili sono tratteggiati su fondo grigio
+function sensorChart(rows, key, o) {
+  const W = o.w || 420, H = o.h || 250, L = o.l ?? 40, R = 12, T = o.t ?? 34, B = o.b ?? 30;
+  const cs = getComputedStyle(document.documentElement), v = (n) => cs.getPropertyValue(n).trim();
+  const ACC = v("--accent"), SEC = v("--text-2"), TXT = v("--text"), GRID = v("--line"), BAND = v("--bg-2");
+  const isos = rows.map((r) => r.iso), lo = Math.min(...isos) / 1.25, hi = Math.max(...isos) * 1.25;
+  const lx = (x) => L + (Math.log10(x) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo)) * (W - L - R);
+  const ly = (y) => T + (1 - (y - o.min) / (o.max - o.min)) * (H - T - B);
+  const fv = (x) => fmtNum(x, o.dec ?? 1);
+  let s = `<svg class="${o.cls || "sn-chart"}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${escapeHtml(o.title || "")}">`;
+  const firstBad = rows.find((r) => !r.reliable);
+  if (firstBad && !o.mini) {
+    const prev = rows[rows.indexOf(firstBad) - 1], x0 = prev ? (lx(prev.iso) + lx(firstBad.iso)) / 2 : L;
+    // fascia stretta (pochi ISO non affidabili): la scritta in verticale nella parte alta della fascia (i punti
+    // non affidabili stanno in basso: gamma e rumore bassi), letta dal basso verso l'alto
+    const narrow = W - R - x0 < 95, xm = (x0 + W - R) / 2 + 4;
+    s += `<rect x="${x0}" y="${T}" width="${W - R - x0}" height="${H - T - B}" fill="${BAND}"/>` + (narrow
+      ? `<text x="${xm}" y="${T + 6}" transform="rotate(-90 ${xm} ${T + 6})" font-size="11" fill="${SEC}" text-anchor="end">${escapeHtml(t("non affidabile"))}</text>`
+      : `<text x="${x0 + 6}" y="${H - B - 7}" font-size="11" fill="${SEC}">${escapeHtml(t("non affidabile"))}</text>`);
+  }
+  for (let y = o.min; y <= o.max + 1e-9; y += o.step) {
+    s += `<line x1="${L}" x2="${W - R}" y1="${ly(y)}" y2="${ly(y)}" stroke="${GRID}"/>`;
+    if (!o.mini) s += `<text x="${L - 6}" y="${ly(y) + 4}" font-size="11" fill="${SEC}" text-anchor="end">${fmtNum(y, o.step < 1 ? 1 : 0)}</text>`;
+  }
+  const ticks = isos.filter((x) => [100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600, 51200, 102400, 204800].includes(x));
+  for (const x of (o.mini ? ticks.filter((x, i) => i % 2 === 0) : ticks))
+    s += `<text x="${lx(x)}" y="${H - B + 15}" font-size="${o.mini ? 10 : 10.5}" fill="${SEC}" text-anchor="middle">${isoShort(x)}</text>`;
+  const pts = rows.filter((r) => r[key] != null && isFinite(r[key])).map((r) => [lx(r.iso), ly(Math.max(o.min, Math.min(o.max, r[key]))), r]);
+  const path = (ps) => (ps.length > 1 ? "M" + ps.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" L") : "");
+  const good = pts.filter((p) => p[2].reliable), bad = pts.filter((p, i) => !p[2].reliable || (pts[i + 1] && !pts[i + 1][2].reliable));
+  s += `<path d="${path(good)}" fill="none" stroke="${ACC}" stroke-width="2"/>`;
+  if (bad.length > 1) s += `<path d="${path(bad)}" fill="none" stroke="${ACC}" stroke-width="2" stroke-dasharray="4 4" opacity=".5"/>`;
+  const OK = v("--ok"), reco = o.reco || [];
+  for (const [x, y, r] of pts)
+    s += `<circle class="pt" cx="${x}" cy="${y}" r="${reco.includes(r.iso) ? (o.mini ? 4.5 : 6) : (o.mini ? 3 : 4)}" fill="${reco.includes(r.iso) ? OK : ACC}"${r.reliable ? "" : ' opacity=".5"'}><title>ISO ${r.iso}: ${fv(r[key])} ${escapeHtml(o.unit)}${r.reliable ? "" : " · " + escapeHtml(t("non affidabile"))}</title></circle>`;
+  const sel = pts.find((p) => p[2].iso === o.sel);
+  if (sel) {
+    s += `<circle cx="${sel[0]}" cy="${sel[1]}" r="${o.mini ? 7 : 8.5}" fill="none" stroke="${TXT}" stroke-width="2.2"/>`;
+    if (!o.mini) {
+      const right = sel[0] < W * 0.62;
+      s += `<text x="${sel[0] + (right ? 12 : -12)}" y="${sel[1] - 11}" font-size="12.5" font-weight="700" fill="${TXT}" text-anchor="${right ? "start" : "end"}">ISO ${o.sel}: ${fv(sel[2][key])} ${escapeHtml(o.unit)}</text>`;
+    }
+  }
+  if (o.title) s += `<text x="${L - 30}" y="${T - 16}" font-size="13" font-weight="700" fill="${TXT}">${escapeHtml(o.title)}</text>`;
+  return s + "</svg>";
+}
+
+function sensorEntry(prof, iso) {
+  const n = parseInt(iso, 10);
+  return prof && isFinite(n) ? (prof.iso || []).find((r) => r.iso === n) || null : null;
+}
+const currentIso = () => ((S && S.camera && S.camera.settings && S.camera.settings.iso) || {}).current;
+
+// ISO consecutivi raggruppati: [160, 200, 250, 320] → "160–320"
+function isoRanges(list, rows) {
+  const order = rows.map((r) => r.iso), out = [];
+  let run = [];
+  for (const v of order) {
+    if (list.includes(v)) run.push(v);
+    else if (run.length) { out.push(run); run = []; }
+  }
+  if (run.length) out.push(run);
+  return out.map((r) => (r.length > 1 ? `${r[0]}–${r[r.length - 1]}` : String(r[0]))).join(", ");
+}
+
+function sensorTip(prof, e) {
+  const rec = prof.recommended || {}, best = sensorEntry(prof, rec.max_dynamic_range_iso);
+  if (!e) return "";
+  if (!e.reliable) return t("valore non affidabile a questo ISO: la fotocamera filtra il rumore nel RAW");
+  if (best && best.iso < e.iso && best.dynamic_range_stops > e.dynamic_range_stops + 0.1)
+    return t("ISO {iso}: {dr} stop, con tempi {k}× più lunghi", { iso: best.iso, dr: fmtNum(best.dynamic_range_stops, 1), k: fmtNum(e.iso / best.iso, e.iso % best.iso ? 1 : 0) });
+  if ((rec.avoid_iso || []).includes(e.iso) && rec.low_noise_iso)
+    return t("A ISO {iso} la stessa gamma con tempi più brevi", { iso: rec.low_noise_iso });
+  return "";
+}
+
+// riga del riepilogo della sequenza (Sessione)
+function sensorSummaryRow() {
+  const prof = S && S.sensor_profile, iso = currentIso(), e = sensorEntry(prof, iso);
+  if (!prof || !e) return "";
+  const chart = sensorChart(prof.iso.filter((r) => r.iso <= (prof.recommended || {}).reliable_up_to_iso * 2 || r.reliable),
+    "dynamic_range_stops", { w: 170, h: 78, l: 6, t: 6, b: 18, min: Math.floor(Math.min(...prof.iso.filter((r) => r.reliable).map((r) => r.dynamic_range_stops)) - 0.5), max: Math.ceil(Math.max(...prof.iso.map((r) => r.dynamic_range_stops)) + 0.3), step: 1, sel: e.iso, reco: [(prof.recommended || {}).max_dynamic_range_iso, (prof.recommended || {}).low_noise_iso], mini: true, cls: "sn-mini", unit: t("stop") });
+  const tip = sensorTip(prof, e);
+  return `<div class="sum-dr">${chart}<div><b>${t("{dr} stop", { dr: fmtNum(e.dynamic_range_stops, 1) })}</b> ` +
+    `<span class="muted">${t("di gamma dinamica attesa a ISO {iso}", { iso: e.iso })}</span><br>` +
+    `<span class="muted">${t("rumore {rn} e-", { rn: fmtNum(e.read_noise_e, 1) })}${tip ? " · " + escapeHtml(tip) : ""}</span></div></div>`;
+}
+
+function renderSensorSummary(prof) {
+  const box = $("sum-sensor"), iso = currentIso(), e = sensorEntry(prof, iso);
+  box.classList.toggle("hidden", !prof);
+  if (!prof) return;
+  $("ssum-title").textContent = t("Sensore · {model}", { model: prof.camera.model });
+  $("ssum-dr").textContent = e ? t("{dr} stop", { dr: fmtNum(e.dynamic_range_stops, 1) }) : "—";
+  $("ssum-drx").textContent = e ? t("a ISO {iso} · rumore {rn} e-", { iso: e.iso, rn: fmtNum(e.read_noise_e, 1) })
+    : iso ? t("ISO {iso} non misurato", { iso }) : "";
+  const ok = prof.iso.filter((r) => r.reliable);
+  $("ssum-chart").innerHTML = ok.length > 1 ? sensorChart(prof.iso.filter((r) => r.reliable || r.iso <= (prof.recommended.reliable_up_to_iso || 0) * 2),
+    "dynamic_range_stops", { w: 260, h: 110, l: 8, t: 8, b: 20, min: Math.floor(Math.min(...ok.map((r) => r.dynamic_range_stops)) - 0.5), max: Math.ceil(Math.max(...ok.map((r) => r.dynamic_range_stops)) + 0.3), step: 1, sel: e && e.iso, reco: [prof.recommended.max_dynamic_range_iso, prof.recommended.low_noise_iso], mini: true, cls: "sn-mini", unit: t("stop") }) : "";
+  const rr = prof.recommended || {}, recoIsos = [...new Set([rr.max_dynamic_range_iso, rr.low_noise_iso].filter(Boolean))];
+  $("ssum-tip").textContent = [recoIsos.length ? t("Consigliati: ISO {list}", { list: recoIsos.join(" · ") }) : "",
+    e && recoIsos.includes(e.iso) ? "" : sensorTip(prof, e)].filter(Boolean).join(" · ");
+}
+
+function renderSensor(c, run) {
+  const st = S.sensor || {}, prof = S.sensor_profile, busy = !!st.busy;
+  const phase = busy ? ({ flats: "flats", wait_cap: "cap", darks: "darks", analyzing: "darks", stopping: "flats" }[st.state] || "flats")
+    : (prof && !sensorRedo ? "done" : "prep");
+  const theme = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "d" : "l");
+  const sig = JSON.stringify([st.state, st.message, st.isos, prof && prof.created, phase, c.connected, c.model, currentIso(), st.iso_choices, run, theme, sensorRedo]);
+  renderSensorSummary(prof);
+  if (sig === sensorSig) return;
+  sensorSig = sig;
+  const idx = SN_STEPS.indexOf(phase);
+  $$("#sn-steps .sn-step").forEach((el, i) => {
+    el.classList.toggle("done", i < idx || (phase === "done" && i === idx && false));
+    el.classList.toggle("on", i === idx);
+    el.querySelector("b").textContent = i < idx ? "✓" : String(i + 1);
+  });
+  const isos = st.isos || [], done = isos.filter((x) => ["flat_done", "dark", "dark_done", "done"].includes(x.phase)).length;
+  const darksDone = isos.filter((x) => ["dark_done", "done"].includes(x.phase)).length, n = isos.filter((x) => x.phase !== "skipped").length;
+  const chip = { prep: c.connected ? [t("Pronta"), ""] : [t("Fotocamera non connessa"), ""],
+    flats: [t("Flat {i} di {n}", { i: Math.min(done + 1, isos.length), n: isos.length }), "busy"],
+    cap: [t("In attesa del tappo"), "busy"], darks: [st.state === "analyzing" ? t("Analisi…") : t("Dark {i} di {n}", { i: Math.min(darksDone + 1, n), n }), "busy"],
+    done: [t("Salvata"), "ok"] }[phase];
+  if (st.state === "error" && !busy && phase === "prep") { chip[0] = t("Errore"); chip[1] = "bad"; }
+  setChip("sn-chip", chip[0], chip[1]);
+  // preparazione
+  $("sn-setup").classList.toggle("hidden", phase !== "prep");
+  $("sn-cam").textContent = c.connected ? [c.model, (c.settings.imageformat || {}).current, (c.settings.aperture || {}).current].filter(Boolean).join(" · ") : t("non connessa");
+  const choices = st.iso_choices || [], cfg = S.settings.sensor || {};
+  const fill = (id, want) => {
+    const sel = $(id), key = choices.join(",");
+    if (sel.dataset.key !== key) {
+      sel.innerHTML = choices.map((v) => `<option value="${v}">${v}</option>`).join("");
+      sel.dataset.key = key;
+      const best = choices.reduce((a, v) => (Math.abs(Math.log(v / want)) < Math.abs(Math.log(a / want)) ? v : a), choices[0]);
+      if (best) sel.value = String(best);
+    }
+    sel.disabled = busy || !choices.length;
+  };
+  fill("sn-from", cfg.iso_from || 100); fill("sn-to", cfg.iso_to || 6400);
+  if (!$("sn-step").dataset.v) $("sn-step").dataset.v = cfg.step || "third";
+  $$("#sn-step button").forEach((b) => b.setAttribute("aria-checked", b.dataset.step === $("sn-step").dataset.v));
+  if (!$("sn-frames").value) $("sn-frames").value = cfg.frames || 2;
+  const plan = sensorPlan();
+  $("sn-count").textContent = plan.length ? t("{n} ISO · circa {m} minuti", { n: plan.length, m: Math.max(1, Math.round(plan.length * (num("sn-frames") || 2) * 0.55)) }) : "";
+  // avanzamento
+  $("sn-isos").classList.toggle("hidden", !busy);
+  if (busy) {
+    $("sn-isos").innerHTML = isos.map((x) => {
+      const okFlat = ["flat_done", "dark", "dark_done", "done"].includes(x.phase), okDark = ["dark_done", "done"].includes(x.phase);
+      const cls = x.phase === "skipped" ? "skip" : (phase === "darks" ? (okDark ? "done" : x.phase === "dark" ? "on" : "") : (okFlat ? "done" : x.phase === "flat" ? "on" : ""));
+      const sub = x.phase === "skipped" ? t("non accettato") : cls === "on" ? t("in corso…")
+        // durante i dark conta solo il tempo (lo stesso dei flat): il livello dei flat accanto a un dark sembrerebbe il suo
+        : x.shutter ? `${x.shutter}${x.level_pct && phase !== "darks" ? " · " + fmtNum(x.level_pct, 0) + "%" : ""}` : "";
+      const lvl = x.level_pct ? (phase === "darks" ? t("Saturazione dei flat {p}%", { p: fmtNum(x.level_pct, 0) })
+        : t("Saturazione del sensore {p}%", { p: fmtNum(x.level_pct, 0) })) : "";
+      const tip = x.shutter ? [t("Tempo di posa {sh}", { sh: x.shutter }), lvl].filter(Boolean).join("\n") : "";
+      return `<div class="sn-iso ${cls}"${tip ? ` title="${escapeHtml(tip)}"` : ""}>ISO ${x.iso}<small>${escapeHtml(sub)}</small></div>`;
+    }).join("");
+  }
+  $("sn-cap").classList.toggle("hidden", phase !== "cap");
+  $("sn-cap-text").textContent = t("I flat di {n} ISO sono fatti. Ora servono i dark: stessi ISO e tempi, al buio. Non cambiare altro.", { n });
+  $("sn-note").textContent = phase === "cap" ? "" : busy ? (st.message || "") : st.state === "error" ? st.message : st.state === "idle" && st.message && phase === "prep" ? st.message : "";
+  $("sn-note").classList.toggle("warn-text", !busy && st.state === "error");
+  // risultato
+  $("sn-result").classList.toggle("hidden", phase !== "done");
+  if (phase === "done" && prof) {
+    const rows = prof.iso, sel = parseInt(currentIso(), 10), ok = rows.filter((r) => r.reliable);
+    const drMax = Math.ceil(Math.max(...rows.map((r) => r.dynamic_range_stops || 0))), drMin = Math.floor(Math.min(...rows.map((r) => r.dynamic_range_stops || 99)));
+    const rnMax = Math.ceil(Math.max(...ok.map((r) => r.read_noise_e)) + 0.5);
+    const rec = prof.recommended || {}, a = sensorEntry(prof, rec.max_dynamic_range_iso), b = sensorEntry(prof, rec.low_noise_iso);
+    const recoIsos = [rec.max_dynamic_range_iso, rec.low_noise_iso].filter(Boolean);
+    $("sn-charts").innerHTML = sensorChart(rows, "dynamic_range_stops", { min: Math.max(0, drMin), max: drMax + 1, step: 1, sel, reco: recoIsos, unit: t("stop"), title: t("Gamma dinamica (stop)") }) +
+      sensorChart(rows, "read_noise_e", { min: 0, max: Math.max(2, rnMax), step: rnMax > 6 ? 2 : 1, sel, reco: recoIsos, unit: "e-", title: t("Rumore di lettura (e-)") });
+    const box = (cls, label, big, text) => `<div class="${cls}"><span class="lbl">${escapeHtml(label)}</span><b>${big}</b>${escapeHtml(text)}</div>`;
+    const stops = (e) => t("{dr} stop", { dr: fmtNum(e.dynamic_range_stops, 1) });
+    let reco = "";
+    if (a) reco += box("ok", t("Consigliato"), `ISO ${a.iso} · ${stops(a)}`,
+      b && b !== a ? t("la gamma più ampia, se la luce permette tempi {k}× più lunghi che a ISO {iso}", { k: fmtNum(b.iso / a.iso, 0), iso: b.iso })
+        : t("la gamma più ampia, se la luce permette tempi più lunghi"));
+    if (b && b !== a) reco += box("ok", t("Consigliato con poca luce"), `ISO ${b.iso} · ${stops(b)}`,
+      t("da qui il rumore di lettura non scende più ({rn} e-): oltre, alzare l'ISO toglie solo gamma", { rn: fmtNum(b.read_noise_e, 1) }));
+    const avoid = isoRanges(rec.avoid_iso || [], rows), top = rec.reliable_up_to_iso, anyBad = rows.some((r) => !r.reliable) && top;
+    const bigAvoid = [avoid, anyBad ? t("oltre {iso}", { iso: top }) : ""].filter(Boolean).join(" · ");
+    if (bigAvoid) reco += box("avoid", t("Da evitare"), escapeHtml(bigAvoid),
+      [avoid && t("{list}: un ISO più alto dà la stessa gamma con tempi più brevi", { list: avoid }), anyBad && t("oltre {iso}: valori non affidabili", { iso: top })].filter(Boolean).join(" · "));
+    $("sn-reco").innerHTML = reco;
+    $("sn-table").innerHTML = `<tr><th>ISO</th><th>${t("Tempo")}</th><th>stop</th><th>${t("rumore")} e-</th><th>${t("pozzetto")} e-</th><th>e-/ADU</th></tr>` +
+      rows.map((r) => `<tr class="${r.iso === sel ? "sel" : r.reliable ? "" : "dim"}" title="${r.reliable ? "" : escapeHtml(t("non affidabile"))}"><td>${r.iso}${r.reliable ? "" : " *"}</td><td>${escapeHtml(r.shutter || "")}</td>` +
+        `<td>${fmtNum(r.dynamic_range_stops, 1)}</td><td>${fmtNum(r.read_noise_e, 2)}</td><td>${fmtInt(r.full_well_e)}</td><td>${fmtNum(r.gain_e_adu, 3)}</td></tr>`).join("");
+    $("sn-saved").textContent = t("Profilo del sensore della {model}, misurato il {date}, in _calibrazione/_sensore: lo usano il riepilogo, il sequence.json di ogni pila e Focus Fusion.", { model: prof.camera.model, date: shortDate(prof.created) }) +
+      (prof.simulated ? " " + t("(simulatore: valori d'esempio)") : "");
+  }
+  // pulsanti
+  $("sn-start").classList.toggle("hidden", phase !== "prep");
+  $("sn-start").disabled = busy || run || !c.connected || !plan.length || !!(S.calibration && S.calibration.busy);
+  $("sn-capbtn").classList.toggle("hidden", phase !== "cap");
+  $("sn-stop").classList.toggle("hidden", !busy);
+  $("sn-redo").classList.toggle("hidden", phase !== "done");
+  $("sn-export").classList.toggle("hidden", phase !== "done");
+  $("sn-back").classList.toggle("hidden", !(phase === "prep" && sensorRedo && prof));
+}
+
+function sensorPlan() {
+  const choices = (S && S.sensor && S.sensor.iso_choices) || [];
+  const a = parseInt($("sn-from").value, 10), b = parseInt($("sn-to").value, 10);
+  if (!isFinite(a) || !isFinite(b)) return [];
+  const lo = Math.min(a, b), hi = Math.max(a, b), full = $("sn-step").dataset.v === "full";
+  return choices.filter((v) => v >= lo && v <= hi && (!full || [25, 50, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600, 51200, 102400, 204800, 409600].includes(v)));
+}
+
+function setupSensor() {
+  const refresh = () => { sensorSig = ""; if (S) renderSensor(S.camera, running()); };
+  $("sn-from").onchange = $("sn-to").onchange = $("sn-frames").oninput = refresh;
+  $$("#sn-step button").forEach((b) => (b.onclick = () => { $("sn-step").dataset.v = b.dataset.step; refresh(); }));
+  $("sn-start").onclick = (e) => act(e.target, async () => {
+    await api("/api/sensor/start", { iso_from: parseInt($("sn-from").value, 10), iso_to: parseInt($("sn-to").value, 10),
+      step: $("sn-step").dataset.v || "third", frames: Math.round(num("sn-frames") || 2) });
+    sensorRedo = false;
+  });
+  $("sn-capbtn").onclick = (e) => act(e.target, () => api("/api/sensor/cap"));
+  $("sn-stop").onclick = (e) => act(e.target, () => api("/api/sensor/stop"));
+  $("sn-redo").onclick = () => { sensorRedo = true; refresh(); };
+  $("sn-back").onclick = () => { sensorRedo = false; refresh(); };
+  $("sn-export").onclick = (e) => act(e.target, async () => {
+    const r = await api("/api/sensor/export");
+    toast(t("Tabella salvata in Download: {name}", { name: r.name }));
+  });
 }
 
 // ---------------- meccanica ----------------
@@ -1666,7 +1912,7 @@ function renderCalibration(c, run) {
   // card esposizione dei light
   setChip("x-chip", isExpo ? labels.exposing : k.exposure && !k.kind ? (k.exposure.within_tolerance ? t("Fatto") : t("Approssimata")) : "—",
     isExpo ? "busy" : k.exposure && !k.kind ? (k.exposure.within_tolerance ? "ok" : "busy") : "");
-  $("x-start").disabled = busy || run || !c.connected || !k.tool;
+  $("x-start").disabled = busy || run || !!(S.sensor && S.sensor.busy) || !c.connected || !k.tool;
   $("x-stop").classList.toggle("hidden", !isExpo);
   if (!k.tool) $("x-result").textContent = t("Strumento di misura fs-rawstat mancante: python3 tools/rawstat/build.py");
   else if (!k.kind && (isExpo || k.exposure || k.state === "error")) {
@@ -1695,7 +1941,8 @@ function renderCalibration(c, run) {
     : `<span class="warn-text">${escapeHtml(t("Nessun set di flat per questa fotocamera: scatta prima i flat"))}</span>`);
   if (calibKind !== "flat" && !(S.settings.sequence.capture_mode === "download")) info += `<br><span class="warn-text">${escapeHtml(t("I frame vengono sempre scaricati sul Mac, nella libreria."))}</span>`;
   $("k-info").innerHTML = info;
-  $("k-start").disabled = busy || run || !c.connected || !k.tool || (calibKind === "flat_dark" && !flat);
+  const snBusy = !!(S.sensor && S.sensor.busy);   // l'analisi del sensore usa la fotocamera
+  $("k-start").disabled = busy || run || snBusy || !c.connected || !k.tool || (calibKind === "flat_dark" && !flat);
   $("k-stop").disabled = !busy || !mine;
   $$("#k-kind button, #k-count, #k-target, #k-table button[data-del], #k-table input[data-sel], #k-sel-all, #k-del-sel").forEach((el) => (el.disabled = busy || run));
   const total = mine ? k.total : num("k-count") || 0;
@@ -2001,7 +2248,7 @@ const GUIDE_CARDS = {
   "card-optics": "profili-ottici", "card-limits": "fine-corsa", "card-mech": "meccanica", "card-jog": "comandi-manuali",
   "card-motor": "motore", "card-lang": "lingua", "card-updates": "aggiornamenti", "card-temp": "temperatura",
   "card-expo": "calibrazione-esposizione", "card-calib": "calibrazione-frame", "card-library": "calibrazione-libreria",
-  "card-remote": "smartphone",
+  "card-remote": "smartphone", "card-sensor": "calibrazione-sensore",
 };
 const guideUrl = (key) => `/guide/${["it", "en", "fr", "de", "es"].includes(LANG) ? LANG : "en"}.html${key ? "#" + key : ""}`;
 function setupGuideLinks() {
@@ -2363,6 +2610,7 @@ function renderPresets() {
 }
 
 bind();
+setupSensor();
 setupGuideLinks();
 trackTopbar();
 bindSettingsPage("view-config", "cfg-nav", "cfg-search", "cfg-none");

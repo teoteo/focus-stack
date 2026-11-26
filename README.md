@@ -22,6 +22,9 @@ The app and its PDF user guide are available in **Italian, English, French, Germ
 ![The Calibration tab taking flat frames, with the calibration library below](docs/img/calibration.jpg)
 *Calibration: light exposure measured on the RAWs, darks and flats taken automatically, the sets the next stack will use, and a library that links each stack to the right calibration set.*
 
+![Sensor analysis of a Sony A6400: dynamic range and read noise for each ISO from 100 to 102400](docs/img/sensor-chart-en.png)
+*Sensor analysis (new in 1.4.0), measured on a Sony A6400 with pairs of flats and darks at each ISO. ISO 100 has the widest dynamic range (13.3 stops). At ISO 400 the sensor switches to a second conversion gain and read noise drops from 3 to 1.2 electrons: 12.9 stops with exposures four times shorter. Above that, raising the ISO only costs range; ISO 160–320 are best avoided, and above 3200 the camera filters noise in the RAW.*
+
 ## Supported focusers
 
 | Board | Firmware | Notes |
@@ -212,19 +215,19 @@ second monitor. If the live view is on, the viewer opens straight on the live vi
 
 | Control | Key | Effect |
 |---|---|---|
-| **−** / **+** | − / + | zoom |
-| **Fit** / **Reset** | 0 or R | whole image in the window |
-| **100%** | 1 | one sensor pixel = one screen pixel. Above 150% pixels stay sharp, without interpolation blur |
+| **−** / **+** | <kbd>−</kbd>&nbsp;/&nbsp;<kbd>+</kbd> | zoom |
+| **Fit** / **Reset** | <kbd>0</kbd>&nbsp;or&nbsp;<kbd>R</kbd> | whole image in the window |
+| **100%** | <kbd>1</kbd> | one sensor pixel = one screen pixel. Above 150% pixels stay sharp, without interpolation blur |
 | Drag with the mouse | — | pan |
 | Scroll wheel (or trackpad pinch) | — | zoom centred on the pointer |
 | Double-click | — | toggle fit ↔ 100% |
-| ◀ ▶ and thumbnails at the bottom | ← → | previous or next shot |
-| **● Live** | L | camera live view with zoom, 100% and pan; ◀ ▶ or a thumbnail go back to the shots |
-| **Follow latest** | U | show every new shot automatically |
-| **Lock view** | K | keep zoom and position when changing shot, to compare focus at the same spot |
-| **Inspector** | I | side panel, read only: R, G, B and brightness histograms, burnt (channels at 255) and black (channels at 0) pixels under a chosen rule, red/blue marks on the image, values under the pointer and min/max/mean/median of the whole image. It also works on the live view (updated twice a second) |
-| **⌖ Autofocus** | A, [ ], Esc | autofocus on a point: click the detail, then Start. The focuser scans in the direction of the stack, the sharpness curve (Sobel gradient in the area) fills in shot by shot, and the focuser returns to the sharpest position from the same side (backlash overshoot) and takes a check shot. Modes: Fast (live view), Precise (live view, then 3 real confirmation shots; default) and Real shots, each with its own settings; it never moves further from the start than the maximum excursion; wide search when everything is blurred; settings in Configuration › Autofocus |
-| Full screen | F | — |
+| ◀ ▶ and thumbnails at the bottom | <kbd>←</kbd>&nbsp;<kbd>→</kbd> | previous or next shot |
+| **● Live** | <kbd>L</kbd> | camera live view with zoom, 100% and pan; ◀ ▶ or a thumbnail go back to the shots |
+| **Follow latest** | <kbd>U</kbd> | show every new shot automatically |
+| **Lock view** | <kbd>K</kbd> | keep zoom and position when changing shot, to compare focus at the same spot |
+| **Inspector** | <kbd>I</kbd> | side panel, read only: R, G, B and brightness histograms, burnt (channels at 255) and black (channels at 0) pixels under a chosen rule, red/blue marks on the image, values under the pointer and min/max/mean/median of the whole image. It also works on the live view (updated twice a second) |
+| **⌖ Autofocus** | <kbd>A</kbd>,&nbsp;<kbd>[</kbd>&nbsp;<kbd>]</kbd>,&nbsp;<kbd>Esc</kbd> | autofocus on a point: click the detail, then Start. The focuser scans in the direction of the stack, the sharpness curve (Sobel gradient in the area) fills in shot by shot, and the focuser returns to the sharpest position from the same side (backlash overshoot) and takes a check shot. Modes: Fast (live view), Precise (live view, then 3 real confirmation shots; default) and Real shots, each with its own settings; it never moves further from the start than the maximum excursion; wide search when everything is blurred; settings in Configuration › Autofocus |
+| Full screen | <kbd>F</kbd> | — |
 
 The Inspector measures the 8-bit image on screen: for a RAW shot that is the conversion for the screen,
 and the RAW itself has more headroom in highlights and shadows (the panel says so).
@@ -321,7 +324,7 @@ settings and are not affected by an update.
 
 ## Calibration frames and automatic exposure
 
-The **Calibration** tab has three cards:
+The **Calibration** tab has four parts:
 
 - **Light exposure**: with the focuser in the middle of the stack, it takes a few test shots, measures the
   RAW data and sets the shutter speed so that the brightest channel reaches a target level (default: 99.5th
@@ -330,6 +333,13 @@ The **Calibration** tab has three cards:
   shutter speed found automatically for a target mean level, default 50 %) and flat darks (lens cap, the
   flats' ISO and shutter speed). The app asks to fit the cap before darks.
 - **Calibration library**: the sets in `<save folder>/_calibrazione/`, and which ones the next stack would use.
+- **Sensor analysis** (once per camera): a guided procedure takes two flats at each ISO, asks for the lens cap,
+  takes two darks at the same ISO and shutter speed, and measures gain, read noise, full well and dynamic range
+  from the raw values (photon transfer). It recommends the ISO with the widest range, the ISO from which read noise
+  stops falling, and the ones to avoid; values above the ISO where the camera starts filtering noise in the RAW are
+  marked as not reliable. The result is the camera's sensor profile in `<save folder>/_calibrazione/_sensore/`: the
+  summaries show the expected dynamic range at the current ISO, and each stack's `sequence.json` carries the values
+  for its ISO (`"sensor"`). Format: [docs/sensor-json.md](docs/sensor-json.md).
 
 Sets are shared by all stacks: each stack's `sequence.json` points to the most recent suitable sets (same
 camera, ISO and shutter speed for darks; same optics profile for flats). Format: [docs/calibration-json.md](docs/calibration-json.md).

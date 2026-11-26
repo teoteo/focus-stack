@@ -54,6 +54,17 @@ CALIB_LABELS = {
     "note2": 'ohne Flats die Division.',
 }
 
+# grafico d'esempio dell'analisi del sensore (7.6)
+SENSOR_LABELS = {
+    "title_dr": 'Dynamikumfang (Blendenstufen)',
+    "title_rn": 'Ausleserauschen (Elektronen)',
+    "unreliable": 'nicht verlässlich',
+    "stops": 'Stufen',
+    "dcg1": 'doppelte Verstärkung:',
+    "dcg2": 'von 3,0 auf 1,2 e-',
+    "dec": ',',
+}
+
 # Tabelle der Schärfentiefe (Objektivnamen in der Sprache der Anleitung)
 OBJ_NAMES = ["4× / 0,10", "10× / 0,25", "20× / 0,40", "40× / 0,65", "60× / 0,85", "100× / 1,25 Öl"]
 dof_rows = []
@@ -535,7 +546,41 @@ nicht kopiert. Es ist dieselbe Bibliothek, die <b>Focus Fusion</b> verwendet und
     f"<b>{ui('Per la prossima pila')}</b>: für Darks, Flats und Flat-Darks ein ✓ mit dem Datum des Satzes, der verwendet würde, oder <i>{ui('manca')}</i> in Orange. Fehlt ein Satz, erscheint auch neben <i>{ui('Libreria')}</i> im Inhaltsverzeichnis ein oranger Punkt.",
     "Aktuelle <b>Temperatur</b> des Fühlers.",
     "Verlauf der <b>letzten 60 Minuten</b>: Vergleichen Sie ihn mit der Temperatur der Darks in der Tabelle.",
+    f"<b>{ui('Sensore')}</b>: erwarteter Dynamikumfang beim eingestellten ISO, mit dem Diagramm (empfohlene ISO-Werte grün, der aktuelle eingekreist). Erscheint nach der Sensoranalyse.",
 ], layout="side narrow")}
+
+<h3>{ui('Analisi del sensore')}</h3>
+<p>Einmal pro Kamera misst <b>{ui('Calibrazione')} › {ui('Sensore')} › {ui('Analisi del sensore')}</b>, wie sich der Sensor
+bei jedem ISO verhält: <b>Verstärkung</b> (wie viele Elektronen eine RAW-Einheit wert ist), <b>Ausleserauschen</b>,
+<b>Full-Well-Kapazität</b> (wie viel Licht ein Pixel sammelt, bevor er sättigt) und <b>Dynamikumfang</b> in
+Blendenstufen. Für 19 ISO-Werte dauert es etwa 20 Minuten.</p>
+<ol>
+<li><b>{ui('Prepara')}</b>: vor dem Objektiv der beleuchtete Diffusor wie für die Flats; Kamera in RAW und manueller Fokus.
+  Wählen Sie den ISO-Bereich (100 bis 6400 in Drittelstufen ist ein guter Anfang) und die Aufnahmen pro ISO (2 genügen).</li>
+<li><b>Flat</b>: Für jeden ISO findet die App die Zeit für ein Flat bei 50% und nimmt auf. ISO-Werte, die die Kamera ablehnt, erscheinen durchgestrichen.</li>
+<li><b>{ui('Tappo')}</b>: Die App hält an und bittet, den Objektivdeckel aufzusetzen; drücken Sie dann <i>{ui('Ho messo il tappo: scatta i dark')}</i>.</li>
+<li><b>Dark</b>: gleiche ISO-Werte und Zeiten, im Dunkeln.</li>
+<li><b>{ui('Risultato')}</b>: zwei Diagramme, Dynamikumfang und Ausleserauschen pro ISO, und die empfohlenen ISO-Werte.</li>
+</ol>
+{fig("calibrazione-sensore", [
+    '<b>Schritte</b> des Ablaufs: der laufende blau, die erledigten mit Häkchen.',
+    '<b>Diagramme</b> von Dynamikumfang und Ausleserauschen pro ISO: empfohlene ISO-Werte grün, der an der Kamera eingestellte ISO eingekreist, grauer Bereich und gestrichelte Linie für nicht verlässliche ISO-Werte.',
+    '<b>Empfohlen</b>, <b>Empfohlen bei wenig Licht</b> und <b>Besser vermeiden</b>, jeweils mit Begründung.',
+    '<b>Tabelle</b>: pro ISO die Zeit der Flats, der Umfang, das Rauschen, die Full-Well-Kapazität und die Verstärkung.',
+    '<b>CSV exportieren</b> speichert die Tabelle in „Downloads“; <b>Analyse wiederholen</b> beginnt wieder bei der Vorbereitung.',
+], layout="full")}
+<figure class="shot">{sensor_chart(SENSOR_LABELS)}<figcaption>Sensoranalyse einer Sony A6400: 19 ISO-Werte von 100 bis 102400, je 2 Flats und 2 Darks. ISO 400 eingekreist.</figcaption></figure>
+<p>So liest man es, am Beispiel einer Sony A6400. ISO 100 hat den größten Umfang, 13,3 Blendenstufen, weil er das meiste Licht
+sammelt. Bei ISO 400 schaltet der Sensor auf eine zweite Verstärkung, und das Ausleserauschen sinkt von 3 auf
+1,2 Elektronen: 12,9 Blendenstufen mit viermal kürzeren Zeiten. Darüber sinkt das Rauschen nicht mehr, und jede
+Verdopplung des ISO kostet eine Blendenstufe: Fehlt Licht, bleiben Sie bei 400 und hellen später auf. ISO 160 bis 320
+geben weniger Umfang als ISO 400 bei längeren Zeiten: besser vermeiden. Über 3200 filtert die Kamera das Rauschen schon im
+RAW, und diese Werte sind als nicht verlässlich markiert.</p>
+<p>Das Ergebnis wird als <b>Sensorprofil</b> der Kamera in <code>_calibrazione/_sensore</code> gespeichert. Die Übersicht der
+Kalibrierung und die der Serie zeigen den erwarteten Dynamikumfang beim eingestellten ISO, mit dem Punkt im Diagramm;
+jeder Stapel schreibt die Werte seines ISO in seine <code>sequence.json</code> (<code>"sensor"</code>), die Focus Fusion
+nutzen kann. Die Bilder der Analyse liegen im selben Ordner, außerhalb der Bibliothek der Sätze, und werden nie für einen
+Stapel gewählt. Wiederholen Sie die Analyse, wenn Sie die Kamera wechseln oder ihre Firmware aktualisieren.</p>
 
 <h2>7.7 {ui('Avanzamento da smartphone')}</h2>
 <p>Um einen langen Stapel fern vom Mac zu verfolgen, schalten Sie unter

@@ -505,6 +505,8 @@ def build_manifest(p: SequenceParams, ctx: dict, positions: list[int], repeats: 
         m["optics_profile"] = ctx["optics_profile"]
     if ctx.get("calibration"):   # set della libreria _calibrazione adatti a questa pila (percorsi relativi)
         m["calibration"] = ctx["calibration"]
+    if ctx.get("sensor"):        # profilo del sensore all'ISO della pila (analisi del sensore, percorso relativo)
+        m["sensor"] = ctx["sensor"]
     m["frames"] = []
     m["extra"] = {}
     return m

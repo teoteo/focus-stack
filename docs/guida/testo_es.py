@@ -54,6 +54,17 @@ CALIB_LABELS = {
     "note2": 'sin flats no hay división.',
 }
 
+# grafico d'esempio dell'analisi del sensore (7.6)
+SENSOR_LABELS = {
+    "title_dr": 'Rango dinámico (pasos)',
+    "title_rn": 'Ruido de lectura (electrones)',
+    "unreliable": 'no fiable',
+    "stops": 'pasos',
+    "dcg1": 'doble ganancia:',
+    "dcg2": 'de 3,0 a 1,2 e-',
+    "dec": ',',
+}
+
 # tabla de la profundidad de campo (nombres de los objetivos en el idioma de la guía)
 OBJ_NAMES = ["4× / 0,10", "10× / 0,25", "20× / 0,40", "40× / 0,65", "60× / 0,85", "100× / 1,25 aceite"]
 dof_rows = []
@@ -522,7 +533,40 @@ se copian. Es la misma biblioteca que usa <b>Focus Fusion</b>, que guarda en ell
     f"<b>{ui('Per la prossima pila')}</b>: para darks, flats y darks de los flats, ✓ con la fecha del conjunto que se usaría, o <i>{ui('manca')}</i> en naranja. Si falta un conjunto, aparece también un punto naranja junto a <i>{ui('Libreria')}</i> en el índice.",
     "<b>Temperatura</b> actual de la sonda.",
     "Evolución de los <b>últimos 60 minutos</b>: compárala con la temperatura de los darks en la tabla.",
+    f"<b>{ui('Sensore')}</b>: rango dinámico esperado al ISO ajustado, con el gráfico (ISO recomendados en verde, el actual en un círculo). Aparece después del análisis del sensor.",
 ], layout="side narrow")}
+
+<h3>{ui('Analisi del sensore')}</h3>
+<p>Una vez por cámara, <b>{ui('Calibrazione')} › {ui('Sensore')} › {ui('Analisi del sensore')}</b> mide cómo se comporta el
+sensor a cada ISO: <b>ganancia</b> (cuántos electrones vale una unidad del RAW), <b>ruido de lectura</b>, <b>pozo
+lleno</b> (cuánta luz recoge un píxel antes de saturarse) y <b>rango dinámico</b> en pasos. Para 19 ISO hacen falta unos
+20 minutos.</p>
+<ol>
+<li><b>{ui('Prepara')}</b>: delante del objetivo, el difusor iluminado, como para los flats; cámara en RAW y enfoque manual.
+  Elige el intervalo de ISO (de 100 a 6400 en tercios de paso es un buen comienzo) y cuántas tomas por ISO (2 bastan).</li>
+<li><b>Flat</b>: para cada ISO la app encuentra el tiempo para un flat al 50% y dispara. Los ISO que la cámara rechaza aparecen tachados.</li>
+<li><b>{ui('Tappo')}</b>: la app se detiene y pide poner la tapa; después pulsa <i>{ui('Ho messo il tappo: scatta i dark')}</i>.</li>
+<li><b>Dark</b>: mismos ISO y tiempos, a oscuras.</li>
+<li><b>{ui('Risultato')}</b>: dos gráficos, rango dinámico y ruido de lectura por ISO, y los ISO recomendados.</li>
+</ol>
+{fig("calibrazione-sensore", [
+    'Los <b>pasos</b> del procedimiento: el que está en curso en azul, los terminados con una marca.',
+    '<b>Gráficos</b> de rango dinámico y ruido de lectura por ISO: ISO recomendados en verde, el ISO ajustado en la cámara en un círculo, franja gris y línea discontinua para los ISO no fiables.',
+    '<b>Recomendado</b>, <b>Recomendado con poca luz</b> y <b>Mejor evitar</b>, cada uno con el porqué.',
+    '<b>Tabla</b>: para cada ISO el tiempo de los flats, el rango, el ruido, el pozo lleno y la ganancia.',
+    '<b>Exportar CSV</b> guarda la tabla en Descargas; <b>Repetir el análisis</b> vuelve a empezar desde la preparación.',
+], layout="full")}
+<figure class="shot">{sensor_chart(SENSOR_LABELS)}<figcaption>Análisis del sensor de una Sony A6400: 19 ISO de 100 a 102400, 2 flats y 2 darks cada uno. ISO 400 en un círculo.</figcaption></figure>
+<p>Cómo se lee, con el ejemplo de una Sony A6400. ISO 100 tiene el rango más amplio, 13,3 pasos, porque recoge más luz.
+A ISO 400 el sensor pasa a una segunda ganancia y el ruido de lectura baja de 3 a 1,2 electrones: 12,9 pasos con tiempos
+cuatro veces más cortos. Por encima el ruido ya no baja y cada vez que se duplica el ISO se pierde un paso: si falta luz,
+conviene quedarse en 400 y aclarar después. Los ISO de 160 a 320 dan menos rango que ISO 400 con tiempos más largos: mejor
+evitarlos. Por encima de 3200 la cámara ya filtra el ruido en el RAW, y esos valores se marcan como no fiables.</p>
+<p>El resultado se guarda como <b>perfil del sensor</b> de la cámara, en <code>_calibrazione/_sensore</code>. El resumen de
+la Calibración y el de la secuencia muestran el rango dinámico esperado al ISO ajustado, con el punto en el gráfico; cada
+pila escribe en su <code>sequence.json</code> los valores de su ISO (<code>"sensor"</code>), que Focus Fusion puede usar.
+Los fotogramas del análisis están en la misma carpeta, fuera de la biblioteca de conjuntos, y nunca se eligen para una
+pila. Repite el análisis si cambias de cámara o actualizas su firmware.</p>
 
 <h2>7.7 Progreso en el smartphone</h2>
 <p>Para seguir una pila larga lejos del Mac, en <span class="ui">{ui('Configurazione')} › {ui('Avanzamento da smartphone')}</span>

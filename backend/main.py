@@ -21,7 +21,7 @@ from . import flasher
 from . import i18n
 from .i18n import tr
 from .optics import manifest_optics
-from . import calibration, desktop, rawstat, remote
+from . import calibration, desktop, rawstat, remote, sensor
 from .autofocus import (MODE_DEFAULTS, MODE_KEYS, MODES, AFParams, AutofocusRunner, computed_defaults,
                         expected_width, planned_travel)
 from .camera import GPHOTO_AVAILABLE, CameraError, GPhotoCamera, SimulatedCamera
@@ -91,6 +91,10 @@ class App:
             lambda: self.camera if self.camera and self.camera.connected else None,
             lambda: self.focuser if self.focuser and self.focuser.connected else None,
             self.log, self.add_calibration_shot, Path(store.CONFIG_DIR) / "test-shots")
+        # analisi del sensore (Calibrazione › Sensore): usa il CalibrationRunner per esposizione e scatti
+        self.sensor = sensor.SensorRunner(
+            self.calib, lambda: self.camera if self.camera and self.camera.connected else None, self.log)
+        self._sensor_cache: tuple = (None, None, None)   # (percorso, mtime, profilo)
         # pagina di sola lettura sulla rete locale (avanzamento da smartphone)
         self.remote = remote.RemoteServer(self.remote_status, self.remote_preview, CACHE_DIR)
         # autofocus su un punto (visualizzatore): scatti o fotogrammi del live view, vedi autofocus.py
@@ -352,6 +356,14 @@ class App:
                 if cur:
                     info[key] = cur
             ctx["camera"] = {k: v for k, v in info.items() if v is not None}
+        # profilo del sensore (analisi del sensore): i valori dell'ISO della pila, per il software di fusione
+        prof = self.sensor_profile()
+        e = sensor.entry_for(prof, (ctx.get("camera") or {}).get("iso")) if prof else None
+        if e:
+            ctx["sensor"] = {"profile": f"../{calibration.LIBRARY_DIR}/{sensor.SENSOR_DIR}/{sensor.safe_name(prof['camera']['model'])}.json",
+                             "measured": prof.get("created"), "iso": e["iso"], "gain_e_adu": e.get("gain_e_adu"),
+                             "read_noise_e": e.get("read_noise_e"), "full_well_e": e.get("full_well_e"),
+                             "dynamic_range_stops": e.get("dynamic_range_stops"), "reliable": e.get("reliable")}
         # Profilo di ottica/filtro scelto nella sequenza; nessun profilo = nessun filtro.
         name = (self.cfg["sequence"].get("optics_profile") or "") if profile is None else profile
         o = (self.cfg.get("optics_profiles") or {}).get(name) if name else None
@@ -383,6 +395,19 @@ class App:
             ctx["notes"] = o["notes"]
         return ctx
 
+    def sensor_profile(self) -> dict | None:
+        cam = self.camera if self.camera and self.camera.connected else None
+        if not cam or not cam.model:
+            return None
+        path = sensor.profile_path(self.cfg["output_root"], cam.model)
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
+            return None
+        if self._sensor_cache[:2] != (str(path), mtime):
+            self._sensor_cache = (str(path), mtime, sensor.load_profile(self.cfg["output_root"], cam.model))
+        return self._sensor_cache[2]
+
     def state(self) -> dict:
         st = self.runner.status
         last = self.shots[-1] if self.shots else None
@@ -395,6 +420,9 @@ class App:
             "calibration": {**self.calib.status.__dict__, "busy": self.calib.busy,
                             "tool": rawstat.tool_path() is not None},
             "autofocus": {**self.af.status.__dict__, "busy": self.af.busy, **self.af_view()},
+            "sensor": {**self.sensor.status.__dict__, "busy": self.sensor.busy,
+                       "iso_choices": sensor.iso_choices(self.camera) if self.camera and self.camera.connected else []},
+            "sensor_profile": self.sensor_profile(),
             "settings": self.cfg,
             "um_per_step": self.um_per_step(),
             "alarm": self.alarm,
@@ -745,6 +773,8 @@ def not_running():
         raise HTTPException(409, tr("Calibrazione in corso"))
     if app_state.af.busy:
         raise HTTPException(409, tr("Autofocus in corso"))
+    if app_state.sensor.busy:
+        raise HTTPException(409, tr("Analisi del sensore in corso"))
 
 
 # ---------------- stato ----------------
@@ -1532,6 +1562,8 @@ async def sequence_start(body: SequenceBody):
         raise ValueError(tr("Calibrazione in corso"))
     if app_state.af.busy:
         raise ValueError(tr("Autofocus in corso"))
+    if app_state.sensor.busy:
+        raise ValueError(tr("Analisi del sensore in corso"))
     ctx = app_state.manifest_context(profile)
     # set di calibrazione adatti (stessa fotocamera, ISO, tempo, profilo ottico): solo riferimenti, niente copie
     if body.capture_mode == "download":
@@ -1831,6 +1863,61 @@ async def log_export():
         out_dir = Path.home()
     path = out_dir / f"FocusStack-registro-{time.strftime('%Y%m%d-%H%M%S')}.txt"
     path.write_text(text, encoding="utf-8")
+    desktop.reveal(path)
+    return {"ok": True, "path": str(path), "name": path.name}
+
+
+# ---------------- analisi del sensore ----------------
+class SensorStart(BaseModel):
+    iso_from: int = 100
+    iso_to: int = 6400
+    step: str = "third"            # "third" = tutti gli ISO della fotocamera (terzi di stop), "full" = stop interi
+    frames: int = sensor.DEFAULT_FRAMES
+
+
+@api.post("/api/sensor/start")
+@guard
+async def sensor_start(body: SensorStart):
+    not_running()
+    if body.step not in ("third", "full"):
+        raise ValueError(tr("Passo non valido"))
+    root = validate_output_root(app_state.cfg["output_root"])
+    cam = need_camera()
+    isos = sensor.plan_isos(sensor.iso_choices(cam), body.iso_from, body.iso_to, body.step)
+    app_state.sensor.software = f"Focus Stack {app_version()}"
+    app_state.calib.pause_s = (app_state.cfg["sequence"].get("post_shot_ms") or 0) / 1000
+    app_state.sensor.start(root, isos, body.frames, mirror_s=(app_state.cfg["sequence"].get("mirror_delay_ms") or 0) / 1000)
+    app_state.new_shot_group("calibration")
+    app_state.cfg["sensor"] = {"iso_from": body.iso_from, "iso_to": body.iso_to, "step": body.step, "frames": body.frames}
+    store.save(app_state.cfg)
+    return {"ok": True, "isos": isos}
+
+
+@api.post("/api/sensor/cap")
+@guard
+async def sensor_cap():
+    app_state.sensor.cap_on()
+    return {"ok": True}
+
+
+@api.post("/api/sensor/stop")
+async def sensor_stop():
+    await app_state.sensor.stop()
+    return {"ok": True}
+
+
+@api.post("/api/sensor/export")
+@guard
+async def sensor_export():
+    """Tabella dell'analisi del sensore in CSV, in Download (mostrata nel Finder)."""
+    prof = app_state.sensor_profile()
+    if not prof:
+        raise ValueError(tr("Nessuna analisi del sensore per questa fotocamera"))
+    out_dir = Path.home() / "Downloads"
+    if not out_dir.is_dir():
+        out_dir = Path.home()
+    path = out_dir / f"FocusStack-sensore-{sensor.safe_name(prof['camera']['model'])}-{time.strftime('%Y%m%d-%H%M%S')}.csv"
+    path.write_text(sensor.csv_text(prof), encoding="utf-8")
     desktop.reveal(path)
     return {"ok": True, "path": str(path), "name": path.name}
 

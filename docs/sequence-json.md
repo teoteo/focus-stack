@@ -70,6 +70,7 @@ with a single shot). Files are named `<name>_0001.ext` with one shot per positio
 | `notes` | free text |
 | `optics_profile` | name of the optics profile used (absent = no profile) |
 | `calibration` | calibration sets from the shared library chosen for this stack: `darks`, `flats`, `flat_darks`, each `{set, path, frames, created, iso, shutterspeed, aperture, …}` with `path` relative to the stack folder; see [calibration-json.md](calibration-json.md). Absent key = no suitable set |
+| `sensor` | values of the camera's sensor profile at this stack's ISO (sensor analysis): `{profile, measured, iso, gain_e_adu, read_noise_e, full_well_e, dynamic_range_stops, reliable}`, `profile` relative to the stack folder; see [sensor-json.md](sensor-json.md). Absent key = no profile for this camera or ISO not measured |
 | `frames[]` | `index` (0-based), `z_um`, `position_steps`, `temperature_c`, `exposures[]` |
 | `frames[].exposures[]` | `repeat` (0-based), `time`, `files` (names relative to the folder; RAW+JPEG gives two; empty with `card`/`trigger` capture), `temperature_c` |
 | `extra` | `{}` reserved |

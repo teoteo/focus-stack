@@ -42,6 +42,8 @@ DEFAULTS: dict = {
     # fermo»). Spento: l'app le spegne chiudendo la porta (firmware build 8), così il motore non scalda per ore;
     # acceso: utile se il carico (slitta verticale) può far girare la vite a motore senza corrente.
     "coil_hold_after_disconnect": False,
+    # ultima scelta della procedura «Analisi del sensore» (Calibrazione › Sensore)
+    "sensor": {"iso_from": 100, "iso_to": 6400, "step": "third", "frames": 2},
     "sequence": {
         "start": 0,
         "end": 1000,

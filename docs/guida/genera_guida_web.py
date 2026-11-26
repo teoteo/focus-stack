@@ -45,7 +45,7 @@ ALIASES = {
     "collegare-fotocamera": "c4-2", "focheggiatore": "c5", "fotocamera": "c6", "live-view": "c6-1",
     "sequenza": "c7-1", "sequenza-in-corso": "c7-2", "profili-ottici": "c7-3", "macro": "c7-4", "piu-scatti": "c7-5",
     "file-pila": "c7-6", "calibrazione": "c7-7", "calibrazione-esposizione": "c7-7-1", "calibrazione-frame": "c7-7-2",
-    "calibrazione-libreria": "c7-7-3", "smartphone": "c7-8", "visualizzatore": "c8", "ispettore": "c8-1",
+    "calibrazione-fusione": "c7-7-3", "calibrazione-libreria": "c7-7-4", "calibrazione-sensore": "c7-7-5", "smartphone": "c7-8", "visualizzatore": "c8", "ispettore": "c8-1",
     "fine-corsa": "c9", "meccanica": "c10", "passo": "c11",
     "motore": "c12-1", "comandi-manuali": "c12-2", "aggiornamenti": "c12-3", "temperatura": "c12-4",
     "sessione-tipo": "c13", "problemi": "c14", "scorciatoie": "c15",

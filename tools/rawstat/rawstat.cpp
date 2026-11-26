@@ -1,6 +1,7 @@
 // fs-rawstat: livelli di un'immagine per la calibrazione e l'esposizione automatica di Focus Stack.
 //
 //   fs-rawstat <file>      →  una riga JSON su stdout (exit 0), oppure {"error": "..."} (exit 1)
+//   fs-rawstat --ptc f1 f2 d1 d2  →  analisi del sensore da due flat e due dark (vedi ptc() più sotto)
 //
 // RAW: LibRaw (stessa versione e stessi sorgenti di Focus Fusion, third_party/LibRaw) senza demosaicizzare:
 // per ogni pixel dell'area visibile il valore grezzo meno il nero del suo canale (black + cblack), diviso per
@@ -404,9 +405,92 @@ int focus_file(const char *path, const double f[4], const std::string &want) {
   return 0;
 }
 
+// ---------------- analisi del sensore (curva di trasferimento dei fotoni) ----------------
+// Ritaglio centrale di un canale verde del mosaico, valori grezzi: niente demosaicizzazione né bilanciamento.
+struct Plane {
+  std::vector<double> v;
+  double black = 0, white = 0, iso = 0, shutter = 0;
+  std::string camera, error;
+};
+
+Plane green_plane(const char *path, int side) {
+  Plane p;
+  LibRaw *rp = new LibRaw;
+  int r = rp->open_file(path);
+  if (r == LIBRAW_SUCCESS) r = rp->unpack();
+  if (r != LIBRAW_SUCCESS) { p.error = std::string(path) + ": " + libraw_strerror(r); delete rp; return p; }
+  auto &d = rp->imgdata;
+  const auto &sz = d.sizes;
+  const auto &col = d.rawdata.color;
+  unsigned short *raw = d.rawdata.raw_image;
+  if (!raw) { p.error = std::string(path) + ": non è un RAW a mosaico"; delete rp; return p; }
+  p.black = col.black + col.cblack[1];
+  // bianco dichiarato nei metadati (Sony: 15360) se c'è, altrimenti il massimo teorico di LibRaw (16383)
+  p.white = col.linear_max[1] > 0 ? (double)col.linear_max[1] : (double)col.maximum;
+  p.iso = d.other.iso_speed; p.shutter = d.other.shutter;
+  p.camera = std::string(d.idata.make) + " " + d.idata.model;
+  int n = std::min(side, std::min(sz.height, sz.width) / 2 - 4);
+  int y0 = (sz.top_margin + sz.height / 2 - n) & ~1, x0 = (sz.left_margin + sz.width / 2 - n) & ~1;
+  int dy = -1, dx = -1;
+  for (int yy = 0; yy < 2 && dy < 0; yy++)
+    for (int xx = 0; xx < 2; xx++)
+      if (rp->COLOR(y0 + yy - sz.top_margin, x0 + xx - sz.left_margin) == 1) { dy = yy; dx = xx; break; }
+  if (dy < 0) { p.error = std::string(path) + ": nessun pixel verde"; delete rp; return p; }
+  p.v.reserve((size_t)n * n);
+  for (int i = 0; i < n; i++)
+    for (int j = 0; j < n; j++) p.v.push_back(raw[(size_t)(y0 + dy + 2 * i) * (sz.raw_pitch / 2) + x0 + dx + 2 * j]);
+  delete rp;
+  return p;
+}
+
+double mean_of(const std::vector<double> &a) { double s = 0; for (double x : a) s += x; return a.empty() ? 0 : s / a.size(); }
+
+double diff_var(const std::vector<double> &a, const std::vector<double> &b) {
+  double s = 0, s2 = 0; size_t n = std::min(a.size(), b.size());
+  for (size_t i = 0; i < n; i++) { double d = a[i] - b[i]; s += d; s2 += d * d; }
+  return n > 1 ? (s2 - s * s / n) / (n - 1) : 0;
+}
+
+// --ptc flat1 flat2 dark1 dark2: due flat e due dark con le stesse impostazioni. La differenza fra due scatti uguali
+// toglie tutto quello che è fisso (polvere, vignettatura, pixel caldi) e lascia solo il rumore:
+// guadagno (e-/ADU) = segnale / (varianza della differenza dei flat − quella dei dark), rumore di lettura =
+// deviazione della differenza dei dark / √2, pieno pozzetto = (bianco − nero) × guadagno.
+int ptc(char **files, int side) {
+  Plane f1 = green_plane(files[0], side), f2 = green_plane(files[1], side);
+  Plane d1 = green_plane(files[2], side), d2 = green_plane(files[3], side);
+  for (Plane *p : {&f1, &f2, &d1, &d2}) if (!p->error.empty()) return fail(p->error);
+  if (f1.v.size() != f2.v.size() || f1.v.size() != d1.v.size() || f1.v.size() != d2.v.size())
+    return fail("flat e dark di dimensioni diverse");
+  double dm = (mean_of(d1.v) + mean_of(d2.v)) / 2, fm1 = mean_of(f1.v) - dm, fm2 = mean_of(f2.v) - dm;
+  double vd = diff_var(d1.v, d2.v), vf = diff_var(f1.v, f2.v);
+  double range = f1.white - f1.black;
+  unsigned long long sat = 0;
+  for (const Plane *p : {&f1, &f2}) for (double x : p->v) if (x >= p->white - 1) sat++;
+  double gain = vf > vd ? (fm1 + fm2) / (vf - vd) : NAN;
+  double rn_adu = std::sqrt(vd / 2), rn_e = rn_adu * gain, fw = range * gain;
+  printf("{\"kind\":\"ptc\",\"camera\":\"%s\",\"iso\":%s,\"shutter_s\":%s,\"black\":%s,\"white\":%s,"
+         "\"dark_mean\":%s,\"flat_signal_adu\":%s,\"flat_level_pct\":%s,\"flat_diff_var\":%s,\"dark_diff_var\":%s,"
+         "\"gain_e_adu\":%s,\"read_noise_adu\":%s,\"read_noise_e\":%s,\"full_well_e\":%s,\"dynamic_range_stops\":%s,"
+         "\"saturated_pct\":%s,\"samples\":%zu,\"libraw\":\"%s\"}\n",
+         esc(f1.camera.c_str()).c_str(), num(f1.iso, 0).c_str(), num(f1.shutter, 6).c_str(), num(f1.black, 1).c_str(),
+         num(f1.white, 0).c_str(), num(dm, 2).c_str(), num((fm1 + fm2) / 2, 1).c_str(),
+         num(range > 0 ? (fm1 + fm2) / 2 / range * 100 : NAN, 2).c_str(), num(vf, 3).c_str(), num(vd, 3).c_str(),
+         num(gain, 4).c_str(), num(rn_adu, 3).c_str(), num(rn_e, 3).c_str(), num(fw, 0).c_str(),
+         num(rn_e > 0 && fw > 0 ? std::log2(fw / rn_e) : NAN, 2).c_str(),
+         num(100.0 * sat / (f1.v.size() + f2.v.size()), 4).c_str(), f1.v.size(), LibRaw::version());
+  return 0;
+}
+
 }  // namespace
 
 int main(int argc, char **argv) {
+  if (argc >= 2 && !strcmp(argv[1], "--ptc")) {
+    // --ptc [--side N] flat1 flat2 dark1 dark2   (N = metà del lato del ritaglio, in pixel verdi; predefinito 400)
+    int side = 400, first = 2;
+    if (argc >= 4 && !strcmp(argv[2], "--side")) { side = atoi(argv[3]); first = 4; }
+    if (argc - first != 4 || side < 16) return fail("uso: --ptc [--side N] flat1 flat2 dark1 dark2");
+    return ptc(argv + first, side);
+  }
   if (argc >= 2 && !strcmp(argv[1], "--focus")) {
     // --focus x0 y0 x1 y1 [--source auto|preview|raw] file
     if (argc != 7 && argc != 9) return fail("uso: --focus x0 y0 x1 y1 [--source auto|preview|raw] file");

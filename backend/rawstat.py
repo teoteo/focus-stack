@@ -46,6 +46,30 @@ async def measure(path: str | Path, timeout_s: float = 60) -> dict:
     return data
 
 
+async def ptc(flats: list, darks: list, timeout_s: float = 120) -> dict:
+    """Analisi del sensore da due flat e due dark con le stesse impostazioni (fs-rawstat --ptc, vedi rawstat.cpp):
+    guadagno, rumore di lettura, pieno pozzetto, gamma dinamica."""
+    exe = tool_path()
+    if exe is None:
+        raise RawStatError(tr("Strumento di misura fs-rawstat mancante: python3 tools/rawstat/build.py"))
+    if len(flats) < 2 or len(darks) < 2:
+        raise RawStatError(tr("Servono due flat e due dark"))
+    proc = await asyncio.create_subprocess_exec(str(exe), "--ptc", *[str(f) for f in (*flats[:2], *darks[:2])],
+                                                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    try:
+        out, _ = await asyncio.wait_for(proc.communicate(), timeout_s)
+    except asyncio.TimeoutError as exc:
+        proc.kill()
+        raise RawStatError(tr("Misura troppo lenta: {name}", name=Path(flats[0]).name)) from exc
+    try:
+        data = json.loads(out.decode("utf-8", "replace").strip().splitlines()[-1])
+    except (IndexError, json.JSONDecodeError) as exc:
+        raise RawStatError(tr("Misura non riuscita: {name}", name=Path(flats[0]).name)) from exc
+    if data.get("error"):
+        raise RawStatError(tr("Misura non riuscita ({name}): {err}", name=Path(flats[0]).name, err=data["error"]))
+    return data
+
+
 async def focus(path: str | Path, roi, source: str = "auto", timeout_s: float = 30) -> dict:
     """Nitidezza di un'area (frazioni x0, y0, x1, y1 dell'immagine vista): {"focus", "mean", "source", "roi_px",
     "image"}. source: auto (anteprima incorporata nei RAW, o il RAW a metà risoluzione se l'area è troppo piccola
