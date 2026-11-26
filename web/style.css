@@ -223,6 +223,28 @@ label.check { flex-direction: row; align-items: center; gap: 9px; font-size: 14.
 .seg button { font: inherit; font-size: 15px; font-weight: 600; color: var(--text-2); background: none; border: 0;
   border-radius: 8px; padding: 7px 14px; cursor: pointer; font-variant-numeric: tabular-nums; min-width: 54px; }
 .seg button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
+/* Ottica: tipo di ottica come schede attaccate al pannello che cambia (Microscopio / Macro fotografica) */
+.kind-tabs { display: flex; gap: 6px; position: relative; z-index: 1; margin-bottom: -1px; }
+/* margin 0: Safari dà ai pulsanti un margine che spostava la linguetta dal bordo e la staccava dal pannello.
+   Le linguette coprono di 1 px il bordo del pannello: quella attiva con il suo fondo (nessuna linea fra linguetta e
+   contenuto), quelle non attive con una loro linea in basso (la divisione resta). */
+.kind-tabs button { display: flex; align-items: center; gap: 12px; flex: 0 1 310px; min-width: 0; margin: 0; padding: 11px 20px 12px;
+  border: 1px solid var(--line); border-radius: 14px 14px 0 0; background: var(--bg-2); color: var(--text-2);
+  font: inherit; text-align: left; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.kind-tabs button:hover { color: var(--text); }
+.kind-tabs button[aria-selected="true"] { background: var(--card); color: var(--text); box-shadow: inset 0 3px 0 var(--accent); cursor: default;
+  border-bottom-color: var(--card); margin-bottom: -1px; }   /* copre anche il riflesso di 1 px in cima al pannello (--shadow) */
+.kind-tabs .kt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.kind-tabs b { font-size: 16px; font-weight: 600; }
+.kind-tabs small { font-size: 12.5px; color: var(--text-2); }
+.kind-ico { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.set-card.tabbed { border-top-left-radius: 0; }
+@media (max-width: 560px) { .kind-tabs button { flex: 1 1 0; padding: 10px 12px; } .kind-tabs small { display: none; } }
+/* valore suggerito dalla misura accanto a un campo (adattatore): come «↺ era X» della pila */
+.suggest { font: inherit; font-size: 12.5px; font-weight: 600; line-height: 1.5; color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 12%, transparent); border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  border-radius: 999px; padding: 1px 10px; cursor: pointer; }
+.suggest:hover, .suggest:focus-visible { background: color-mix(in srgb, var(--warn) 24%, transparent); outline: none; }
 
 .connect { padding: 4px 0 6px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
 .connected-line { display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -312,10 +334,36 @@ details.more summary { cursor: pointer; padding: 12px 0; font-weight: 600; color
 #k-root, #k-match, #k-progress, #x-result { overflow-wrap: anywhere; }   /* percorsi lunghi senza spazi */   /* la tabella scorre nella sua cornice invece di allargare la pagina */
 .table-wrap { max-width: 100%; overflow-x: auto; margin: 10px 0; border: 1px solid var(--line); border-radius: 10px; }
 .lib-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
-.lib-table th { text-align: left; font-weight: 600; color: var(--text-2); font-size: 12.5px; padding: 8px 10px; background: var(--bg-2); white-space: nowrap; }
-.lib-table td { padding: 7px 10px; border-top: 1px solid var(--line); white-space: nowrap; }
+.lib-table th { text-align: left; font-weight: 600; color: var(--text-2); font-size: 12.5px; padding: 8px 8px; background: var(--bg-2); vertical-align: bottom; }
+.lib-table td { padding: 7px 8px; border-top: 1px solid var(--line); white-space: nowrap; }
+.lib-table th:first-child, .lib-table td:first-child { padding-left: 12px; }
+.lib-table td:last-child { text-align: right; padding-right: 10px; }
 .lib-table td.muted { color: var(--muted); }
 .lib-table .empty td { color: var(--muted); text-align: center; padding: 14px; white-space: normal; }
+/* Libreria di calibrazione: niente scorrimento laterale. I testi lunghi (tipo, fotocamera, profilo ottico)
+   vanno a capo; quando nemmeno così ci sta (finestra stretta), ogni set diventa una scheda con le etichette. */
+#view-calib .table-wrap { container-type: inline-size; }   /* lo scorrimento resta solo come rete di sicurezza */
+#k-table td.wrap { white-space: normal; min-width: 7em; }
+/* casella di selezione davanti al tipo (e in testa alla colonna: tutti) */
+#k-table .lib-sel { display: flex; flex-direction: row; align-items: center; gap: 10px; font: inherit; color: inherit; cursor: pointer; }
+#k-table th .lib-sel { font-weight: 600; }
+#k-table td.wrap.short { min-width: 0; }
+@container (max-width: 900px) {   /* larghezza minima della tabella: ~850 px in italiano, la lingua più larga */
+  #k-table thead { display: none; }
+  #k-table, #k-table tbody { display: block; }
+  #k-table tbody tr:not(.empty) { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 16px;
+    padding: 12px 14px; border-top: 1px solid var(--line); }
+  #k-table tbody tr:first-child { border-top: 0; }
+  #k-table tbody tr:not(.empty) td { display: flex; flex-direction: column; gap: 1px; padding: 0; border: 0; white-space: normal;
+    min-width: 0; text-align: left; overflow-wrap: anywhere; }
+  #k-table tbody tr:not(.empty) td::before { content: attr(data-label); font-size: 12px; color: var(--text-2); font-weight: 600; }
+  #k-table tbody tr:not(.empty) td:first-child { grid-column: 1 / -1; font-weight: 600; }
+  #k-table tbody tr:not(.empty) td:first-child::before { content: none; }
+  #k-table tbody tr:not(.empty) td:last-child { grid-column: 1 / -1; flex-direction: row; justify-content: flex-end; }
+  #k-table tbody tr:not(.empty) td:last-child::before { content: none; }
+  #k-table .empty { display: block; }
+  #k-table .empty td { display: block; }
+}
 .result .muted, .summary .muted { color: var(--muted); }
 .result .warn-text { color: var(--warn); display: block; margin-top: 8px; }
 .result .result-line { display: block; margin-top: 8px; }
@@ -361,6 +409,14 @@ details.more summary { cursor: pointer; padding: 12px 0; font-weight: 600; color
 .spark path.area { fill: var(--accent-soft); stroke: none; }
 
 .log-card { min-height: calc(100vh - 140px); }
+.log-head { justify-content: flex-start; flex-wrap: wrap; gap: 10px 12px; }
+.log-head h2 { margin-right: 8px; }
+#log-q { width: 260px; max-width: 100%; }
+#log-level { width: auto; }
+.log-count { font-size: 13.5px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+#log .log-warn { color: var(--warn); }
+#log .log-err { color: var(--bad); }
+#log mark { background: color-mix(in srgb, var(--accent) 35%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
 #log { margin: 0; height: calc(100vh - 230px); overflow: auto; font: 13.5px/1.65 ui-monospace, "SF Mono", Menlo, monospace;
   color: var(--text-2); background: var(--bg-2); padding: 14px; border-radius: 10px; white-space: pre-wrap; word-break: break-word; }
 
@@ -409,7 +465,7 @@ input[aria-invalid="true"] { border-color: var(--warn); box-shadow: 0 0 0 1px va
    (≥ 3:1 su ogni sfondo, WCAG 1.4.11). Indice e riepilogo restano fermi (--topbar-h la imposta app.js). */
 .view.settings [hidden] { display: none !important; }
 .view.settings { grid-template-columns: 236px minmax(0, 860px) minmax(230px, 290px); justify-content: center; gap: 20px; }
-.set-nav, .set-sum { position: sticky; top: calc(var(--topbar-h, 62px) + 18px); max-height: calc(100vh - var(--topbar-h, 62px) - 36px); overflow-y: auto; }
+.set-nav, .set-side { position: sticky; top: calc(var(--topbar-h, 62px) + 18px); max-height: calc(100vh - var(--topbar-h, 62px) - 36px); overflow-y: auto; }
 
 /* indice: come la barra laterale di Focus Fusion */
 .set-nav { display: flex; flex-direction: column; gap: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
@@ -428,6 +484,8 @@ input[aria-invalid="true"] { border-color: var(--warn); box-shadow: 0 0 0 1px va
 /* sezione larga sotto pagina e riepilogo (Libreria di calibrazione) */
 .set-wide { min-width: 0; grid-column: 2 / span 2; grid-row: 2; }
 .view.settings:has(.set-wide) .set-nav { grid-row: 1 / span 2; }
+/* il riepilogo fermo finirebbe sopra la sezione larga che gli scorre sotto: con la sezione larga scorre con la pagina */
+.view.settings:has(.set-wide) .set-side { position: static; max-height: none; }
 .set-group { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-2); font-weight: 600; margin: 0 0 8px 4px; }
 .set-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 4px 20px; box-shadow: var(--shadow); margin-bottom: 26px; }
 .set-sec { padding: 16px 0 18px; border-top: 1px solid var(--line); scroll-margin-top: calc(var(--topbar-h, 62px) + 14px); }
@@ -451,6 +509,15 @@ label.set-row { cursor: pointer; }
 .set-help { flex: 1 1 220px; min-width: 0; font-size: 13.5px; color: var(--text-2); line-height: 1.4; }
 .set-val { font-size: 14.5px; color: var(--text); font-variant-numeric: tabular-nums; margin-right: 6px; }
 .set-ctl { display: flex; align-items: center; justify-content: flex-start; gap: 8px; flex-wrap: wrap; color: var(--text); min-width: 0; }
+/* più caselle sotto una sola etichetta (Alimentazione bobine motore): una per riga, testo accanto */
+.set-ctl.set-checks { flex-direction: column; align-items: stretch; gap: 8px; }
+.set-row.baseline { align-items: start; }   /* etichetta alla prima casella, non al centro del gruppo */
+.set-ctl .set-check { display: flex; flex-direction: row; align-items: flex-start; gap: 10px; cursor: pointer; line-height: 1.5;
+  font-size: 15px; color: var(--text); }   /* come le etichette a sinistra: la prima riga si allinea con loro */   /* label: in colonna e grigio di base */
+/* selettore forte: «.view.settings input[type=checkbox]» azzera il margine */
+.view.settings .set-check input[type="checkbox"] { margin-top: 3px; }   /* centrata sulla prima riga di testo */
+.set-check .set-help { font-size: 13.5px; }
+.set-check:has(input:disabled) { cursor: default; opacity: .5; }
 .set-row > .warn, .set-rows > .warn { margin: 0; }
 
 /* controlli: contorno «control», fondo card, raggio 7, alti 34 */
@@ -508,7 +575,8 @@ label.set-row { cursor: pointer; }
 
 @media (max-width: 1240px) {
   .view.settings { grid-template-columns: 210px minmax(0, 1fr); }
-  .set-sum { position: static; max-height: none; grid-column: 2; grid-row: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .set-side { position: static; max-height: none; grid-column: 2; grid-row: 1; }
+  .set-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
   .set-sum h4, .set-sum hr { grid-column: 1 / -1; }
   .set-main { grid-column: 2; grid-row: 2; }
   .set-wide { grid-column: 2; grid-row: 3; }
@@ -521,7 +589,7 @@ label.set-row { cursor: pointer; }
   .set-nav .set-h { display: none; }
   .set-nav a { white-space: nowrap; min-height: 36px; }
   .view.settings .set-search { min-width: 130px; margin: 0; }
-  .set-sum { grid-column: 1; grid-row: 2; }
+  .set-side { grid-column: 1; grid-row: 2; }
   .set-main { grid-column: 1; grid-row: 3; padding: 14px 12px 4px; }
   .set-wide { grid-column: 1; grid-row: 4; padding: 0 12px 4px; }
   .view.settings:has(.set-wide) .set-nav { grid-row: 1; }

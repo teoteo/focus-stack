@@ -295,10 +295,10 @@
   "Il pacchetto scaricato non ha la firma dello sviluppatore di Focus Stack": "The downloaded package is not signed by the Focus Stack developer",
   "ISO {v}: questa fotocamera arriva al massimo a {top}.": "ISO {v}: this camera goes up to {top} at most.",
   "Live view non spento: {exc}": "Live view not turned off: {exc}",
- "dalla catena {m}×": "from the optical chain {m}×",
- "Esiste già un profilo «{name}»": "A profile «{name}» already exists",
- "Profilo ottico rinominato: «{old}» → «{new}»": "Optics profile renamed: «{old}» → «{new}»",
- "({n} set di calibrazione aggiornati)": "({n} calibration sets updated)",
+  "dalla catena {m}×": "from the optical chain {m}×",
+  "Esiste già un profilo «{name}»": "A profile «{name}» already exists",
+  "Profilo ottico rinominato: «{old}» → «{new}»": "Optics profile renamed: «{old}» → «{new}»",
+  "({n} set di calibrazione aggiornati)": "({n} calibration sets updated)",
   "Autofocus già in corso": "Autofocus already running",
   "Autofocus…": "Autofocus…",
   "Movimento manuale rilevato ({actual} invece di {pos}): autofocus fermato": "Manual movement detected ({actual} instead of {pos}): autofocus stopped",
@@ -346,5 +346,8 @@
   "Conferma: fuoco a {pos} (col live view era {live})": "Confirmation: focus at {pos} (live view gave {live})",
   "Modo non valido": "Invalid mode",
   "Escursione massima": "Maximum excursion",
-  "Scatti di conferma": "Confirmation shots"
+  "Scatti di conferma": "Confirmation shots",
+  "{n} set di calibrazione spostati nel Cestino: {names}": "{n} calibration sets moved to the Trash: {names}",
+  "lingua": "language",
+  "non connesso": "not connected"
 }

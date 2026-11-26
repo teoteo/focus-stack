@@ -5,6 +5,7 @@ Il testo sta in testo_it.py e testo_en.py; le schermate e le posizioni dei numer
 cattura_schermate.py --lang <lingua>. Se mancano le schermate di una lingua usa quelle italiane.
 """
 import json
+import shutil
 import sys
 from html import escape as html_escape
 from pathlib import Path
@@ -189,6 +190,65 @@ def diagram(labels):
     return DIAGRAM.format(**labels)
 
 
+# Dove entrano dark e flat nella fusione: versione breve dello schema della guida di Focus Fusion (capitolo 2.4).
+# Etichette in CALIB_LABELS di ogni testo_<lingua>.py.
+CALIB_DIAGRAM = """
+<svg class="diagram" viewBox="0 0 760 410" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Helvetica, Arial" font-size="13">
+  <defs>
+    <marker id="cg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6b80"/></marker>
+    <marker id="co" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d98a1f"/></marker>
+    <marker id="cv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2e9b5f"/></marker>
+  </defs>
+  <g fill="#33475f" font-size="11.5" font-weight="700" letter-spacing="1" text-anchor="middle">
+    <text x="125" y="26">{col_dark}</text><text x="380" y="26">{col_stack}</text><text x="635" y="26">{col_flat}</text>
+  </g>
+  <g fill="#ffffff" stroke="#9fb0c5" stroke-width="1.5">
+    <rect x="20" y="40" width="210" height="58" rx="9"/><rect x="20" y="122" width="210" height="36" rx="9"/>
+    <rect x="530" y="40" width="210" height="58" rx="9"/><rect x="530" y="122" width="210" height="36" rx="9"/>
+    <rect x="530" y="182" width="210" height="36" rx="9"/>
+  </g>
+  <rect x="20" y="182" width="210" height="40" rx="9" fill="#fff7ea" stroke="#d98a1f" stroke-width="2"/>
+  <rect x="530" y="242" width="210" height="52" rx="9" fill="#ecf8f1" stroke="#2e9b5f" stroke-width="2"/>
+  <rect x="275" y="40" width="210" height="58" rx="9" fill="#eef5ff" stroke="#2f81f7" stroke-width="2"/>
+  <rect x="275" y="324" width="210" height="40" rx="9" fill="#eef5ff" stroke="#2f81f7" stroke-width="2"/>
+  <g fill="#0f1c2e" text-anchor="middle">
+    <text x="125" y="64" font-weight="700">{dark}</text><text x="125" y="84" font-size="12" fill="#33475f">{dark1}</text>
+    <text x="125" y="145">{mean}</text>
+    <text x="125" y="207" font-weight="700" fill="#9a5a08">{D}</text>
+    <text x="635" y="64" font-weight="700">{flat}</text><text x="635" y="84" font-size="12" fill="#33475f">{flat1}</text>
+    <text x="635" y="145">{flat_mean}</text>
+    <text x="635" y="205">{norm}</text>
+    <text x="635" y="264" font-weight="700" fill="#1f7a48">{F}</text><text x="635" y="283" font-size="12" fill="#33475f">{F1}</text>
+    <text x="380" y="64" font-weight="700">{frame}</text><text x="380" y="84" font-size="12" fill="#33475f">{frame1}</text>
+    <text x="380" y="349" font-weight="700">{fusion}</text>
+  </g>
+  <g stroke="#5b6b80" stroke-width="1.6" fill="none" marker-end="url(#cg)">
+    <path d="M125 98 V119"/><path d="M125 158 V179"/>
+    <path d="M635 98 V119"/><path d="M635 158 V179"/><path d="M635 218 V239"/>
+    <path d="M380 98 V180"/><path d="M380 222 V246"/><path d="M380 288 V321"/>
+  </g>
+  <circle cx="380" cy="202" r="20" fill="#fff7ea" stroke="#d98a1f" stroke-width="2"/>
+  <text x="380" y="210" text-anchor="middle" font-size="24" font-weight="700" fill="#9a5a08">−</text>
+  <circle cx="380" cy="268" r="20" fill="#ecf8f1" stroke="#2e9b5f" stroke-width="2"/>
+  <text x="380" y="276" text-anchor="middle" font-size="22" font-weight="700" fill="#1f7a48">÷</text>
+  <path d="M230 202 H357" stroke="#d98a1f" stroke-width="2" fill="none" marker-end="url(#co)"/>
+  <path d="M530 268 H403" stroke="#2e9b5f" stroke-width="2" fill="none" marker-end="url(#cv)"/>
+  <text x="20" y="392" font-family="Menlo, monospace" font-size="15" font-weight="700" fill="#0f1c2e">I′ = (I − <tspan fill="#9a5a08">D</tspan>) ÷ <tspan fill="#1f7a48">F</tspan></text>
+  <g fill="#33475f" font-size="12" text-anchor="end">
+    <text x="740" y="376">{note1}</text><text x="740" y="394">{note2}</text>
+  </g>
+</svg>
+"""
+
+
+# esempio vero di calibrazione (matita, 7.6): vedi esempio-calibrazione/LEGGIMI.md
+STATIC_FIGS = [HERE / "esempio-calibrazione" / "calibrazione-esempio.jpg"]
+
+
+def calib_diagram(labels):
+    return CALIB_DIAGRAM.format(**labels)
+
+
 def table(head, rows, right=()):
     th = "".join(f'<th class="{"r" if i in right else ""}">{h}</th>' for i, h in enumerate(head))
     trs = "".join("<tr>" + "".join(f'<td class="{"r" if i in right else ""}">{c}</td>' for i, c in enumerate(r)) + "</tr>"
@@ -239,9 +299,15 @@ def parts(lang):
         print(f"ATTENZIONE: mancano le schermate in {img_dir}/, uso quelle italiane")
         img_dir = "img/it"
     notes = json.loads((HERE / img_dir / "annotazioni.json").read_text(encoding="utf-8"))
+    # figure fatte a mano, uguali in tutte le lingue (senza testo): stanno nel repository e si copiano accanto alle
+    # schermate, che invece cattura_schermate.py rigenera (img/ non è nel repository)
+    for src in STATIC_FIGS:
+        dst = HERE / img_dir / src.name
+        if not dst.exists() or dst.stat().st_mtime < src.stat().st_mtime:
+            shutil.copy2(src, dst)
     seq_txt = HERE / img_dir / "sequence.txt"   # esempio di riepilogo, prodotto da cattura_schermate.py
     seq_txt = html_escape(seq_txt.read_text(encoding="utf-8")) if seq_txt.exists() else ""
-    ns = {"fig": make_fig(notes, img_dir), "frac": frac, "table": table, "num": make_num(lang), "diagram": diagram,
+    ns = {"fig": make_fig(notes, img_dir), "frac": frac, "table": table, "num": make_num(lang), "diagram": diagram, "calib_diagram": calib_diagram,
           "APP": app_strings(lang),
           "VERSION": VERSION, "ICON": ICON, "IMG": img_dir, "UA": UA, "UB": UB, "GEAR17": GEAR17,
           "um_step": um_step, "dof": dof, "OBJ": OBJ, "SEQ_TXT": seq_txt}

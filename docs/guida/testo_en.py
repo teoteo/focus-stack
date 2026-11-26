@@ -18,6 +18,7 @@ UI = {
     "Ottica": "Optics",
     "Configurazione": "Configuration",
     "Registro": "Log",
+    "Esporta": "Export",
     "Simulatore": "Simulator",
     "Connetti": "Connect",
     "Disconnetti": "Disconnect",
@@ -118,7 +119,9 @@ UI = {
     "Motore (firmware)": "Motor (firmware)",
     "Microstep": "Microstep",
     "Velocità": "Speed",
-    "Bobine alimentate a motore fermo": "Keep coils powered when idle",
+    "Alimentazione bobine motore": "Motor coil power",
+    "Sempre quando connesso": "Always while connected",
+    "Alimentazione bobine motore › Sempre quando connesso": "Motor coil power › Always while connected",
     "Inverti verso di rotazione": "Reverse rotation",
     "Compensa il gioco IN": "Compensate backlash IN",
     "Compensa il gioco OUT": "Compensate backlash OUT",
@@ -184,6 +187,7 @@ UI = {
     "Sotto il puntatore:": "Under the pointer:",
     "Motore": "Motor",
     "Alimentale comunque durante la sequenza": "Power them anyway during the sequence",
+    "Anche quando viene disconnesso o si spegne l'applicazione": "Also when disconnected or when the app quits",
     "Tratto massimo per comando (passi)": "Maximum segment per command (steps)",
 }
 
@@ -191,6 +195,10 @@ UI = {
 def ui(s):
     """English name of an app command (the Italian text is the key)."""
     return UI.get(s, s)
+
+
+# nome dell'opzione con l'apostrofo: in una costante, perché Python 3.11 non accetta virgolette annidate nelle f-string
+COIL_HOLD = "Anche quando viene disconnesso o si spegne l'applicazione"
 
 
 DIAGRAM_LABELS = {
@@ -202,6 +210,28 @@ DIAGRAM_LABELS = {
     "stage1": "moves", "stage2": "in µm",
     "ratio": "total gear ratio = gearbox × pulleys",
     "steps": "motor steps per knob turn = steps/rev × microstep × ratio",
+}
+
+# schema «Come li usa la fusione» (7.6): etichette dello SVG, testo semplice (&lt; per <)
+CALIB_LABELS = {
+    "col_dark": 'MASTER DARK',
+    "col_stack": 'SUBJECT STACK',
+    "col_flat": 'MASTER FLAT',
+    "dark": 'Darks · N shots',
+    "dark1": 'cap on, same ISO and shutter',
+    "mean": 'pixel-by-pixel average',
+    "D": 'D: master dark',
+    "flat": 'Flats · N shots',
+    "flat1": 'even field, same optics',
+    "flat_mean": 'average − flat darks',
+    "norm": '÷ its own average',
+    "F": 'F: normalised flat',
+    "F1": '&lt; 1 at the edges and on dust',
+    "frame": 'Each frame I',
+    "frame1": 'RAW, linear light',
+    "fusion": 'alignment and fusion',
+    "note1": 'Without darks the subtraction is skipped,',
+    "note2": 'without flats the division.',
 }
 
 # depth-of-field table (objective names in the guide's language)
@@ -423,7 +453,7 @@ you watch the live view.</div>
 <div class="box warn"><span class="t">Physical buttons</span>The buttons on the focuser drive the motor without
 going through the app. The app watches them and, if the position leaves the limits, sends STOP and shows an
 alarm; for full protection read chapter 9. Pressing them during a sequence pauses the sequence.</div>
-<div class="box warn"><span class="t">If the stage doesn't advance with small steps</span>With <span class="ui">{ui('Bobine alimentate a motore fermo')}</span>
+<div class="box warn"><span class="t">If the stage doesn't advance with small steps</span>With <span class="ui">{ui('Alimentazione bobine motore › Sempre quando connesso')}</span>
 turned off ({ui('Configurazione')} › Motor) the motor loses, at every stop, the force that holds it in position: the
 load (weight of the camera, a spring, the belt) can pull it back. The step counter advances, but the stage stays where it
 is and a whole stack ends up on the same plane. During the sequence the app powers the coils by itself (chapter 12); for
@@ -537,7 +567,7 @@ of type <b>{ui('Microscopio')}</b> or <b>{ui('Macro fotografica')}</b> (7.3). Th
     f"<b>{ui('Profilo da modificare')}</b>: choose one to load its values; <i>{ui('— nuovo profilo —')}</i> starts from an empty form.",
     "<b>Save as new profile…</b>, in the bar that appears at the top: asks for a name and saves a copy, leaving the original profile as it was.",
     f"<b>{ui('Elimina profilo')}</b>, after a confirmation. <b>Rename…</b> changes the name also in the sequence and in the flats of the calibration library.",
-    f"<b>{ui('Tipo di ottica')}</b>: <i>{ui('Microscopio')}</i> (objective with engraved magnification and NA) or <i>{ui('Macro fotografica')}</i> (photographic lens, tubes and close-up lenses, 7.3).",
+    f"<b>{ui('Tipo di ottica')}</b>, the two tabs at the top of the {ui('Ottica')} panel, which change the fields below: <i>{ui('Microscopio')}</i> (objective with engraved magnification and NA) or <i>{ui('Macro fotografica')}</i> (photographic lens, tubes and close-up lenses, 7.3).",
     "<b>Sensor pixel</b> (pixel pitch) in µm. Nikon D5600: <b>3.9 µm</b> (23.5 mm ÷ 6,000 pixels). It is in the camera's specifications, on <b>digicamdb.com</b> (photo cameras) or in the sensor database of <b>AstroBin</b> (dedicated cameras, searching for example IMX571).",
     f"<b>{ui('Adattatore / oculare di proiezione')}</b> between the microscope and the camera: name and factor, for example a 0.5× or 0.63× C-mount adapter, a 2.5× photo eyepiece, a T2 adapter with no lens 1×. Empty = 1×.",
     "<b>" + ui("Cambio d'ingrandimento intermedio") + "</b>, if the microscope stand has one: name and factor, for example <i>Optovar</i> 1.25×, 1.6× or 2×. Empty = 1×.",
@@ -546,7 +576,7 @@ of type <b>{ui('Microscopio')}</b> or <b>{ui('Macro fotografica')}</b> (7.3). Th
     f"<b>{ui('Apertura numerica (NA)')}</b>: the second number engraved on the objective (10×/<b>0.25</b>).",
     f"<b>{ui('Immersione')}</b>: air, water, oil, glycerol or silicone.",
     "<b>µm per pixel on the specimen, measured</b> with a stage micrometer: if present, it takes precedence over the calculation.",
-    f"<b>{ui('Ingrandimento sul sensore')}</b> = objective × intermediate changer × adapter (here 10 × 1.6 × 1 = 16×) and <b>scale on the specimen</b>: the measured value, or sensor pixel ÷ magnification. With a measurement you also see the <b>real magnification</b> (sensor pixel ÷ measured µm per pixel), which includes what the chain leaves out, such as the sensor distance or the photo tube; if the deviation is large, <i>Derive the factor from the measurement</i> corrects the adapter.",
+    f"<b>{ui('Ingrandimento sul sensore')}</b> = objective × intermediate changer × adapter (here 10 × 1.6 × 1 = 16×) and <b>scale on the specimen</b>: the measured value, or sensor pixel ÷ magnification. With a measurement you also see the <b>real magnification</b> (sensor pixel ÷ measured µm per pixel), which includes what the chain leaves out, such as the sensor distance or the photo tube; if the deviation is large, the factor <i>suggested by the measurement</i> appears next to the adapter: one click writes it into the field.",
     f"<b>{ui('Filtro')}</b>: <i>{ui('Non indicato')}</i> (unknown), <i>{ui('Nessun filtro')}</i> or <i>{ui('Filtro montato')}</i>.",
     "Filter <b>name</b> and <b>type</b>: band pass, long pass, short pass, neutral density, polarizer, other.",
     "<b>Centre</b> and <b>bandwidth</b> in nm for a band pass; for long pass and short pass, the cut-off wavelength.",
@@ -641,11 +671,22 @@ differ.</p>
 <li><b>{ui('Dark dei flat')}</b>: right after the flats, with the cap on: the app uses the ISO and shutter speed of the
   most recent flats by itself.</li>
 </ul>
+<h3>How fusion uses them</h3>
+<p>Focus Stack shoots the frames and lists them in the stack's <code>sequence.json</code>; the correction is done by the
+fusion software (for example Focus Fusion) on every frame, before aligning it. The dark is <b>subtracted</b>: it removes
+thermal noise and hot pixels. The flat <b>divides</b>: it gives back the light that vignetting and dust shadows had
+taken away.</p>
+{calib_diagram(CALIB_LABELS)}
+{fig("calibrazione-esempio", [
+    '<b>Normalised flat</b> F, with boosted contrast: the corners get 70% of the light of the centre, and every dot is a speck of dust on the sensor.',
+    '<b>One frame of the stack</b> as it is: the background darkens towards the corners (64% of the centre) and the same dust spot shows on the background (box enlarged 4×).',
+    '<b>The same frame corrected</b>, (I − D) ÷ F, with the same rendering: corners at 94% of the centre and the spot gone.',
+], layout="full", caption='A pencil: Sony A6400 with the 70-350 mm at 350 mm, +8 dioptre close-up lens, f/20, ISO 400, 1/20 s; 10 flats, 10 darks and 10 flat darks.')}
 <h3>The {ui('Libreria di calibrazione').lower()}</h3>
 {fig("calibrazione-libreria", [
     f"Library <b>folder</b>: <code>_calibrazione</code> inside the stacks folder. <span class='ui'>{ui('Apri nel Finder')}</span> shows it.",
     "<b>Matching sets</b> for a stack started now, with the current camera and settings.",
-    "<b>Table of sets</b>: type, date, camera, ISO, shutter speed, optics profile, frames, mean level and temperature. <span class='ui'>Delete</span> moves the set to the Mac's Trash (recoverable from the Finder).",
+    "<b>Table of sets</b>: type, date, camera, ISO, shutter speed, optics profile, frames, mean level and temperature. <span class='ui'>Delete</span> moves the set to the Mac's Trash (recoverable from the Finder). With the boxes in front of the type you can pick several (the one in the header selects them all) and delete them together with <span class='ui'>Delete selected</span>: to be safe, you have to type the word DELETE.",
 ], layout="full")}
 <p>Each set has its own folder with the frames and a <code>calibration.json</code> (format in
 <code>docs/calibration-json.md</code>). When a stack starts, <code>sequence.json</code> lists the most recent matching
@@ -1045,7 +1086,7 @@ add(f"""
 {fig("motore", [
     "<b>Microstep</b>: full step, 1/2 … 1/32 (see 10.2). Changing it changes the scale of the positions: check the limits again afterwards.",
     "Firmware <b>speed</b>: slow, medium, fast. With the myFocuserPro2 and firmware build 7 the maximum speed of moves is 80, 200 and 400 steps per second; every move starts at 40 steps per second and accelerates.",
-    f"<b>{ui('Bobine alimentate a motore fermo')}</b>: the motor holds its position, but runs warm.",
+    f"<b>{ui('Alimentazione bobine motore')}</b>: with <b>{ui('Sempre quando connesso')}</b> the motor holds its position when idle, but runs warm. <b>{ui(COIL_HOLD)}</b> (off at first; only with the first one on): if you leave it off, the coils switch off when you disconnect the focuser or quit the app, so the motor doesn't stay warm for hours; the first move switches them back on. Turn it on if the weight can make a vertical slide sink. Needs firmware build 8.",
     f"<b>{ui('Alimentale comunque durante la sequenza')}</b> (appears when the coils are off; on by default): the coils are powered when the stack starts and turned off again after the return to the start.",
     f"<b>{ui('Inverti verso di rotazione')}</b>.",
     "<b>Compensate backlash IN / OUT</b>: at every reversal towards lower (IN) or higher (OUT) positions the firmware adds extra steps without counting them, physical buttons included.",
@@ -1138,8 +1179,11 @@ add(f"""
 
 # 14
 add(f"""<h1><span class="n">14</span>Troubleshooting</h1>
-<p>The <b>{ui('Registro')}</b> (third tab) lists every connection, move, shot and error with its time: when something
-goes wrong, read it first.</p>
+<p>The <b>{ui('Registro')}</b> (the last tab) lists every connection, move, shot and error with its time: when something
+goes wrong, read it first. At the top you can search for words and show only warnings (⚠) and errors (✖). If you
+report a problem, press <b>{ui('Esporta')}</b>: the log is saved as a text file in the Downloads folder, with the app
+and firmware versions and the focuser and camera details, without the key of the smartphone link or your user name.
+Attach that file to your report.</p>
 """)
 add(table(["Problem", "What to do"], [
     ["The camera won't connect", "Quit Photos, Preview, Image Capture, NX Studio, EOS Utility; unplug and replug the cable with the camera on; make sure it is in mode M and that Wi-Fi/SnapBridge are off."],

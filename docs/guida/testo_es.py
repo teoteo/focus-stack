@@ -17,6 +17,10 @@ def ui(s):
     return APP.get(s, s)
 
 
+# nome dell'opzione con l'apostrofo: in una costante, perché Python 3.11 non accetta virgolette annidate nelle f-string
+COIL_HOLD = "Anche quando viene disconnesso o si spegne l'applicazione"
+
+
 DIAGRAM_LABELS = {
     "motor": "Motor", "gearbox": "Reductor", "pulleys": "Poleas / engranajes", "knob": "Enfoque fino", "stage": "Platina",
     "motor1": "pasos por vuelta", "motor2": "× micropaso",
@@ -26,6 +30,28 @@ DIAGRAM_LABELS = {
     "stage1": "se desplaza", "stage2": "en µm",
     "ratio": "relación de reducción total = reductor × poleas",
     "steps": "pasos del motor por vuelta del mando = pasos/vuelta × micropaso × relación",
+}
+
+# schema «Come li usa la fusione» (7.6): etichette dello SVG, testo semplice (&lt; per <)
+CALIB_LABELS = {
+    "col_dark": 'MASTER DARK',
+    "col_stack": 'PILA DEL SUJETO',
+    "col_flat": 'MASTER FLAT',
+    "dark": 'Darks · N tomas',
+    "dark1": 'tapa, mismos ISO y tiempo',
+    "mean": 'media píxel a píxel',
+    "D": 'D: master dark',
+    "flat": 'Flats · N tomas',
+    "flat1": 'campo uniforme, misma óptica',
+    "flat_mean": 'media − darks de los flats',
+    "norm": '÷ su propia media',
+    "F": 'F: flat normalizado',
+    "F1": '&lt; 1 en bordes y sobre el polvo',
+    "frame": 'Cada fotograma I',
+    "frame1": 'RAW, luz lineal',
+    "fusion": 'alineación y fusión',
+    "note1": 'Sin darks no hay resta,',
+    "note2": 'sin flats no hay división.',
 }
 
 # tabla de la profundidad de campo (nombres de los objetivos en el idioma de la guía)
@@ -249,7 +275,7 @@ mientras miras la vista en vivo.</div>
 la app. La app los vigila y, si la posición sale de los límites, envía STOP y muestra una alarma; para una
 protección completa lee el capítulo 9. Si los pulsas durante una secuencia, la secuencia se pone en pausa.</div>
 <div class="box warn"><span class="t">Si el carro no avanza con pasos pequeños</span>Con
-<span class="ui">{ui('Bobine alimentate a motore fermo')}</span> desactivado ({ui('Configurazione')} › Motor), el motor
+<span class="ui">{ui('Alimentazione bobine motore › Sempre quando connesso')}</span> desactivado ({ui('Configurazione')} › Motor), el motor
 pierde, en cada parada, la fuerza que lo mantiene en su posición: la carga (peso de la cámara, un muelle, la correa) puede
 hacerlo retroceder. El contador de pasos avanza, pero el carro se queda donde está y toda la pila sale en el mismo plano.
 Durante la secuencia la app alimenta las bobinas por sí sola (capítulo 12); para los movimientos manuales de pocos pasos,
@@ -365,7 +391,7 @@ un objetivo 10× con el cambiador de aumento Optovar 1,6× y la cámara en un ad
     f"<b>{ui('Profilo da modificare')}</b>: elígelo para cargar sus valores; <i>{ui('— nuovo profilo —')}</i> empieza con un formulario vacío.",
     f"<b>{ui('Salva come nuovo profilo…')}</b>, en la barra que aparece arriba: pide un nombre y guarda una copia, sin tocar el perfil de partida.",
     f"<b>{ui('Elimina profilo')}</b>, tras una confirmación. <b>{ui('Rinomina…')}</b> cambia el nombre también en la secuencia y en los flats de la biblioteca de calibración.",
-    f"<b>{ui('Tipo di ottica')}</b>: <i>{ui('Microscopio')}</i> (objetivo con aumento y NA grabados) o <i>{ui('Macro fotografica')}</i> (objetivo fotográfico, tubos y lentes de aproximación, 7.3).",
+    f"<b>{ui('Tipo di ottica')}</b>, las dos pestañas arriba del panel {ui('Ottica')}, que cambian los campos de abajo: <i>{ui('Microscopio')}</i> (objetivo con aumento y NA grabados) o <i>{ui('Macro fotografica')}</i> (objetivo fotográfico, tubos y lentes de aproximación, 7.3).",
     f"<b>{ui('Pixel del sensore (pixel pitch in µm)')}</b>. Nikon D5600: <b>3,9 µm</b> (23,5 mm ÷ 6.000 píxeles). Se encuentra en la ficha técnica de la cámara, en <b>digicamdb.com</b> (cámaras fotográficas) o en la base de datos de sensores de <b>AstroBin</b> (cámaras dedicadas, buscando por ejemplo IMX571).",
     f"<b>{ui('Adattatore / oculare di proiezione')}</b> entre el microscopio y la cámara: nombre y factor, por ejemplo un adaptador C-mount de 0,5× o 0,63×, un fotocular de 2,5×, un adaptador T2 sin lentes de 1×. Vacío = 1×.",
     f'''<b>{ui("Cambio d'ingrandimento intermedio")}</b>, si el estativo lo tiene: nombre y factor, por ejemplo <i>Optovar</i> 1,25×, 1,6× o 2×. Vacío = 1×.''',
@@ -374,7 +400,7 @@ un objetivo 10× con el cambiador de aumento Optovar 1,6× y la cámara en un ad
     f"<b>{ui('Apertura numerica (NA)')}</b>: el segundo número grabado en el objetivo (10×/<b>0,25</b>).",
     f"<b>{ui('Immersione')}</b>: aire, agua, aceite, glicerina o silicona.",
     "<b>µm por píxel en la muestra, medidos</b> con un micrómetro objetivo: si se indican, valen más que el cálculo.",
-    f"<b>{ui('Ingrandimento sul sensore')}</b> = objetivo × cambiador intermedio × adaptador (aquí 10 × 1,6 × 1 = 16×) y <b>escala en la muestra</b>: el valor medido o bien píxel del sensor ÷ aumento. Con una medida aparece también el <b>aumento real</b> (píxel del sensor ÷ µm por píxel medidos), que incluye lo que la cadena no dice, como la distancia del sensor o el tubo fotográfico; si la desviación es grande, <i>{ui('Ricava il fattore dalla misura')}</i> corrige el adaptador.",
+    f"<b>{ui('Ingrandimento sul sensore')}</b> = objetivo × cambiador intermedio × adaptador (aquí 10 × 1,6 × 1 = 16×) y <b>escala en la muestra</b>: el valor medido o bien píxel del sensor ÷ aumento. Con una medida aparece también el <b>aumento real</b> (píxel del sensor ÷ µm por píxel medidos), que incluye lo que la cadena no dice, como la distancia del sensor o el tubo fotográfico; si la desviación es grande, junto al adaptador aparece el factor <i>sugerido por la medida</i>: un clic lo escribe en el campo.",
     f"<b>{ui('Filtro')}</b>: <i>{ui('Non indicato')}</i> (no se sabe), <i>{ui('Nessun filtro')}</i> o <i>{ui('Filtro montato')}</i>.",
     "<b>Nombre</b> y <b>tipo</b> del filtro: paso banda, paso largo (long pass), paso corto (short pass), densidad neutra, polarizador, otro.",
     "<b>Centro</b> y <b>ancho de banda</b> en nm para un paso banda; para paso largo y paso corto, la longitud de onda de corte.",
@@ -469,11 +495,22 @@ fotogramas.</p>
 <li><b>Darks de los flats</b>: justo después de los flats, con la tapa: la app usa por sí sola el ISO y el tiempo de los
   flats más recientes.</li>
 </ul>
+<h3>Cómo los usa la fusión</h3>
+<p>Focus Stack toma los frames y los indica en el <code>sequence.json</code> de la pila; la corrección la hace el
+software de fusión (por ejemplo Focus Fusion) en cada fotograma, antes de alinearlo. El dark se <b>resta</b>: quita el
+ruido térmico y los píxeles calientes. El flat <b>divide</b>: devuelve la luz que la viñeta y las sombras del polvo
+habían quitado.</p>
+{calib_diagram(CALIB_LABELS)}
+{fig("calibrazione-esempio", [
+    '<b>Flat normalizado</b> F, con el contraste aumentado: las esquinas reciben el 70% de la luz del centro y cada punto es una mota de polvo en el sensor.',
+    '<b>Un fotograma de la pila</b> tal cual: el fondo se oscurece hacia las esquinas (64% del centro) y la misma mancha de polvo se ve en el fondo (recuadro ampliado 4×).',
+    '<b>El mismo fotograma corregido</b>, (I − D) ÷ F, con la misma presentación: esquinas al 94% del centro y la mancha desaparece.',
+], layout="full", caption='Un lápiz: Sony A6400 con el 70-350 mm a 350 mm, lente de aproximación +8 dioptrías, f/20, ISO 400, 1/20 s; 10 flats, 10 darks y 10 darks de los flats.')}
 <h3>La {ui('Libreria di calibrazione').lower()}</h3>
 {fig("calibrazione-libreria", [
     f"<b>Carpeta</b> de la biblioteca: <code>_calibrazione</code> dentro de la carpeta de las pilas. <span class='ui'>{ui('Apri nel Finder')}</span> la muestra.",
     "<b>Conjuntos adecuados</b> para una pila iniciada ahora, con la cámara y los ajustes actuales.",
-    "<b>Tabla de los conjuntos</b>: tipo, fecha, cámara, ISO, tiempo, perfil óptico, fotogramas, nivel medio y temperatura. <span class='ui'>Eliminar</span> mueve el conjunto a la Papelera del Mac (recuperable desde el Finder).",
+    "<b>Tabla de los conjuntos</b>: tipo, fecha, cámara, ISO, tiempo, perfil óptico, fotogramas, nivel medio y temperatura. <span class='ui'>Eliminar</span> mueve el conjunto a la Papelera del Mac (recuperable desde el Finder). Con las casillas delante del tipo eliges varios (la de la cabecera los selecciona todos) y los eliminas juntos con <span class='ui'>Eliminar seleccionados</span>: por seguridad hay que escribir la palabra ELIMINAR.",
 ], layout="full")}
 <p>Cada conjunto tiene su carpeta con los fotogramas y un <code>calibration.json</code> (formato en
 <code>docs/calibration-json.md</code>). Al iniciar una pila, <code>sequence.json</code> indica los conjuntos adecuados más
@@ -882,7 +919,7 @@ add(f"""
 {fig("motore", [
     f"<b>{ui('Microstep')}</b>: {ui('passo intero')}, 1/2 … 1/32 (mira 10.2). Cambiarlo cambia la escala de las posiciones: después, vuelve a comprobar los límites.",
     f"<b>{ui('Velocità')}</b> del firmware: lenta, media, rápida. Con el myFocuserPro2 y el firmware build 7 la velocidad máxima de los movimientos es de 80, 200 y 400 pasos por segundo; cada movimiento arranca a 40 pasos por segundo y acelera.",
-    f"<b>{ui('Bobine alimentate a motore fermo')}</b>: el motor mantiene la posición, pero se calienta.",
+    f"<b>{ui('Alimentazione bobine motore')}</b>: con <b>{ui('Sempre quando connesso')}</b> el motor mantiene la posición parado, pero se calienta. <b>{ui(COIL_HOLD)}</b> (desactivada al principio; solo con la primera activada): si la dejas desactivada, las bobinas se apagan al desconectar el enfocador o cerrar la app, y el motor no se calienta durante horas; el primer movimiento las vuelve a encender. Actívala si el peso puede hacer bajar una corredera vertical. Requiere el firmware build 8.",
     f"<b>{ui('Alimentale comunque durante la sequenza')}</b> (aparece con las bobinas apagadas; activada por defecto): las bobinas se encienden al iniciar la pila y se vuelven a apagar después de la vuelta al inicio.",
     f"<b>{ui('Inverti verso di rotazione')}</b>.",
     "<b>Compensar holgura IN / OUT</b>: en cada inversión hacia posiciones más bajas (IN) o más altas (OUT) el firmware da unos pasos de más sin contarlos, también con los botones físicos.",
@@ -977,8 +1014,11 @@ add(f"""
 
 # 14
 add(f"""<h1><span class="n">14</span>Si algo no funciona</h1>
-<p>El <b>{ui('Registro')}</b> (tercera pestaña) recoge con la hora cada conexión, movimiento, foto y error: cuando
-algo no funciona, léelo antes que nada.</p>
+<p>El <b>{ui('Registro')}</b> (la última pestaña) recoge con la hora cada conexión, movimiento, foto y error: cuando
+algo no funciona, léelo antes que nada. Arriba puedes buscar palabras y mostrar solo los avisos (⚠) y los errores (✖).
+Si informas de un problema, pulsa <b>{ui('Esporta')}</b>: el registro se guarda en un archivo de texto en la carpeta
+Descargas, con las versiones de la app y del firmware y los datos del enfocador y la cámara, sin la clave del enlace
+para el smartphone ni tu nombre de usuario. Adjunta ese archivo al informe.</p>
 """)
 add(table(["Problema", "Qué hacer"], [
     ["La cámara no se conecta", "Cierra Fotos, Vista Previa, Captura de Imagen, NX Studio, EOS Utility; desconecta y vuelve a conectar el cable con la cámara encendida; comprueba que esté en modo M y que Wi-Fi/SnapBridge estén apagados."],

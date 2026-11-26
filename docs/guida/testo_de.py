@@ -17,6 +17,10 @@ def ui(s):
     return APP.get(s, s)
 
 
+# nome dell'opzione con l'apostrofo: in una costante, perché Python 3.11 non accetta virgolette annidate nelle f-string
+COIL_HOLD = "Anche quando viene disconnesso o si spegne l'applicazione"
+
+
 DIAGRAM_LABELS = {
     "motor": "Motor", "gearbox": "Getriebe", "pulleys": "Riemen / Zahnräder", "knob": "Feintrieb", "stage": "Objekttisch",
     "motor1": "Schritte/Umdr.", "motor2": "× Mikroschritt",
@@ -26,6 +30,28 @@ DIAGRAM_LABELS = {
     "stage1": "bewegt sich", "stage2": "in µm",
     "ratio": "Gesamtuntersetzung = Getriebe × Riemen",
     "steps": "Motorschritte pro Knopfumdrehung = Schritte/Umdr. × Mikroschritt × Untersetzung",
+}
+
+# schema «Come li usa la fusione» (7.6): etichette dello SVG, testo semplice (&lt; per <)
+CALIB_LABELS = {
+    "col_dark": 'MASTER-DARK',
+    "col_stack": 'STAPEL DES MOTIVS',
+    "col_flat": 'MASTER-FLAT',
+    "dark": 'Darks · N Aufnahmen',
+    "dark1": 'Deckel, gleiche ISO und Zeit',
+    "mean": 'Mittelwert Pixel für Pixel',
+    "D": 'D: Master-Dark',
+    "flat": 'Flats · N Aufnahmen',
+    "flat1": 'gleichmäßig, gleiche Optik',
+    "flat_mean": 'Mittelwert − Flat-Darks',
+    "norm": '÷ eigener Mittelwert',
+    "F": 'F: normiertes Flat',
+    "F1": '&lt; 1 am Rand und auf Staub',
+    "frame": 'Jedes Bild I',
+    "frame1": 'RAW, lineares Licht',
+    "fusion": 'Ausrichtung und Fusion',
+    "note1": 'Ohne Darks entfällt die Subtraktion,',
+    "note2": 'ohne Flats die Division.',
 }
 
 # Tabelle der Schärfentiefe (Objektivnamen in der Sprache der Anleitung)
@@ -252,7 +278,7 @@ auch während Sie das Live-View betrachten.</div>
 vorbei. Die App überwacht sie und sendet STOP und einen Alarm, wenn die Position die Grenzen verlässt; für einen
 vollständigen Schutz lesen Sie Kapitel 9. Drücken Sie sie während einer Serie, wird die Serie pausiert.</div>
 <div class="box warn"><span class="t">Wenn der Schlitten bei kleinen Schritten nicht vorrückt</span>Ist
-<span class="ui">{ui('Bobine alimentate a motore fermo')}</span> ausgeschaltet ({ui('Configurazione')} › {ui('Motore (firmware)')}),
+<span class="ui">{ui('Alimentazione bobine motore › Sempre quando connesso')}</span> ausgeschaltet ({ui('Configurazione')} › {ui('Motore (firmware)')}),
 verliert der Motor bei jedem Halt die Kraft, die ihn in Position hält: Die Last (Gewicht der Kamera, eine Feder, der
 Riemen) kann ihn zurückdrehen. Der Schrittzähler läuft weiter, der Schlitten bleibt aber stehen, und ein ganzer Stapel
 entsteht in derselben Ebene. Während der Serie bestromt die App die Spulen selbst (Kapitel 12); für Handbewegungen um
@@ -377,7 +403,7 @@ ohne Linsen.</p>
     f"<b>{ui('Profilo da modificare')}</b>: Wählen Sie es, um seine Werte zu laden; <i>{ui('— nuovo profilo —')}</i> beginnt mit einem leeren Formular.",
     f"<b>{ui('Salva come nuovo profilo…')}</b>, in der Leiste, die oben erscheint: fragt nach einem Namen und speichert eine Kopie; das Ausgangsprofil bleibt unverändert.",
     f"<b>{ui('Elimina profilo')}</b>, nach einer Rückfrage. <b>{ui('Rinomina…')}</b> ändert den Namen auch in der Serie und in den Flats der Kalibrierungsbibliothek.",
-    f"<b>{ui('Tipo di ottica')}</b>: <i>{ui('Microscopio')}</i> (Objektiv mit eingravierter Vergrößerung und NA) oder <i>{ui('Macro fotografica')}</i> (Fotoobjektiv, Zwischenringe und Nahlinsen, 7.3).",
+    f"<b>{ui('Tipo di ottica')}</b>, die zwei Reiter oben im Bereich {ui('Ottica')}, die die Felder darunter ändern: <i>{ui('Microscopio')}</i> (Objektiv mit eingravierter Vergrößerung und NA) oder <i>{ui('Macro fotografica')}</i> (Fotoobjektiv, Zwischenringe und Nahlinsen, 7.3).",
     f"<b>{ui('Pixel del sensore (pixel pitch in µm)')}</b>. Nikon D5600: <b>3,9 µm</b> (23,5 mm ÷ 6.000 Pixel). Er steht im Datenblatt der Kamera, auf <b>digicamdb.com</b> (Fotokameras) oder in der Sensordatenbank von <b>AstroBin</b> (dedizierte Kameras, zum Beispiel nach IMX571 suchen).",
     f"<b>{ui('Adattatore / oculare di proiezione')}</b> zwischen Mikroskop und Kamera: Name und Faktor, zum Beispiel ein C-Mount-Adapter 0,5× oder 0,63×, ein Fotookular 2,5×, ein T2-Adapter ohne Linsen 1×. Leer = 1×.",
     f"<b>{CAMBIO_INTERMEDIO}</b>, falls das Stativ einen hat: Name und Faktor, zum Beispiel <i>Optovar</i> 1,25×, 1,6× oder 2×. Leer = 1×.",
@@ -386,7 +412,7 @@ ohne Linsen.</p>
     f"<b>{ui('Apertura numerica (NA)')}</b>: die zweite auf dem Objektiv eingravierte Zahl (10×/<b>0,25</b>).",
     f"<b>{ui('Immersione')}</b>: {ui('Aria (a secco)')}, {ui('Acqua')}, {ui('Olio')}, {ui('Glicerina')} oder {ui('Silicone')}.",
     f"<b>{ui('µm per pixel sul campione, misurati (facoltativo)')}</b> mit einem Objektmikrometer: Falls vorhanden, hat dieser Wert Vorrang vor der Berechnung.",
-    f"<b>{ui('Ingrandimento sul sensore')}</b> = Objektiv × Zwischenvergrößerung × Adapter (hier 10 × 1,6 × 1 = 16×) und <b>Maßstab am Präparat</b>: der gemessene Wert oder Sensorpixel ÷ Vergrößerung. Mit einer Messung erscheint auch die <b>tatsächliche Vergrößerung</b> (Sensorpixel ÷ gemessene µm pro Pixel), die enthält, was die Kette nicht angibt, etwa den Sensorabstand oder den Fototubus; bei großer Abweichung korrigiert <i>{ui('Ricava il fattore dalla misura')}</i> den Adapter.",
+    f"<b>{ui('Ingrandimento sul sensore')}</b> = Objektiv × Zwischenvergrößerung × Adapter (hier 10 × 1,6 × 1 = 16×) und <b>Maßstab am Präparat</b>: der gemessene Wert oder Sensorpixel ÷ Vergrößerung. Mit einer Messung erscheint auch die <b>tatsächliche Vergrößerung</b> (Sensorpixel ÷ gemessene µm pro Pixel), die enthält, was die Kette nicht angibt, etwa den Sensorabstand oder den Fototubus; bei großer Abweichung erscheint neben dem Adapter der <i>aus der Messung vorgeschlagene</i> Faktor: Ein Klick trägt ihn ins Feld ein.",
     f"<b>{ui('Filtro')}</b>: <i>{ui('Non indicato')}</i> (unbekannt), <i>{ui('Nessun filtro')}</i> oder <i>{ui('Filtro montato')}</i>.",
     f"<b>{ui('Nome')}</b> und <b>{ui('Tipo')}</b> des Filters: {ui('Passa banda')}, {ui('Long pass')}, {ui('Short pass')}, {ui('Neutro (ND)')}, {ui('Polarizzatore')}, {ui('Altro')}.",
     f"<b>{ui('Centro (nm)')}</b> und <b>{ui('Larghezza di banda (nm)')}</b> bei einem Bandpass; bei Lang- und Kurzpass die Kantenwellenlänge.",
@@ -482,11 +508,22 @@ Bilder unterschiedlich machen.</p>
 <li><b>{ui('Dark dei flat')}</b>: direkt nach den Flats, mit Objektivdeckel: Die App übernimmt selbst ISO und Zeit der
   neuesten Flats.</li>
 </ul>
+<h3>Wie die Fusion sie verwendet</h3>
+<p>Focus Stack nimmt die Frames auf und trägt sie in die <code>sequence.json</code> des Stapels ein; die Korrektur
+übernimmt die Fusionssoftware (zum Beispiel Focus Fusion) an jedem Bild, bevor sie es ausrichtet. Das Dark wird
+<b>abgezogen</b>: Es entfernt thermisches Rauschen und heiße Pixel. Durch das Flat wird <b>geteilt</b>: Es gibt das
+Licht zurück, das Vignettierung und Staubschatten weggenommen hatten.</p>
+{calib_diagram(CALIB_LABELS)}
+{fig("calibrazione-esempio", [
+    '<b>Normiertes Flat</b> F, mit verstärktem Kontrast: Die Ecken erhalten 70% des Lichts der Mitte, und jeder Punkt ist ein Staubkorn auf dem Sensor.',
+    '<b>Ein Bild des Stapels</b> unverändert: Der Hintergrund wird zu den Ecken hin dunkler (64% der Mitte), und derselbe Staubfleck ist auf dem Hintergrund zu sehen (Ausschnitt 4× vergrößert).',
+    '<b>Dasselbe Bild korrigiert</b>, (I − D) ÷ F, mit derselben Darstellung: Ecken bei 94% der Mitte, der Fleck ist verschwunden.',
+], layout="full", caption='Ein Bleistift: Sony A6400 mit dem 70-350 mm bei 350 mm, Nahlinse +8 Dioptrien, f/20, ISO 400, 1/20 s; 10 Flats, 10 Darks und 10 Flat-Darks.')}
 <h3>Die {ui('Libreria di calibrazione')}</h3>
 {fig("calibrazione-libreria", [
     f"<b>Ordner</b> der Bibliothek: <code>_calibrazione</code> im Ordner der Stapel. <span class='ui'>{ui('Apri nel Finder')}</span> zeigt ihn an.",
     "<b>Passende Sätze</b> für einen Stapel, der jetzt gestartet würde, mit der aktuellen Kamera und den aktuellen Einstellungen.",
-    "<b>Tabelle der Sätze</b>: Typ, Datum, Kamera, ISO, Zeit, Optikprofil, Bilder, mittlerer Pegel und Temperatur. <span class='ui'>Löschen</span> verschiebt den Satz in den Papierkorb des Mac (im Finder wiederherstellbar).",
+    "<b>Tabelle der Sätze</b>: Typ, Datum, Kamera, ISO, Zeit, Optikprofil, Bilder, mittlerer Pegel und Temperatur. <span class='ui'>Löschen</span> verschiebt den Satz in den Papierkorb des Mac (im Finder wiederherstellbar). Mit den Kästchen vor dem Typ wählen Sie mehrere aus (das Kästchen im Kopf wählt alle) und löschen sie zusammen mit <span class='ui'>Ausgewählte löschen</span>: Zur Sicherheit muss das Wort LÖSCHEN eingegeben werden.",
 ], layout="full")}
 <p>Jeder Satz hat seinen eigenen Ordner mit den Bildern und einer <code>calibration.json</code> (Format in
 <code>docs/calibration-json.md</code>). Beim Start eines Stapels verweist <code>sequence.json</code> auf die neuesten
@@ -899,7 +936,7 @@ add(f"""
 {fig("motore", [
     f"<b>{ui('Microstep')}</b>: {ui('Passo intero')}, 1/2 … 1/32 (siehe 10.2). Eine Änderung ändert den Maßstab der Positionen: Prüfen Sie danach die Grenzen erneut.",
     f"<b>{ui('Velocità')}</b> der Firmware: {ui('Lenta')}, {ui('Media')}, {ui('Veloce')}. Mit dem myFocuserPro2 und der Firmware-Build 7 beträgt die Höchstgeschwindigkeit der Bewegungen 80, 200 und 400 Schritte pro Sekunde; jede Bewegung beginnt mit 40 Schritten pro Sekunde und beschleunigt.",
-    f"<b>{ui('Bobine alimentate a motore fermo')}</b>: Der Motor hält seine Position, wird aber warm.",
+    f"<b>{ui('Alimentazione bobine motore')}</b>: Mit <b>{ui('Sempre quando connesso')}</b> hält der Motor im Stillstand seine Position, wird aber warm. <b>{ui(COIL_HOLD)}</b> (anfangs aus; nur wenn die erste Option an ist): Bleibt sie aus, werden die Spulen beim Trennen des Fokussierers oder beim Beenden der App abgeschaltet, damit der Motor nicht stundenlang warm bleibt; die erste Bewegung schaltet sie wieder ein. Schalten Sie sie ein, wenn das Gewicht einen senkrechten Schlitten absinken lassen kann. Erfordert Firmware-Build 8.",
     f"<b>{ui('Alimentale comunque durante la sequenza')}</b> (erscheint bei ausgeschalteten Spulen; standardmäßig aktiv): Die Spulen werden beim Start des Stapels eingeschaltet und nach der Rückkehr zum Anfang wieder ausgeschaltet.",
     f"<b>{ui('Inverti verso di rotazione')}</b>.",
     f"<b>{ui('Compensa il gioco IN')} / OUT</b>: Bei jeder Umkehr zu niedrigeren (IN) oder höheren (OUT) Positionen fährt die Firmware zusätzliche Schritte, ohne sie zu zählen, auch bei den Hardwaretasten.",
@@ -997,8 +1034,11 @@ add(f"""
 
 # 14
 add(f"""<h1><span class="n">14</span>Wenn etwas nicht funktioniert</h1>
-<p>Das <b>{ui('Registro')}</b> (dritter Bereich) listet jede Verbindung, Bewegung, Aufnahme und jeden Fehler mit Uhrzeit
-auf: Wenn etwas nicht funktioniert, lesen Sie es zuerst.</p>
+<p>Das <b>{ui('Registro')}</b> (der letzte Bereich) listet jede Verbindung, Bewegung, Aufnahme und jeden Fehler mit Uhrzeit
+auf: Wenn etwas nicht funktioniert, lesen Sie es zuerst. Oben können Sie nach Wörtern suchen und nur Warnungen (⚠)
+und Fehler (✖) anzeigen. Wenn Sie ein Problem melden, drücken Sie <b>{ui('Esporta')}</b>: Das Protokoll wird als
+Textdatei im Ordner „Downloads“ gespeichert, mit den Versionen von App und Firmware und den Daten von Fokussierer und
+Kamera, ohne den Schlüssel des Smartphone-Links und ohne Ihren Benutzernamen. Hängen Sie diese Datei an die Meldung an.</p>
 """)
 add(table(["Problem", "Was tun"], [
     ["Die Kamera verbindet sich nicht", "Beenden Sie Fotos, Vorschau, Digitale Bilder, NX Studio und EOS Utility; ziehen Sie das Kabel bei eingeschalteter Kamera ab und stecken Sie es wieder an; prüfen Sie, ob sie im Modus M ist und WLAN/SnapBridge ausgeschaltet sind."],

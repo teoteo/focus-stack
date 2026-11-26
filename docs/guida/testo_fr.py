@@ -17,6 +17,10 @@ def ui(s):
     return APP.get(s, s)
 
 
+# nome dell'opzione con l'apostrofo: in una costante, perché Python 3.11 non accetta virgolette annidate nelle f-string
+COIL_HOLD = "Anche quando viene disconnesso o si spegne l'applicazione"
+
+
 DIAGRAM_LABELS = {
     "motor": "Moteur", "gearbox": "Réducteur", "pulleys": "Poulies / engrenages", "knob": "Micrométrique", "stage": "Platine",
     "motor1": "pas par tour", "motor2": "× micropas",
@@ -26,6 +30,28 @@ DIAGRAM_LABELS = {
     "stage1": "se déplace", "stage2": "en µm",
     "ratio": "rapport de réduction total = réducteur × poulies",
     "steps": "pas moteur par tour de molette = pas/tour × micropas × rapport",
+}
+
+# schema «Come li usa la fusione» (7.6): etichette dello SVG, testo semplice (&lt; per <)
+CALIB_LABELS = {
+    "col_dark": 'MASTER DARK',
+    "col_stack": 'PILE DU SUJET',
+    "col_flat": 'MASTER FLAT',
+    "dark": 'Darks · N vues',
+    "dark1": 'bouchon, mêmes ISO et temps',
+    "mean": 'moyenne pixel par pixel',
+    "D": 'D : master dark',
+    "flat": 'Flats · N vues',
+    "flat1": 'champ uniforme, même optique',
+    "flat_mean": 'moyenne − darks des flats',
+    "norm": '÷ sa propre moyenne',
+    "F": 'F : flat normalisé',
+    "F1": '&lt; 1 au bord et sur la poussière',
+    "frame": 'Chaque image I',
+    "frame1": 'RAW, lumière linéaire',
+    "fusion": 'alignement et fusion',
+    "note1": 'Sans darks, pas de soustraction ;',
+    "note2": 'sans flats, pas de division.',
 }
 
 # tableau de la profondeur de champ (noms des objectifs dans la langue du guide)
@@ -251,7 +277,7 @@ pas, la touche maintenue enfoncée déplace en continu jusqu'au relâchement (co
 par l'app. L'app les surveille et, si la position sort des limites, envoie STOP et affiche une alarme ; pour une
 protection complète, lisez le chapitre 9. Si vous les actionnez pendant une séquence, la séquence se met en
 pause.</div>
-<div class="box warn"><span class="t">Si la glissière n'avance pas avec les petits pas</span>Avec <span class="ui">{ui('Bobine alimentate a motore fermo')}</span>
+<div class="box warn"><span class="t">Si la glissière n'avance pas avec les petits pas</span>Avec <span class="ui">{ui('Alimentazione bobine motore › Sempre quando connesso')}</span>
 désactivé ({ui('Configurazione')} › {ui('Motore (firmware)')}), le moteur perd, à chaque arrêt, la force qui le maintient
 en position : la charge (poids de l'appareil photo, un ressort, la courroie) peut le faire reculer. Le compteur de pas
 avance, mais la glissière reste où elle est et toute la pile se retrouve sur le même plan. Pendant la séquence, l'app
@@ -383,7 +409,7 @@ monté sur une bague T2 sans lentille.</p>
     f"<b>{ui('Profilo da modificare')}</b> : choisissez-le pour charger ses valeurs ; <i>{ui('— nuovo profilo —')}</i> part d'un formulaire vide.",
     f"<b>{ui('Salva come nuovo profilo…')}</b>, dans la barre qui apparaît en haut : demande un nom et enregistre une copie, sans modifier le profil de départ.",
     f"<b>{ui('Elimina profilo')}</b>, après confirmation. <b>{ui('Rinomina…')}</b> change le nom aussi dans la séquence et dans les flats de la bibliothèque de calibration.",
-    f"<b>{ui('Tipo di ottica')}</b> : <i>{ui('Microscopio')}</i> (objectif avec grossissement et ON gravés) ou <i>{ui('Macro fotografica')}</i> (objectif photo, tubes et bonnettes, 7.3).",
+    f"<b>{ui('Tipo di ottica')}</b>, les deux onglets en haut du panneau {ui('Ottica')}, qui changent les champs en dessous : <i>{ui('Microscopio')}</i> (objectif avec grossissement et ON gravés) ou <i>{ui('Macro fotografica')}</i> (objectif photo, tubes et bonnettes, 7.3).",
     f"<b>{ui('Pixel del sensore (pixel pitch in µm)')}</b>. Nikon D5600 : <b>3,9 µm</b> (23,5 mm ÷ 6000 pixels). On le trouve dans la fiche technique de l’appareil, sur <b>digicamdb.com</b> (appareils photo) ou dans la base de capteurs d’<b>AstroBin</b> (caméras dédiées, en cherchant par exemple IMX571).",
     f"<b>{ui('Adattatore / oculare di proiezione')}</b> entre le microscope et l'appareil photo : nom et facteur, par exemple un adaptateur monture C 0,5× ou 0,63×, un photo-oculaire 2,5×, une bague T2 sans lentille 1×. Vide = 1×.",
     f"<b>{CAMBIO}</b>, si le statif en possède un : nom et facteur, par exemple <i>Optovar</i> 1,25×, 1,6× ou 2×. Vide = 1×.",
@@ -392,7 +418,7 @@ monté sur une bague T2 sans lentille.</p>
     f"<b>{ui('Apertura numerica (NA)')}</b> : le second nombre gravé sur l'objectif (10×/<b>0,25</b>).",
     f"<b>{ui('Immersione')}</b> : air, eau, huile, glycérine ou silicone.",
     "<b>µm par pixel sur l'échantillon, mesurés</b> avec un micromètre objet : s'il est indiqué, il prime sur le calcul.",
-    f"<b>{ui('Ingrandimento sul sensore')}</b> = objectif × changeur intermédiaire × adaptateur (ici 10 × 1,6 × 1 = 16×) et <b>échelle sur l'échantillon</b> : la valeur mesurée, ou bien pixel du capteur ÷ grossissement. Avec une mesure s'affiche aussi le <b>grandissement réel</b> (pixel du capteur ÷ µm par pixel mesurés), qui inclut ce que la chaîne ne dit pas, comme la distance du capteur ou le tube photo ; si l'écart est grand, <i>{ui('Ricava il fattore dalla misura')}</i> corrige l'adaptateur.",
+    f"<b>{ui('Ingrandimento sul sensore')}</b> = objectif × changeur intermédiaire × adaptateur (ici 10 × 1,6 × 1 = 16×) et <b>échelle sur l'échantillon</b> : la valeur mesurée, ou bien pixel du capteur ÷ grossissement. Avec une mesure s'affiche aussi le <b>grandissement réel</b> (pixel du capteur ÷ µm par pixel mesurés), qui inclut ce que la chaîne ne dit pas, comme la distance du capteur ou le tube photo ; si l'écart est grand, le facteur <i>suggéré par la mesure</i> apparaît à côté de l'adaptateur : un clic l'inscrit dans le champ.",
     f"<b>{ui('Filtro')}</b> : <i>{ui('Non indicato')}</i> (on ne sait pas), <i>{ui('Nessun filtro')}</i> ou <i>{ui('Filtro montato')}</i>.",
     "<b>Nom</b> et <b>type</b> du filtre : passe-bande, passe-haut (long pass), passe-bas (short pass), densité neutre, polariseur, autre.",
     "<b>Centre</b> et <b>largeur de bande</b> en nm pour un passe-bande ; pour un passe-haut ou un passe-bas, la longueur d'onde de coupure.",
@@ -487,11 +513,22 @@ brûlés sont détectés canal par canal. Avec le simulateur, les niveaux ne son
 <li><b>Darks des flats</b> : juste après les flats, avec le bouchon : l'app reprend toute seule l'ISO et le temps de pose
   des flats les plus récents.</li>
 </ul>
+<h3>Comment la fusion les utilise</h3>
+<p>Focus Stack prend les frames et les indique dans le <code>sequence.json</code> de la pile ; la correction est faite
+par le logiciel de fusion (par exemple Focus Fusion) sur chaque image, avant de l'aligner. Le dark est
+<b>soustrait</b> : il enlève le bruit thermique et les pixels chauds. Le flat <b>divise</b> : il rend la lumière que
+le vignetage et les ombres de poussière avaient enlevée.</p>
+{calib_diagram(CALIB_LABELS)}
+{fig("calibrazione-esempio", [
+    '<b>Flat normalisé</b> F, avec un contraste renforcé : les coins reçoivent 70 % de la lumière du centre, et chaque point est un grain de poussière sur le capteur.',
+    "<b>Une image de la pile</b> telle quelle : le fond s'assombrit vers les coins (64 % du centre) et la même tache de poussière se voit sur le fond (encadré agrandi 4×).",
+    '<b>La même image corrigée</b>, (I − D) ÷ F, avec le même rendu : coins à 94 % du centre et tache disparue.',
+], layout="full", caption='Un crayon : Sony A6400 avec le 70-350 mm à 350 mm, lentille additionnelle +8 dioptries, f/20, ISO 400, 1/20 s ; 10 flats, 10 darks et 10 darks des flats.')}
 <h3>La {ui('Libreria di calibrazione').lower()}</h3>
 {fig("calibrazione-libreria", [
     f"<b>Dossier</b> de la bibliothèque : <code>_calibrazione</code> dans le dossier des piles. <span class='ui'>{ui('Apri nel Finder')}</span> l'affiche.",
     "<b>Jeux adaptés</b> à une pile lancée maintenant, avec l'appareil photo et les réglages actuels.",
-    "<b>Tableau des jeux</b> : type, date, appareil photo, ISO, temps de pose, profil optique, images, niveau moyen et température. <span class='ui'>Supprimer</span> place le jeu dans la Corbeille du Mac (récupérable depuis le Finder).",
+    "<b>Tableau des jeux</b> : type, date, appareil photo, ISO, temps de pose, profil optique, images, niveau moyen et température. <span class='ui'>Supprimer</span> place le jeu dans la Corbeille du Mac (récupérable depuis le Finder). Les cases devant le type permettent d'en choisir plusieurs (celle de l'en-tête les sélectionne tous) et de les supprimer ensemble avec <span class='ui'>Supprimer la sélection</span> : par sécurité, il faut taper le mot SUPPRIMER.",
 ], layout="full")}
 <p>Chaque jeu a son dossier avec les images et un fichier <code>calibration.json</code> (format décrit dans
 <code>docs/calibration-json.md</code>). Au lancement d'une pile, <code>sequence.json</code> indique les jeux adaptés les
@@ -909,7 +946,7 @@ add(f"""
 {fig("motore", [
     f"<b>{ui('Microstep')}</b> : {ui('passo intero')}, 1/2 … 1/32 (voir 10.2). Le modifier change l'échelle des positions : vérifiez ensuite à nouveau les limites.",
     f"<b>{ui('Velocità')}</b> du firmware : {ui('Lenta').lower()}, {ui('Media').lower()}, {ui('Veloce').lower()}. Avec le myFocuserPro2 et le firmware build 7, la vitesse maximale des mouvements est de 80, 200 et 400 pas par seconde ; chaque mouvement démarre à 40 pas par seconde et accélère.",
-    f"<b>{ui('Bobine alimentate a motore fermo')}</b> : le moteur maintient sa position, mais chauffe.",
+    f"<b>{ui('Alimentazione bobine motore')}</b> : avec <b>{ui('Sempre quando connesso')}</b>, le moteur maintient sa position à l'arrêt, mais chauffe. <b>{ui(COIL_HOLD)}</b> (désactivée au départ ; seulement avec la première activée) : si vous la laissez désactivée, les bobines s'éteignent quand vous déconnectez le focuser ou fermez l'app, et le moteur ne chauffe pas pendant des heures ; le premier mouvement les rallume. Activez-la si le poids peut faire descendre une glissière verticale. Nécessite le firmware build 8.",
     f"<b>{ui('Alimentale comunque durante la sequenza')}</b> (apparaît quand les bobines sont éteintes ; activée par défaut) : les bobines s'allument au lancement de la pile et s'éteignent de nouveau après le retour au début.",
     f"<b>{ui('Inverti verso di rotazione')}</b>.",
     f"<b>{ui('Compensa il gioco IN')} / OUT</b> : à chaque inversion vers des positions plus basses (IN) ou plus hautes (OUT), le firmware ajoute des pas sans les compter, y compris avec les boutons physiques.",
@@ -1007,8 +1044,11 @@ add(f"""
 
 # 14
 add(f"""<h1><span class="n">14</span>En cas de problème</h1>
-<p>Le <b>{ui('Registro')}</b> (troisième onglet) liste avec l'heure chaque connexion, déplacement, photo et erreur : en
-cas de problème, lisez-le en premier.</p>
+<p>Le <b>{ui('Registro')}</b> (le dernier onglet) liste avec l'heure chaque connexion, déplacement, photo et erreur : en
+cas de problème, lisez-le en premier. En haut, vous pouvez chercher des mots et n'afficher que les avertissements (⚠)
+et les erreurs (✖). Si vous signalez un problème, appuyez sur <b>{ui('Esporta')}</b> : le journal est enregistré
+dans un fichier texte du dossier Téléchargements, avec les versions de l'app et du firmware et les données du focuser
+et de l'appareil photo, sans la clé du lien pour le smartphone ni votre nom d'utilisateur. Joignez ce fichier au signalement.</p>
 """)
 add(table(["Problème", "Que faire"], [
     ["L'appareil photo ne se connecte pas", "Quittez Photos, Aperçu, Transfert d'images, NX Studio, EOS Utility ; débranchez et rebranchez le câble avec l'appareil allumé ; vérifiez qu'il est en mode M et que le Wi-Fi/SnapBridge est désactivé."],

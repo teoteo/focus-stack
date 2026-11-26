@@ -28,6 +28,28 @@ DIAGRAM_LABELS = {
     "steps": "passi del motore per un giro della manopola = passi/giro × microstep × rapporto",
 }
 
+# schema «Come li usa la fusione» (7.6): etichette dello SVG, testo semplice (&lt; per <)
+CALIB_LABELS = {
+    "col_dark": 'MASTER DARK',
+    "col_stack": 'PILA DEL SOGGETTO',
+    "col_flat": 'MASTER FLAT',
+    "dark": 'Dark · N scatti',
+    "dark1": 'tappo, stessi ISO e tempo',
+    "mean": 'media pixel per pixel',
+    "D": 'D: master dark',
+    "flat": 'Flat · N scatti',
+    "flat1": 'campo uniforme, stessa ottica',
+    "flat_mean": 'media − dark dei flat',
+    "norm": '÷ la sua media',
+    "F": 'F: flat normalizzato',
+    "F1": '&lt; 1 ai bordi e sulla polvere',
+    "frame": 'Ogni fotogramma I',
+    "frame1": 'RAW, luce lineare',
+    "fusion": 'allineamento e fusione',
+    "note1": 'Senza dark si salta la sottrazione,',
+    "note2": 'senza flat la divisione.',
+}
+
 # tabella della profondità di campo (nomi degli obiettivi nella lingua della guida)
 OBJ_NAMES = ["4× / 0,10", "10× / 0,25", "20× / 0,40", "40× / 0,65", "60× / 0,85", "100× / 1,25 olio"]
 dof_rows = []
@@ -245,8 +267,8 @@ mentre guardi il live view.</div>
 passare dall'app. L'app li sorveglia e, se la posizione esce dai fine corsa, invia STOP e mostra un
 allarme; per una protezione completa leggi il capitolo 9. Se li premi durante una sequenza, la sequenza va
 in pausa.</div>
-<div class="box warn"><span class="t">Se la slitta non avanza con i passi piccoli</span>Con <span class="ui">Bobine
-alimentate a motore fermo</span> spento (Configurazione › Motore) il motore, a ogni fermata, perde la forza che lo tiene in
+<div class="box warn"><span class="t">Se la slitta non avanza con i passi piccoli</span>Con <span class="ui">Alimentazione bobine
+motore › Sempre quando connesso</span> spento (Configurazione › Motore) il motore, a ogni fermata, perde la forza che lo tiene in
 posizione: il carico (peso della fotocamera, una molla, la cinghia) può riportarlo indietro. Il contatore dei passi avanza,
 ma la slitta resta dov'è e una pila viene tutta sullo stesso piano. Durante la sequenza l'app alimenta le bobine da sola
 (capitolo 12); per i movimenti a mano di pochi passi accendile, oppure controlla nel live view che l'immagine si sposti
@@ -362,7 +384,7 @@ obiettivo 10× con il cambio d'ingrandimento Optovar 1,6× e la fotocamera su un
     "<b>Profilo da modificare</b>: sceglilo per caricarne i valori; <i>— nuovo profilo —</i> parte da un modulo vuoto.",
     "<b>Salva come nuovo profilo…</b>, nella barra che compare in alto: chiede un nome e salva una copia, lasciando com'è il profilo di partenza.",
     "<b>Elimina profilo</b>, dopo una conferma. <b>Rinomina…</b> cambia il nome anche nella sequenza e nei flat della libreria di calibrazione.",
-    "<b>Tipo di ottica</b>: <i>Microscopio</i> (obiettivo con ingrandimento e NA incisi) oppure <i>Macro fotografica</i> (obiettivo fotografico, tubi e lenti addizionali, 7.3).",
+    "<b>Tipo di ottica</b>, le due schede in cima al pannello Ottica, che cambiano i campi sotto: <i>Microscopio</i> (obiettivo con ingrandimento e NA incisi) oppure <i>Macro fotografica</i> (obiettivo fotografico, tubi e lenti addizionali, 7.3).",
     "<b>Pixel del sensore</b> (pixel pitch) in µm. Nikon D5600: <b>3,9 µm</b> (23,5 mm ÷ 6000 pixel). Si trova nella scheda tecnica della fotocamera, su <b>digicamdb.com</b> (fotocamere fotografiche) o nel database dei sensori di <b>AstroBin</b> (camere dedicate, cercando per esempio IMX571).",
     "<b>Adattatore / oculare di proiezione</b> fra il microscopio e la fotocamera: nome e fattore, per esempio un adattatore C-mount 0,5× o 0,63×, un fotoculare 2,5×, un raccordo T2 senza lenti 1×. Vuoto = 1×.",
     "<b>Cambio d'ingrandimento intermedio</b>, se lo stativo ce l'ha: nome e fattore, per esempio <i>Optovar</i> 1,25×, 1,6× o 2×. Vuoto = 1×.",
@@ -371,7 +393,7 @@ obiettivo 10× con il cambio d'ingrandimento Optovar 1,6× e la fotocamera su un
     "<b>Apertura numerica (NA)</b>: il secondo numero inciso sull'obiettivo (10×/<b>0,25</b>).",
     "<b>Immersione</b>: aria, acqua, olio, glicerina o silicone.",
     "<b>µm per pixel sul campione, misurati</b> con un micrometro oggetto: se c'è, vale più del calcolo.",
-    "<b>Ingrandimento sul sensore</b> = obiettivo × cambio intermedio × adattatore (qui 10 × 1,6 × 1 = 16×) e <b>scala sul campione</b>: il valore misurato oppure pixel del sensore ÷ ingrandimento. Con la misura compare anche l'<b>ingrandimento reale</b> (pixel del sensore ÷ µm per pixel misurati), che comprende ciò che la catena non dice, come la distanza del sensore o il tubo foto; se lo scarto è grande, <i>Ricava il fattore dalla misura</i> corregge l'adattatore.",
+    "<b>Ingrandimento sul sensore</b> = obiettivo × cambio intermedio × adattatore (qui 10 × 1,6 × 1 = 16×) e <b>scala sul campione</b>: il valore misurato oppure pixel del sensore ÷ ingrandimento. Con la misura compare anche l'<b>ingrandimento reale</b> (pixel del sensore ÷ µm per pixel misurati), che comprende ciò che la catena non dice, come la distanza del sensore o il tubo foto; se lo scarto è grande, accanto all'adattatore compare il fattore <i>suggerito dalla misura</i>: un clic lo scrive nel campo.",
     "<b>Filtro</b>: <i>Non indicato</i> (non si sa), <i>Nessun filtro</i> oppure <i>Filtro montato</i>.",
     "<b>Nome</b> e <b>tipo</b> del filtro: passa banda, long pass, short pass, neutro, polarizzatore, altro.",
     "<b>Centro</b> e <b>larghezza di banda</b> in nm per un passa banda; per long pass e short pass la lunghezza d'onda di taglio.",
@@ -465,11 +487,22 @@ fotogrammi.</p>
   stesso diaframma della pila: correggono vignettatura e polvere solo se l'ottica è la stessa.</li>
 <li><b>Dark dei flat</b>: subito dopo i flat, con il tappo: l'app usa da sola ISO e tempo dei flat più recenti.</li>
 </ul>
+<h3>Come li usa la fusione</h3>
+<p>Focus Stack scatta i frame e li indica nel <code>sequence.json</code> della pila; la correzione la fa il software di
+fusione (per esempio Focus Fusion) su ogni fotogramma, prima di allinearlo. Il dark si <b>sottrae</b>: toglie il
+rumore termico e i pixel caldi. Il flat <b>divide</b>: riporta la luce dove la vignettatura e le ombre della polvere
+l'avevano tolta.</p>
+{calib_diagram(CALIB_LABELS)}
+{fig("calibrazione-esempio", [
+    '<b>Flat normalizzato</b> F, con il contrasto accentuato: gli angoli ricevono il 70% della luce del centro e ogni puntino è un granello di polvere sul sensore.',
+    "<b>Uno scatto della pila</b> così com'è: lo sfondo scurisce verso gli angoli (64% del centro) e la stessa macchia di polvere si vede sul fondo (riquadro ingrandito 4×).",
+    '<b>Lo stesso scatto corretto</b>, (I − D) ÷ F, con la stessa resa: angoli al 94% del centro e macchia sparita.',
+], layout="full", caption='Una matita: Sony A6400 con 70-350 mm a 350 mm, lente addizionale +8 diottrie, f/20, ISO 400, 1/20 s; 10 flat, 10 dark e 10 dark dei flat.')}
 <h3>La libreria di calibrazione</h3>
 {fig("calibrazione-libreria", [
     "<b>Cartella</b> della libreria: <code>_calibrazione</code> dentro la cartella delle pile. <span class='ui'>Apri nel Finder</span> la mostra.",
     "<b>Set adatti</b> a una pila avviata adesso, con la fotocamera e le impostazioni attuali.",
-    "<b>Tabella dei set</b>: tipo, data, fotocamera, ISO, tempo, profilo ottico, fotogrammi, livello medio e temperatura. <span class='ui'>Elimina</span> sposta il set nel Cestino del Mac (recuperabile dal Finder).",
+    "<b>Tabella dei set</b>: tipo, data, fotocamera, ISO, tempo, profilo ottico, fotogrammi, livello medio e temperatura. <span class='ui'>Elimina</span> sposta il set nel Cestino del Mac (recuperabile dal Finder). Con le caselle davanti al tipo ne scegli più d'uno (quella in testa li seleziona tutti) e li elimini insieme con <span class='ui'>Elimina selezionati</span>: per sicurezza va scritta la parola ELIMINA.",
 ], layout="full")}
 <p>Ogni set ha la sua cartella con i fotogrammi e un <code>calibration.json</code> (formato in
 <code>docs/calibration-json.md</code>). All'avvio di una pila, <code>sequence.json</code> indica i set più recenti
@@ -873,7 +906,7 @@ add(f"""
 {fig("motore", [
     "<b>Microstep</b>: passo intero, 1/2 … 1/32 (vedi 10.2). Cambiarlo cambia la scala delle posizioni: dopo, ricontrolla i fine corsa.",
     "<b>Velocità</b> del firmware: lenta, media, veloce. Con il myFocuserPro2 e il firmware build 7 la massima dei movimenti è 80, 200 e 400 passi al secondo; ogni movimento parte a 40 passi al secondo e accelera.",
-    "<b>Bobine alimentate a motore fermo</b>: il motore tiene la posizione, ma scalda.",
+    "<b>Alimentazione bobine motore</b>: con <b>Sempre quando connesso</b> il motore tiene la posizione a motore fermo, ma scalda. <b>Anche quando viene disconnesso o si spegne l'applicazione</b> (spenta in partenza; vale solo con la prima accesa): se resta spenta, quando disconnetti il focheggiatore o chiudi l'app le bobine si spengono e il motore non scalda per ore; il primo movimento le riaccende. Accendila se il peso può far scendere una slitta verticale. Serve il firmware build 8.",
     "<b>Alimentale comunque durante la sequenza</b> (compare con le bobine spente; attiva in partenza): le bobine si accendono all'avvio della pila e si rispengono dopo il ritorno all'inizio.",
     "<b>Inverti verso di rotazione</b>.",
     "<b>Compensa il gioco IN / OUT</b>: a ogni inversione verso posizioni più basse (IN) o più alte (OUT) il firmware fa dei passi in più senza contarli, anche con i pulsanti fisici.",
@@ -966,8 +999,11 @@ add("""
 
 # 14
 add(f"""<h1><span class="n">14</span>Se qualcosa non va</h1>
-<p>Il <b>Registro</b> (terza scheda) elenca con l'ora ogni collegamento, movimento, scatto ed errore: quando
-qualcosa non va, leggilo per primo.</p>
+<p>Il <b>Registro</b> (l'ultima scheda) elenca con l'ora ogni collegamento, movimento, scatto ed errore: quando
+qualcosa non va, leggilo per primo. In alto puoi cercare delle parole e mostrare solo gli avvisi (⚠) e gli errori (✖).
+Se segnali un problema premi <b>Esporta</b>: il registro viene salvato in un file di testo nella cartella Download,
+con le versioni dell'app e del firmware e i dati di focheggiatore e fotocamera, senza la chiave del link per lo
+smartphone né il tuo nome utente. Allega quel file alla segnalazione.</p>
 """)
 add(table(["Problema", "Che cosa fare"], [
     ["La fotocamera non si collega", "Chiudi Foto, Anteprima, Acquisizione Immagine, NX Studio, EOS Utility; scollega e ricollega il cavo con la fotocamera accesa; controlla che sia in modo M e che Wi-Fi/SnapBridge siano spenti."],

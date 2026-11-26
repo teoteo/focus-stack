@@ -15,3 +15,7 @@ web/guide/
 
 # app per Mac (Swift): prodotti di swift build
 packaging/mac/.build/
+# esempio di calibrazione: i file a piena risoluzione si rifanno dai RAW con gli script (vedi LEGGIMI.md)
+docs/guida/esempio-calibrazione/originale.jpg
+docs/guida/esempio-calibrazione/corretto.jpg
+docs/guida/esempio-calibrazione/flat-normalizzato.png

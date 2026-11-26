@@ -295,10 +295,10 @@
   "Il pacchetto scaricato non ha la firma dello sviluppatore di Focus Stack": "Das heruntergeladene Paket ist nicht vom Entwickler von Focus Stack signiert",
   "ISO {v}: questa fotocamera arriva al massimo a {top}.": "ISO {v}: diese Kamera reicht höchstens bis {top}.",
   "Live view non spento: {exc}": "Live-View nicht ausgeschaltet: {exc}",
- "dalla catena {m}×": "laut optischer Kette {m}×",
- "Esiste già un profilo «{name}»": "Ein Profil «{name}» existiert bereits",
- "Profilo ottico rinominato: «{old}» → «{new}»": "Optikprofil umbenannt: «{old}» → «{new}»",
- "({n} set di calibrazione aggiornati)": "({n} Kalibrierungssätze aktualisiert)",
+  "dalla catena {m}×": "laut optischer Kette {m}×",
+  "Esiste già un profilo «{name}»": "Ein Profil «{name}» existiert bereits",
+  "Profilo ottico rinominato: «{old}» → «{new}»": "Optikprofil umbenannt: «{old}» → «{new}»",
+  "({n} set di calibrazione aggiornati)": "({n} Kalibrierungssätze aktualisiert)",
   "Autofocus già in corso": "Autofokus läuft bereits",
   "Autofocus…": "Autofokus…",
   "Movimento manuale rilevato ({actual} invece di {pos}): autofocus fermato": "Manuelle Bewegung erkannt ({actual} statt {pos}): Autofokus angehalten",
@@ -346,5 +346,8 @@
   "Conferma: fuoco a {pos} (col live view era {live})": "Bestätigung: Fokus bei {pos} (mit Live-View {live})",
   "Modo non valido": "Ungültiger Modus",
   "Escursione massima": "Maximaler Verfahrweg",
-  "Scatti di conferma": "Bestätigungsaufnahmen"
+  "Scatti di conferma": "Bestätigungsaufnahmen",
+  "{n} set di calibrazione spostati nel Cestino: {names}": "{n} Kalibrierungssätze in den Papierkorb verschoben: {names}",
+  "lingua": "Sprache",
+  "non connesso": "nicht verbunden"
 }

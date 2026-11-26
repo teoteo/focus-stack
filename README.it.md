@@ -390,7 +390,8 @@ copyright nei file) per scheda DRV8825, con: pulsanti, sonda di temperatura, dis
 righe (Position, Target, Temp) senza sfarfallio; pulsanti con movimento continuo a velocità
 crescente (`PB_SPEED*` in `focuserconfig.h`); rampa di accelerazione e decelerazione per i movimenti
 comandati (`MOVE_*`); comando `:97#` che restituisce il numero di build (`fsbuild.h`) e `:98#` che
-indica la scheda (0 = myFocuserPro2, 1 = Ardufocus).
+indica la scheda (0 = myFocuserPro2, 1 = Ardufocus); `:99#` (build 8) che spegne le bobine a motore fermo
+senza cambiare l'impostazione salvata (l'app lo manda alla disconnessione e alla chiusura).
 
 **Scheda Ardufocus:** con `ARDUFOCUSPCB` (riga in `focuserconfig.h`, oppure `-DARDUFOCUSPCB` come fa
 `build_release.sh` per `firmware-ardufocus.hex`) lo stesso firmware usa i collegamenti del circuito

@@ -38,6 +38,10 @@ DEFAULTS: dict = {
     # bobine del motore accese durante la sequenza anche se il firmware le spegne a motore fermo
     # (con le bobine spente il carico può riportare indietro la slitta a ogni fermata)
     "coil_during_sequence": True,
+    # bobine accese anche dopo «Disconnetti» e la chiusura dell'app (vale solo con «Bobine alimentate a motore
+    # fermo»). Spento: l'app le spegne chiudendo la porta (firmware build 8), così il motore non scalda per ore;
+    # acceso: utile se il carico (slitta verticale) può far girare la vite a motore senza corrente.
+    "coil_hold_after_disconnect": False,
     "sequence": {
         "start": 0,
         "end": 1000,

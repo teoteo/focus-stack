@@ -5,6 +5,7 @@ import asyncio
 import functools
 import hashlib
 import json
+import re
 import time
 from collections import deque
 from contextlib import asynccontextmanager
@@ -51,7 +52,7 @@ class App:
         i18n.set_language(i18n.resolve(self.cfg.get("language")))
         self.focuser: MyFocuserPro2 | None = None
         self.camera: GPhotoCamera | None = None
-        self.log_lines: deque[str] = deque(maxlen=500)
+        self.log_lines: deque[str] = deque(maxlen=2000)   # la pagina ne mostra 200, l'esportazione tutte
         self.temp_history: deque[tuple[float, float]] = deque(maxlen=720)  # 2 h a 10 s
         self.shots: list[dict] = []          # galleria della sessione (prova + sequenze)
         self.next_shot_id = 0                # gli id non si riusano dopo "Svuota" (l'elenco riparte vuoto)
@@ -97,8 +98,13 @@ class App:
                                   self.af_grab, self.log, self.af_learn, self.af_end)
         self.af_shots = 0   # scatti veri fatti dall'autofocus in corso (alla fine il live view resta da parte)
 
-    def log(self, msg: str) -> None:
-        self.log_lines.append(f"{time.strftime('%H:%M:%S')}  {msg}")
+    def log(self, msg: str, level: str = "info") -> None:
+        """level "warn" o "error": la riga comincia con ⚠ o ✖, così il Registro può filtrarle e colorarle
+        (e si riconoscono anche nel file esportato)."""
+        mark = {"warn": "⚠ ", "error": "✖ "}.get(level, "")
+        if mark and msg.startswith(("⚠", "✖")):
+            mark = ""
+        self.log_lines.append(f"{time.strftime('%H:%M:%S')}  {mark}{msg}")
 
     # ---------- calibrazione / limiti ----------
     def um_per_step(self) -> float:
@@ -299,7 +305,7 @@ class App:
                     raise RuntimeError(tr("La fotocamera non ha scattato ({exc})", exc=exc)) from exc
                 wait = 3 * (attempt + 1)
                 self.log(tr("Scatto non riuscito ({exc}): nuovo tentativo fra {s} s ({a} di {n})",
-                            exc=exc, s=wait, a=attempt + 1, n=2))
+                            exc=exc, s=wait, a=attempt + 1, n=2), "warn")
                 if attempt == 1:
                     # la fotocamera può essere sparita dall'USB (es. ripartita per un calo di alimentazione): ci mette
                     # qualche secondo a tornare, quindi il ricollegamento si ritenta per circa 15 s
@@ -309,7 +315,7 @@ class App:
                             self.log(tr("Fotocamera ricollegata: {model}", model=cam.model))
                             break
                         except Exception as exc2:  # noqa: BLE001
-                            self.log(tr("Fotocamera non ricollegata: {exc}", exc=exc2))
+                            self.log(tr("Fotocamera non ricollegata: {exc}", exc=exc2), "error")
                             if k < 4:
                                 await asyncio.sleep(3)
                 await asyncio.sleep(wait)
@@ -525,7 +531,7 @@ async def poll_loop():
                 last_pos = f.position
             except Exception as exc:  # noqa: BLE001
                 if f.connected and f is app_state.focuser:   # non durante una disconnessione
-                    app_state.log(tr("Errore lettura focheggiatore: {exc}", exc=exc))
+                    app_state.log(tr("Errore lettura focheggiatore: {exc}", exc=exc), "error")
                     await asyncio.sleep(2)
         else:
             # scollegato o sequenza in corso: la posizione letta prima non vale più come riferimento (a fine
@@ -580,7 +586,7 @@ def hold_watchdog(f: MyFocuserPro2) -> None:
         app_state.hold_dir = 0
         if f.moving:
             asyncio.get_running_loop().create_task(f.halt())
-            app_state.log(tr("Movimento continuo fermato: la pagina non risponde"))
+            app_state.log(tr("Movimento continuo fermato: la pagina non risponde"), "warn")
 
 
 async def update_check_loop():
@@ -605,7 +611,7 @@ async def lifespan(_: FastAPI):
         try:
             await app_state.remote_apply()
         except RuntimeError as exc:
-            app_state.log(tr("Errore: {exc}", exc=exc))
+            app_state.log(tr("Errore: {exc}", exc=exc), "error")
 
     remote_task = asyncio.create_task(remote_on_boot()) if app_state.cfg["remote"].get("enabled") else None
     connect_task = asyncio.create_task(connect_on_boot())
@@ -617,9 +623,14 @@ async def lifespan(_: FastAPI):
     task.cancel()
     update_task.cancel()
     if app_state.focuser:
-        await app_state.focuser.disconnect()
+        await app_state.focuser.disconnect(release_coils=release_coils_on_disconnect())
     if app_state.camera:
         await app_state.camera.disconnect()
+
+
+def release_coils_on_disconnect() -> bool:
+    """Alla disconnessione e alla chiusura le bobine si spengono, salvo l'opzione per tenerle accese."""
+    return not app_state.cfg.get("coil_hold_after_disconnect", False)
 
 
 async def connect_on_boot() -> None:
@@ -641,7 +652,7 @@ async def connect_on_boot() -> None:
                 async with app_state.focuser_lock:
                     await _focuser_connect(FocuserConnect(port=port, baud=cfg.get("focuser_baud", 9600)))
             except Exception as exc:  # noqa: BLE001
-                app_state.log(tr("Collegamento automatico del focheggiatore non riuscito: {exc}", exc=exc))
+                app_state.log(tr("Collegamento automatico del focheggiatore non riuscito: {exc}", exc=exc), "error")
     driver = cfg.get("camera_driver")
     if driver and GPHOTO_AVAILABLE and not (app_state.camera and app_state.camera.connected):
         try:
@@ -650,7 +661,7 @@ async def connect_on_boot() -> None:
                 async with app_state.camera_lock:
                     await _camera_connect(CameraConnect(model=cam["model"], port=cam["port"]))
         except Exception as exc:  # noqa: BLE001
-            app_state.log(tr("Collegamento automatico della fotocamera non riuscito: {exc}", exc=exc))
+            app_state.log(tr("Collegamento automatico della fotocamera non riuscito: {exc}", exc=exc), "error")
 
 
 api = FastAPI(title="Focus Stack", lifespan=lifespan)
@@ -707,10 +718,10 @@ def guard(fn):
         except HTTPException:
             raise
         except (FocuserError, CameraError, RuntimeError, ValueError, OSError) as exc:
-            app_state.log(tr("Errore: {exc}", exc=exc))
+            app_state.log(tr("Errore: {exc}", exc=exc), "error")
             raise HTTPException(400, str(exc)) from exc
         except Exception as exc:  # errori gphoto2 e simili
-            app_state.log(tr("Errore: {exc}", exc=exc))
+            app_state.log(tr("Errore: {exc}", exc=exc), "error")
             raise HTTPException(500, str(exc)) from exc
     return wrapper
 
@@ -838,7 +849,7 @@ async def _focuser_connect(body: FocuserConnect):
     if old and old.connected and not body.simulate and not old.simulated and old.port == body.port:
         return old.describe()   # già collegato a questa porta (richiesta doppia): niente seconda apertura
     if app_state.focuser:
-        await app_state.focuser.disconnect()
+        await app_state.focuser.disconnect(release_coils=release_coils_on_disconnect())
     if body.simulate:
         f = SimulatedFocuser()
     else:
@@ -868,7 +879,7 @@ async def _focuser_connect(body: FocuserConnect):
 async def focuser_disconnect():
     not_running()
     if app_state.focuser:
-        await app_state.focuser.disconnect()
+        await app_state.focuser.disconnect(release_coils=release_coils_on_disconnect())
         app_state.focuser = None
         app_state.alarm, app_state.alarm_kind = "", ""
         app_state.log(tr("Focheggiatore disconnesso"))
@@ -897,7 +908,7 @@ async def run_firmware_update(port: str, baud: int, hex_path: Path, build: int, 
         app_state.apply_limits()
         app_state.log(tr("Focheggiatore ricollegato (firmware {firmware}, build {build})", firmware=f.firmware, build=f.fs_build))
     except Exception as exc:  # noqa: BLE001
-        app_state.log(tr("Focheggiatore non ricollegato: {exc}", exc=exc))
+        app_state.log(tr("Focheggiatore non ricollegato: {exc}", exc=exc), "error")
     fw["busy"] = False
     fw["phase"] = ""
 
@@ -1056,7 +1067,7 @@ async def focuser_halt():
 async def focuser_sync(body: Position):
     not_running()
     await need_focuser().sync(body.position)
-    app_state.log(tr("Posizione sincronizzata a {pos}: verifica i fine corsa!", pos=body.position))
+    app_state.log(tr("Posizione sincronizzata a {pos}: verifica i fine corsa!", pos=body.position), "warn")
     return {"ok": True}
 
 
@@ -1319,7 +1330,7 @@ async def live_frames(cam: GPhotoCamera):
                 frame = await next_live_frame(cam, seq)
             except Exception as exc:  # noqa: BLE001
                 app_state.live_error = str(exc)
-                app_state.log(tr("Live view interrotto: {exc}", exc=exc))
+                app_state.log(tr("Live view interrotto: {exc}", exc=exc), "warn")
                 return
             app_state.live_error = ""
             seq, data = frame["seq"], frame["data"]
@@ -1761,6 +1772,69 @@ async def calibration_delete(body: CalibrationSetBody):
     return calibration_view()
 
 
+class CalibrationSetsBody(BaseModel):
+    names: list[str]
+
+
+@api.post("/api/calibration/delete-many")
+@guard
+async def calibration_delete_many(body: CalibrationSetsBody):
+    """Sposta nel Cestino più set della libreria insieme (la pagina chiede prima di scrivere una parola di conferma).
+    Si fermano al primo set non valido: quelli prima sono già nel Cestino e la libreria restituita lo mostra."""
+    not_running()
+    done = []
+    try:
+        for name in dict.fromkeys(body.names):   # senza doppioni, nell'ordine dato
+            calibration.delete_set(app_state.cfg["output_root"], name)
+            done.append(name)
+    finally:
+        if done:
+            app_state.log(tr("{n} set di calibrazione spostati nel Cestino: {names}", n=len(done), names=", ".join(done)))
+    return calibration_view()
+
+
+@api.post("/api/log/export")
+@guard
+async def log_export():
+    """Salva il registro in un file di testo in Download e lo mostra nel Finder: da allegare a una segnalazione.
+    In testa versioni, sistema, focheggiatore, fotocamera; poi tutte le righe del registro e la coda dei file di
+    registro del server e dell'app per Mac. Toglie la chiave del link dello smartphone e il nome dell'utente dai percorsi."""
+    import platform
+    f, c = app_state.focuser, app_state.camera
+    up = app_state.updater.describe()
+    head = [
+        f"Focus Stack {up.get('version')} — {tr('Registro')} {time.strftime('%Y-%m-%d %H:%M:%S')}",
+        f"{('macOS ' + platform.mac_ver()[0]) if platform.mac_ver()[0] else platform.platform()} ({platform.machine()}) · "
+        f"Python {platform.python_version()} · {tr('lingua')} {i18n.current()}",
+    ]
+    if f and f.connected:
+        fd = f.describe()
+        head.append(f"{tr('Focheggiatore')}: {fd.get('port')} · firmware {fd.get('firmware')} build {fd.get('fs_build')} · "
+                    f"{fd.get('board')} · max {fd.get('max_step')} · {json.dumps(fd.get('motor'), ensure_ascii=False)}")
+    else:
+        head.append(f"{tr('Focheggiatore')}: {tr('non connesso')}")
+    head.append(f"{tr('Fotocamera')}: {c.model if c and c.connected else tr('non connessa')}")
+    parts = ["\n".join(head), "== " + tr("Registro"), "\n".join(app_state.log_lines)]
+    logs = Path.home() / "Library" / "Logs"
+    for name in ("FocusStack.log", "FocusStack-app.log"):
+        try:
+            lines = (logs / name).read_text(errors="replace").splitlines()[-300:]
+        except OSError:
+            continue
+        if lines:
+            parts += [f"== {name}", "\n".join(lines)]
+    text = "\n\n".join(parts) + "\n"
+    text = re.sub(r"([?&]k=)[A-Za-z0-9_-]+", r"\1…", text)          # chiave del link dello smartphone
+    text = text.replace(str(Path.home()), "~")                         # nome dell'utente nei percorsi
+    out_dir = Path.home() / "Downloads"
+    if not out_dir.is_dir():
+        out_dir = Path.home()
+    path = out_dir / f"FocusStack-registro-{time.strftime('%Y%m%d-%H%M%S')}.txt"
+    path.write_text(text, encoding="utf-8")
+    desktop.reveal(path)
+    return {"ok": True, "path": str(path), "name": path.name}
+
+
 @api.post("/api/calibration/open")
 async def calibration_open():
     root = calibration.library_root(app_state.cfg["output_root"])
@@ -1775,6 +1849,7 @@ class SettingsBody(BaseModel):
     jog_max: int | None = None
     jog_hold: bool | None = None
     coil_during_sequence: bool | None = None
+    coil_hold_after_disconnect: bool | None = None
     hold_chunk_steps: int | None = None
     language: str | None = None   # "auto" (lingua di macOS) oppure un codice di i18n.SUPPORTED
 
@@ -1891,6 +1966,8 @@ async def save_settings(body: SettingsBody):
         app_state.cfg["jog_hold"] = body.jog_hold
     if body.coil_during_sequence is not None:
         app_state.cfg["coil_during_sequence"] = body.coil_during_sequence
+    if body.coil_hold_after_disconnect is not None:
+        app_state.cfg["coil_hold_after_disconnect"] = body.coil_hold_after_disconnect
     if body.hold_chunk_steps is not None:
         lo, hi = HOLD_CHUNK_RANGE
         if not lo <= body.hold_chunk_steps <= hi:

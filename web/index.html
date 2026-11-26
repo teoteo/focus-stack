@@ -312,13 +312,6 @@
               <span class="set-lbl">Profilo da modificare</span>
               <span class="set-ctl"><select id="o-profile" aria-label="Profilo da modificare"><option value="">— nuovo profilo —</option></select><button class="btn ghost small" id="o-profile-ren">Rinomina…</button><button class="btn ghost small" id="o-profile-del">Elimina profilo</button></span>
             </div>
-            <div class="set-row">
-              <span class="set-lbl">Tipo di ottica</span>
-              <span class="set-ctl"><span class="seg" id="o-kind" role="radiogroup" aria-label="Tipo di ottica">
-                <button data-kind="microscope" title="Obiettivo da microscopio: ingrandimento e apertura numerica (NA) scritti sull'obiettivo">Microscopio</button>
-                <button data-kind="macro" title="Obiettivo fotografico, con tubi di prolunga e lenti addizionali">Macro fotografica</button>
-              </span></span>
-            </div>
           </div>
           <details class="set-details">
             <summary>Dettagli</summary>
@@ -330,7 +323,12 @@
 
     <!-- in ordine fisico, dalla fotocamera al campione -->
     <h3 class="set-group">Ottica</h3>
-    <div class="set-card">
+    <!-- tipo di ottica: schede attaccate al pannello, perché decide quali campi ci sono sotto -->
+    <div class="kind-tabs" id="o-kind" role="tablist" aria-label="Tipo di ottica">
+      <button role="tab" data-kind="microscope" title="Obiettivo da microscopio: ingrandimento e apertura numerica (NA) scritti sull'obiettivo"><svg class="kind-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2.5h4"/><path d="M9 2.5v9.5h2V2.5"/><path d="M10 12v2.5"/><path d="M6 16.5h8"/><path d="M12.5 7.5a6 6 0 0 1 3.5 10.5"/><path d="M16 18v3"/><path d="M5 21h14"/></svg><span class="kt"><b>Microscopio</b><small>obiettivo con ingrandimento e NA</small></span></button>
+      <button role="tab" data-kind="macro" title="Obiettivo fotografico, con tubi di prolunga e lenti addizionali"><svg class="kind-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8.5h4l2-3h6l2 3h4V19H3z"/><circle cx="12" cy="13" r="3.5"/></svg><span class="kt"><b>Macro fotografica</b><small>obiettivo fotografico, tubi e lenti</small></span></button>
+    </div>
+    <div class="set-card tabbed">
       <section class="set-sec" id="opt-sensor">
         <header class="card-head"><h2>Sensore</h2></header>
         <div class="set-box">
@@ -353,7 +351,7 @@
           <div class="set-rows">
             <div class="set-row">
               <span class="set-lbl">Adattatore / oculare di proiezione</span>
-              <span class="set-ctl"><input type="text" class="txt" id="o-relay-name" autocomplete="off" placeholder="es. fotoculare NFK" aria-label="Adattatore / oculare di proiezione"><span class="unit">×</span><input type="number" class="num" id="o-relay" step="0.01" min="0" placeholder="es. 2.5" aria-label="Fattore (×)" title="Fattore dell'adattatore per fotocamera o dell'oculare di proiezione, per esempio 0,63× o 2,5×"></span>
+              <span class="set-ctl"><input type="text" class="txt" id="o-relay-name" autocomplete="off" placeholder="es. fotoculare NFK" aria-label="Adattatore / oculare di proiezione"><span class="unit">×</span><input type="number" class="num" id="o-relay" step="0.01" min="0" placeholder="es. 2.5" aria-label="Fattore (×)" title="Fattore dell'adattatore per fotocamera o dell'oculare di proiezione, per esempio 0,63× o 2,5×"><button type="button" class="suggest hidden" id="o-relay-suggest"></button></span>
             </div>
             <div class="set-row">
               <span class="set-lbl">Cambio d'ingrandimento intermedio</span>
@@ -582,6 +580,8 @@
     <p class="hint hidden" id="opt-none">Nessuna impostazione con questo nome.</p>
   </div>
 
+  <div class="set-side">
+  <h3 class="set-group">Riepilogo</h3>
   <aside class="set-sum card" id="opt-sum" aria-label="Riepilogo">
     <h4>Profilo</h4>
     <div class="sum-kv"><span>In modifica</span><b id="osum-name">—</b><em id="osum-state"></em></div>
@@ -594,6 +594,7 @@
     <div class="sum-kv"><span>Profondità di campo</span><b id="osum-dof">—</b></div>
     <div class="sum-kv"><span>Passo consigliato</span><b class="big" id="osum-step">—</b><em id="osum-steps"></em></div>
   </aside>
+  </div>
 
 </main>
 
@@ -681,6 +682,8 @@
 
   </div>
 
+  <div class="set-side">
+  <h3 class="set-group">Riepilogo</h3>
   <aside class="set-sum card" id="cal-sum" aria-label="Riepilogo">
     <h4>Per la prossima pila</h4>
     <div class="sum-kv"><span>Dark</span><b id="ksum-dark">—</b><em id="ksum-darkx"></em></div>
@@ -694,19 +697,20 @@
       <p class="hint" id="t-range" data-i18n-html>Ultimi 60 minuti. La temperatura di ogni scatto viene salvata in <code>sequence.json</code>.</p>
     </div>
   </aside>
+  </div>
 
   <!-- la libreria occupa anche la colonna del riepilogo: la tabella ha molte colonne -->
   <div class="set-wide">
     <h3 class="set-group">Libreria</h3>
     <div class="set-card">
       <section class="set-sec" id="card-library">
-        <header class="card-head"><h2>Libreria di calibrazione</h2><span class="grow"></span><button class="btn ghost small" id="k-open">Apri nel Finder</button></header>
+        <header class="card-head"><h2>Libreria di calibrazione</h2><span class="grow"></span><button class="btn danger small hidden" id="k-del-sel"></button><button class="btn ghost small" id="k-open">Apri nel Finder</button></header>
         <div class="set-box">
           <p class="set-note top" id="k-root"></p>
           <p class="result" id="k-match"></p>
           <div class="table-wrap">
             <table class="lib-table" id="k-table">
-              <thead><tr><th>Tipo</th><th>Data</th><th>Fotocamera</th><th>ISO</th><th>Tempo</th><th>Profilo ottico</th><th>Fotogrammi</th><th>Livello medio</th><th>Temperatura</th><th></th></tr></thead>
+              <thead><tr><th><label class="lib-sel"><input type="checkbox" id="k-sel-all" aria-label="Seleziona tutti i set"><span>Tipo</span></label></th><th>Data</th><th>Fotocamera</th><th>ISO</th><th>Tempo</th><th>Profilo ottico</th><th>Fotogrammi</th><th>Livello medio</th><th>Temperatura</th><th></th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -764,15 +768,18 @@
             <span class="set-lbl">Velocità</span>
             <span class="set-ctl"><select id="mo-speed" aria-label="Velocità"><option value="0">Lenta</option><option value="1">Media</option><option value="2">Veloce</option></select></span>
           </div>
-          <label class="set-row">
-            <span class="set-lbl">Bobine alimentate a motore fermo</span>
-            <span class="set-ctl"><input type="checkbox" id="mo-coil_power"><span class="set-help">tiene la posizione, scalda il motore</span></span>
-          </label>
+          <div class="set-row baseline">
+            <span class="set-lbl">Alimentazione bobine motore</span>
+            <span class="set-ctl set-checks">
+              <label class="set-check"><input type="checkbox" id="mo-coil_power"><span>Sempre quando connesso <span class="set-help">(scalda il motore ma evita eventuale perdita di passi)</span></span></label>
+              <label class="set-check" id="opt-coil-hold-row"><input type="checkbox" id="opt-coil-hold"><span>Anche quando viene disconnesso o si spegne l'applicazione <span class="set-help" id="opt-coil-hold-help">(con la slitta verticale evita che il peso la sposti)</span></span></label>
+            </span>
+          </div>
           <label class="set-row hidden" id="opt-coil-seq-row">
             <span class="set-lbl">Alimentale comunque durante la sequenza</span>
             <span class="set-ctl"><input type="checkbox" id="opt-coil-seq"><span class="set-help">accese all'avvio della pila, spente dopo il ritorno all'inizio</span></span>
           </label>
-          <div class="warn hidden" id="mo-coil-warn">Attiva <b>Bobine alimentate a motore fermo</b>: con le bobine spente il carico (peso della fotocamera, molla, cinghia) può riportare indietro la slitta a ogni fermata, e con passi piccoli la pila resta tutta sullo stesso piano. Con il microstep, inoltre, il motore scatta sul passo intero più vicino.</div>
+          <div class="warn hidden" id="mo-coil-warn">Attiva <b>Alimentazione bobine motore › Sempre quando connesso</b>: con le bobine spente il carico (peso della fotocamera, molla, cinghia) può riportare indietro la slitta a ogni fermata, e con passi piccoli la pila resta tutta sullo stesso piano. Con il microstep, inoltre, il motore scatta sul passo intero più vicino.</div>
           <label class="set-row">
             <span class="set-lbl">Inverti verso di rotazione</span>
             <span class="set-ctl"><input type="checkbox" id="mo-reverse"></span>
@@ -1152,6 +1159,8 @@
     <p class="hint hidden" id="cfg-none">Nessuna impostazione con questo nome.</p>
   </div>
 
+  <div class="set-side">
+  <h3 class="set-group">Riepilogo</h3>
   <aside class="set-sum card" id="cfg-sum" aria-label="Riepilogo">
     <h4>Focheggiatore</h4>
     <div class="sum-kv"><span>Risoluzione</span><b class="big" id="sum-res">—</b><em id="sum-res1k"></em></div>
@@ -1162,13 +1171,23 @@
     <div class="sum-kv"><span>Versione</span><b id="sum-app">—</b><em id="sum-appx"></em></div>
     <div class="sum-kv"><span>Smartphone</span><b id="sum-phone">—</b><em id="sum-phonex"></em></div>
   </aside>
+  </div>
 
 </main>
 
 <!-- ================================ REGISTRO ================================ -->
 <main class="view hidden" id="view-log">
   <section class="card log-card">
-    <header class="card-head"><h2>Registro</h2></header>
+    <header class="card-head log-head"><h2>Registro</h2>
+      <input type="search" id="log-q" placeholder="Cerca nel registro" aria-label="Cerca nel registro" autocomplete="off">
+      <select id="log-level" aria-label="Righe da mostrare">
+        <option value="">Tutte le righe</option>
+        <option value="issues">Solo avvisi ed errori</option>
+      </select>
+      <span class="log-count" id="log-count"></span>
+      <span class="grow"></span>
+      <button class="btn ghost small" id="log-export" title="Salva il registro in un file di testo in Download, con versioni, focheggiatore e fotocamera: allegalo quando segnali un problema">Esporta</button>
+    </header>
     <pre id="log"></pre>
   </section>
 </main>

@@ -44,7 +44,19 @@ final class WebWindows: NSObject, WKUIDelegate, WKNavigationDelegate, NSWindowDe
         w.backgroundColor = Theme.background
         w.delegate = self
         w.center()
+        // La finestra principale non si apre mai a tutto schermo: una misura salvata mentre macOS la teneva affiancata
+        // o ingrandita (tilingState, trascinandola in alto o con il pulsante verde) la riporterebbe così a ogni avvio.
+        let key = "NSWindow Frame FocusStackMain"
+        if UserDefaults.standard.string(forKey: key)?.contains("tilingState") == true {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
         w.setFrameAutosaveName("FocusStackMain")
+        if let area = (w.screen ?? NSScreen.main)?.visibleFrame,
+           w.frame.width >= area.width * 0.95 || w.frame.height >= area.height * 0.95 {
+            let size = NSSize(width: min(1400, area.width * 0.85), height: min(900, area.height * 0.85))
+            w.setFrame(NSRect(x: area.midX - size.width / 2, y: area.midY - size.height / 2,
+                              width: size.width, height: size.height), display: false)
+        }
         mainWindow = w
         showPlaceholder()
         w.makeKeyAndOrderFront(nil)

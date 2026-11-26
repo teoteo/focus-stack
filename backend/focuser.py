@@ -190,7 +190,7 @@ class MyFocuserPro2:
         self.motor = out
         return out
 
-    def _close_blocking(self) -> None:
+    def _close_blocking(self, release_coils: bool = False) -> None:
         # Tutto sotto il lock: una lettura periodica in un altro thread non deve usare la porta mentre si chiude
         # (dava "Bad file descriptor" nel registro).
         with self._lock:
@@ -207,6 +207,10 @@ class MyFocuserPro2:
                 ser.write(b":48#")
                 ser.flush()
                 time.sleep(0.3)   # scrittura della EEPROM prima del reset
+                if release_coils and self.can_release_coils:
+                    ser.write(b":99#")   # dopo :48#: nella EEPROM resta l'impostazione delle bobine com'era
+                    ser.flush()
+                    time.sleep(0.05)
             except Exception:  # noqa: BLE001
                 pass
             try:
@@ -282,8 +286,18 @@ class MyFocuserPro2:
     async def connect(self) -> None:
         await asyncio.to_thread(self._connect_blocking)
 
-    async def disconnect(self) -> None:
-        await asyncio.to_thread(self._close_blocking)
+    async def disconnect(self, release_coils: bool = False) -> None:
+        """Chiude la porta. release_coils: spegne prima le bobine del motore (:99#, firmware build 8) senza
+        cambiare l'impostazione «Bobine alimentate a motore fermo»: a motore staccato dall'app non scalda."""
+        await asyncio.to_thread(self._close_blocking, release_coils)
+
+    # firmware build 8: :99# spegne le bobine a motore fermo senza toccare l'impostazione salvata (:12x# la
+    # scrive nella EEPROM); il movimento successivo le riaccende da solo
+    RELEASE_BUILD = 8
+
+    @property
+    def can_release_coils(self) -> bool:
+        return (self.fs_build or 0) >= self.RELEASE_BUILD
 
     async def poll(self, with_temp: bool = False) -> None:
         await asyncio.to_thread(self._poll_blocking, with_temp)
@@ -392,7 +406,7 @@ class MyFocuserPro2:
             "connected": self.connected, "simulated": self.simulated, "port": self.port,
             "position": self.position, "moving": self.moving, "temperature": self.temperature,
             "has_temp_probe": self.has_temp_probe, "max_step": self.max_step, "firmware": self.firmware,
-            "fs_build": self.fs_build, "board": self.board,
+            "fs_build": self.fs_build, "board": self.board, "can_release_coils": self.can_release_coils,
             "motor": self.motor, "bounds": [lo, hi],
         }
 
@@ -440,8 +454,13 @@ class SimulatedFocuser(MyFocuserPro2):
         self._t = time.monotonic()
         self._advance()
 
-    async def disconnect(self) -> None:
+    @property
+    def can_release_coils(self) -> bool:
+        return True   # il simulatore fa come il firmware più recente
+
+    async def disconnect(self, release_coils: bool = False) -> None:
         self._open_flag = False
+        self.coils_released = release_coils
 
     async def poll(self, with_temp: bool = False) -> None:
         self._advance()

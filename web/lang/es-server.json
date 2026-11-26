@@ -295,10 +295,10 @@
   "Il pacchetto scaricato non ha la firma dello sviluppatore di Focus Stack": "El paquete descargado no está firmado por el desarrollador de Focus Stack",
   "ISO {v}: questa fotocamera arriva al massimo a {top}.": "ISO {v}: esta cámara llega como máximo a {top}.",
   "Live view non spento: {exc}": "Visión en directo no apagada: {exc}",
- "dalla catena {m}×": "según la cadena óptica {m}×",
- "Esiste già un profilo «{name}»": "Ya existe un perfil «{name}»",
- "Profilo ottico rinominato: «{old}» → «{new}»": "Perfil óptico renombrado: «{old}» → «{new}»",
- "({n} set di calibrazione aggiornati)": "({n} series de calibración actualizadas)",
+  "dalla catena {m}×": "según la cadena óptica {m}×",
+  "Esiste già un profilo «{name}»": "Ya existe un perfil «{name}»",
+  "Profilo ottico rinominato: «{old}» → «{new}»": "Perfil óptico renombrado: «{old}» → «{new}»",
+  "({n} set di calibrazione aggiornati)": "({n} series de calibración actualizadas)",
   "Autofocus già in corso": "Autoenfoque ya en curso",
   "Autofocus…": "Autoenfoque…",
   "Movimento manuale rilevato ({actual} invece di {pos}): autofocus fermato": "Movimiento manual detectado ({actual} en lugar de {pos}): autoenfoque detenido",
@@ -346,5 +346,8 @@
   "Conferma: fuoco a {pos} (col live view era {live})": "Confirmación: enfoque en {pos} (con la vista en vivo era {live})",
   "Modo non valido": "Modo no válido",
   "Escursione massima": "Excursión máxima",
-  "Scatti di conferma": "Tomas de confirmación"
+  "Scatti di conferma": "Tomas de confirmación",
+  "{n} set di calibrazione spostati nel Cestino: {names}": "{n} conjuntos de calibración movidos a la papelera: {names}",
+  "lingua": "idioma",
+  "non connesso": "no conectado"
 }

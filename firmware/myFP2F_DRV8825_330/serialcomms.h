@@ -283,6 +283,13 @@ void ser_comms() {
     case 98:  // Focus Stack: scheda per cui è compilato il firmware (0 = myFocuserPro2, 1 = Ardufocus)
       SendPacket('H', (long)FSBOARD);
       break;
+    case 99:  // Focus Stack build 8: spegne subito le bobine a motore fermo SENZA cambiare l'impostazione
+              // "coilpower" (che :12x# salva nella EEPROM). L'app lo manda alla disconnessione e alla chiusura;
+              // il movimento successivo le riaccende come sempre (set_motorpower(true) all'avvio del movimento).
+      if (isMoving == 0) {
+        driverboard->set_motorpower(false);
+      }
+      break;
     case 5:   // set new target position to xxxxxx (and focuser initiates immediate move to xxxxxx)
     case 96:  // Focus Stack: come :05#, ma sorvegliato (vedi fs_supervise)
       // only if not already moving

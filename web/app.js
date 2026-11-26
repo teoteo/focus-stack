@@ -560,7 +560,8 @@ function renderConfig(f) {
   // motore
   const motor = (f.connected && f.motor) || {};
   // l'opzione "bobine durante la sequenza" cambia gli avvisi: fa parte della firma
-  const sig = JSON.stringify(motor) + f.connected + (S.settings.coil_during_sequence !== false);
+  const sig = JSON.stringify(motor) + f.connected + (S.settings.coil_during_sequence !== false)
+    + !!S.settings.coil_hold_after_disconnect + !!f.can_release_coils;
   if (sig !== motorSig) {
     motorSig = sig;
     for (const name of ["step_mode", "speed"]) {
@@ -581,6 +582,14 @@ function renderConfig(f) {
     const coilSeq = S.settings.coil_during_sequence !== false;
     $("opt-coil-seq-row").classList.toggle("hidden", motor.coil_power !== false);
     $("opt-coil-seq").checked = coilSeq;
+    // bobine dopo la disconnessione: ha senso solo se sono accese a motore fermo; serve il firmware build 8
+    // la seconda casella vale solo con la prima accesa (altrimenti è grigia); col firmware < 8 restano sempre accese
+    const holdOk = motor.coil_power === true && !!f.can_release_coils;
+    $("opt-coil-hold").disabled = !holdOk;
+    $("opt-coil-hold").checked = motor.coil_power === true && (!f.can_release_coils || !!S.settings.coil_hold_after_disconnect);
+    $("opt-coil-hold-help").textContent = motor.coil_power === true && !f.can_release_coils && f.connected
+      ? t("(con questo firmware restano sempre accese: aggiornalo alla build 8)")
+      : t("(con la slitta verticale evita che il peso la sposti)");
     $("mo-coil-warn").classList.toggle("hidden", !(motor.coil_power === false && !coilSeq));
     $("m-micro").value = motor.step_mode ? (motor.step_mode === 1 ? t("passo intero") : `1/${motor.step_mode}`) : t("1 (non letto)");
     updateMechResult();
@@ -605,14 +614,28 @@ function sparkline(values, w, h) {
   return `<path class="area" d="${line}L${w},${h}L0,${h}Z"/><path class="line" d="${line}"/>`;
 }
 
+// Registro: ricerca (tutte le parole, senza distinguere maiuscole) e filtro avvisi/errori (righe con ⚠ o ✖,
+// che il server mette davanti ai messaggi di quel livello). Le parole trovate sono evidenziate.
+let logHtml = "";
 function renderLog() {
   if ($("view-log").classList.contains("hidden")) return;
   const log = $("log");
   const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
-  const text = S.log.join("\n");
-  if (log.textContent !== text) {
-    log.textContent = text;
-    if (atBottom) log.scrollTop = log.scrollHeight;
+  const words = $("log-q").value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const issues = $("log-level").value === "issues";
+  const lines = S.log.filter((l) => (!issues || /^\S+\s+[⚠✖]/.test(l)) && words.every((w) => l.toLowerCase().includes(w)));
+  const re = words.length ? new RegExp(`(${words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi") : null;
+  const html = lines.map((l) => {
+    const cls = /^\S+\s+✖/.test(l) ? "log-err" : /^\S+\s+⚠/.test(l) ? "log-warn" : "";
+    let h = escapeHtml(l);
+    if (re) h = h.replace(re, "<mark>$1</mark>");
+    return cls ? `<span class="${cls}">${h}</span>` : h;
+  }).join("\n");
+  $("log-count").textContent = words.length || issues ? t("{n} di {tot} righe", { n: lines.length, tot: S.log.length }) : "";
+  if (html !== logHtml) {
+    log.innerHTML = html || `<span class="muted">${escapeHtml(words.length || issues ? t("Nessuna riga corrisponde") : "")}</span>`;
+    logHtml = html;
+    if (atBottom || words.length || issues) log.scrollTop = log.scrollHeight;
   }
 }
 
@@ -991,7 +1014,7 @@ function setOpticsKind(kind) {
   opticsKind = kind === "macro" ? "macro" : "microscope";
   $("card-optics").dataset.kind = opticsKind;
   $("view-optics").dataset.kind = opticsKind;
-  $$("#o-kind button").forEach((b) => b.setAttribute("aria-checked", b.dataset.kind === opticsKind));
+  $$("#o-kind button").forEach((b) => b.setAttribute("aria-selected", b.dataset.kind === opticsKind));
 }
 
 // righe delle lenti addizionali (nome + diottrie)
@@ -1116,6 +1139,39 @@ function measuredMag(o) {
   return o.pixel_size_um > 0 && o.sensor_pixel_um > 0 ? o.sensor_pixel_um / o.pixel_size_um : null;
 }
 
+// Adattatore: se la catena non torna con i µm per pixel misurati, accanto al campo compare il fattore ricavato
+// dalla misura («suggerito dalla misura: 1,62×»); cliccandolo si scrive nel campo, evidenziato, e il chip diventa
+// «↺ era X» per tornare indietro, come il Passo ricalcolato nella pila.
+let relayApplied = null;   // { value, before } dopo un clic sul suggerimento
+function relaySuggest(o, calc, limit) {
+  const input = $("o-relay"), chip = $("o-relay-suggest");
+  if (relayApplied && input.value !== relayApplied.value) relayApplied = null;   // modificato a mano
+  input.classList.toggle("auto-upd", !!relayApplied);
+  let txt = "", title = "";
+  if (relayApplied) {
+    txt = t("↺ era {v}", { v: relayApplied.before || t("vuoto") });
+    title = t("Ricavato dalla misura: clic per tornare al valore di prima");
+  } else {
+    const f = derivedRelay(o);
+    if (f && calc && o.pixel_size_um && Math.abs((o.pixel_size_um / calc - 1) * 100) > limit) {
+      txt = t("suggerito dalla misura: {f}×", { f: fmtNum(f, 3) });
+      title = t("Il fattore che fa coincidere obiettivo × cambio intermedio × adattatore con i µm per pixel misurati: clic per usarlo");
+    }
+  }
+  chip.classList.toggle("hidden", !txt);
+  if (chip.textContent !== txt) chip.textContent = txt;   // solo se cambia (Safari perde il clic)
+  chip.title = title;
+  chip.onclick = () => {
+    if (relayApplied) { input.value = relayApplied.before; relayApplied = null; updateOptics(); return; }
+    const f = derivedRelay(opticsForm());
+    if (!f) return;
+    relayApplied = { value: String(f), before: input.value };
+    input.value = f;
+    updateOptics();
+    toast(t("Adattatore a {f}×: salva il profilo per tenerlo", { f: fmtNum(f, 3) }));
+  };
+}
+
 // fattore dell'adattatore che fa tornare la catena (obiettivo × intermedio × adattatore) con la misura
 function derivedRelay(o) {
   const real = measuredMag(o), obj = o.objective_magnification;
@@ -1201,21 +1257,13 @@ function updateOptics() {
     // la catena non torna: propone il fattore dell'adattatore che la fa coincidere con la misura
     const relay = derivedRelay(o);
     if (relay && calc && Math.abs((o.pixel_size_um / calc - 1) * 100) > limit)
-      txt += `<span class="result-line"><button type="button" class="btn ghost small" id="o-derive">${t("Ricava il fattore dalla misura")}</button>`
-        + `<span class="muted">${t("l'adattatore diventa {f}×, così la catena coincide con la misura", { f: fmtNum(relay, 3) })}</span></span>`;
+      txt += `<span class="result-line muted">${t("Con un adattatore da {f}× la catena coincide con la misura: è suggerito accanto al campo «Adattatore».", { f: fmtNum(relay, 3) })}</span>`;
   }
   if (o.kind === "macro" && total && !o.pixel_size_um) txt += "<br>" + `<span class="hint">${t("Stima con lenti sottili: per misure esatte fotografa un righello o un micrometro e scrivi qui sotto i µm per pixel misurati.")}</span>`;
   // si riscrive solo se cambia: uscire dal campo (change) mentre si clicca «Ricava il fattore» non deve
   // sostituire il pulsante fra la pressione e il rilascio, altrimenti il clic va perso
   if (txt !== pxResultHtml) { $("o-pxresult").innerHTML = txt; pxResultHtml = txt; }
-  const derive = $("o-derive");
-  if (derive) derive.onclick = () => {
-    const f = derivedRelay(opticsForm());
-    if (!f) return;
-    $("o-relay").value = f;
-    updateOptics();
-    toast(t("Adattatore a {f}×: salva il profilo per tenerlo", { f: fmtNum(f, 3) }));
-  };
+  relaySuggest(o, calc, limit);
   dof();
   const dirty = JSON.stringify(o) !== opticsSaved;
   setChip("o-chip", editingProfile || t("Nuovo profilo"), editingProfile ? (dirty ? "busy" : "ok") : "");
@@ -1575,18 +1623,39 @@ function renderLibrary() {
   $("k-match").innerHTML = t("Per la prossima pila, con le impostazioni attuali: {txt}", { txt: matchText(calibView.match) });
   renderCalibSummary(calibView.match);
   const tbody = $("k-table").querySelector("tbody");
+  const heads = [...$("k-table").querySelectorAll("thead th")].map((th) => th.textContent);
+  // selezione per «Elimina selezionati»: resta fra un aggiornamento e l'altro, senza i set che non ci sono più
+  const names = new Set(calibView.sets.map((s) => s.name));
+  for (const n of [...libSel]) if (!names.has(n)) libSel.delete(n);
+  // colonne che possono andare a capo: Tipo, Fotocamera, Tempo (posa B), Profilo ottico
+  const WRAP_COLS = { 0: "wrap short", 2: "wrap", 4: "wrap short", 5: "wrap" };
   const rows = calibView.sets.map((s) => {
     const lv = s.mean_level_pct ? Math.max(...Object.values(s.mean_level_pct)) : null;
     const temp = s.temperature_c ? `${fmtNum(s.temperature_c.mean, 1)} °C` : "—";
     const state = s.state === "completed" ? "" : ` (${s.state === "interrupted" ? t("interrotto") : s.state === "running" ? t("in corso") : t("errore")})`;
-    const cells = [CALIB_LABELS()[s.type] + state, shortDate(s.created), s.camera.model || "—", s.camera.iso || "—",
+    const cells = [CALIB_LABELS()[s.type] + state, shortDate(s.created), (s.camera.model || "—").replace(/\s*\(PC Control\)$/i, ""), s.camera.iso || "—",
       s.bulb_s ? t("posa B {s} s", { s: fmtNum(s.bulb_s, 1) }) : s.camera.shutterspeed || "—",
       s.type === "flat" ? (s.optics_profile || t("nessuno")) : "—", s.frames, lv == null ? "—" : `${fmtNum(lv, 1)} %`, temp];
     const del = `<td><button class="btn ghost small" data-del="${escapeHtml(s.name)}" data-frames="${s.frames}" title="${escapeHtml(t("Sposta nel Cestino la cartella di questo set"))}">${escapeHtml(t("Elimina"))}</button></td>`;
-    return `<tr title="${escapeHtml(s.path)}">${cells.map((v) => `<td>${escapeHtml(String(v))}</td>`).join("")}${del}</tr>`;
+    // data-label: nelle finestre strette ogni riga diventa una scheda con le etichette delle colonne (style.css)
+    const td = (v, i) => `<td${WRAP_COLS[i] ? ` class="${WRAP_COLS[i]}"` : ""} data-label="${escapeHtml(heads[i] || "")}">${i ? escapeHtml(String(v))
+      : `<label class="lib-sel"><input type="checkbox" data-sel="${escapeHtml(s.name)}"${libSel.has(s.name) ? " checked" : ""} aria-label="${escapeHtml(t("Seleziona"))}"><span>${escapeHtml(String(v))}</span></label>`}</td>`;
+    return `<tr title="${escapeHtml(s.path)}">${cells.map(td).join("")}${del}</tr>`;
   });
   tbody.innerHTML = rows.length ? rows.join("")
     : `<tr class="empty"><td colspan="10">${escapeHtml(t("Nessun set di calibrazione: scatta dark e flat con la card qui sopra"))}</td></tr>`;
+  updateLibSel();
+}
+
+const libSel = new Set();   // nomi dei set selezionati nella libreria
+function updateLibSel() {
+  const n = libSel.size, all = calibView ? calibView.sets.length : 0, btn = $("k-del-sel");
+  btn.classList.toggle("hidden", !n);
+  btn.textContent = t("Elimina selezionati ({n})", { n });
+  const head = $("k-sel-all");
+  head.checked = n > 0 && n === all;
+  head.indeterminate = n > 0 && n < all;
+  head.disabled = !all;
 }
 
 function renderCalibration(c, run) {
@@ -1628,7 +1697,7 @@ function renderCalibration(c, run) {
   $("k-info").innerHTML = info;
   $("k-start").disabled = busy || run || !c.connected || !k.tool || (calibKind === "flat_dark" && !flat);
   $("k-stop").disabled = !busy || !mine;
-  $$("#k-kind button, #k-count, #k-target, #k-table button[data-del]").forEach((el) => (el.disabled = busy || run));
+  $$("#k-kind button, #k-count, #k-target, #k-table button[data-del], #k-table input[data-sel], #k-sel-all, #k-del-sel").forEach((el) => (el.disabled = busy || run));
   const total = mine ? k.total : num("k-count") || 0;
   $("k-count-label").textContent = `${mine ? k.index : 0} / ${total}`;
   $("k-bar").style.width = `${mine && k.total ? (k.index / k.total) * 100 : 0}%`;
@@ -1649,6 +1718,12 @@ function bindCalibration() {
   $("x-stop").onclick = (e) => act(e.target, () => api("/api/calibration/stop"));
   $("x-start").onclick = (e) => act(e.target, () => api("/api/exposure/auto", { target_pct: num("x-target") || 85, stat: $("x-stat").value }));
   $("k-open").onclick = (e) => act(e.target, () => api("/api/calibration/open"));
+  $("log-q").oninput = renderLog;
+  $("log-level").onchange = renderLog;
+  $("log-export").onclick = (e) => act(e.target, async () => {
+    const r = await api("/api/log/export");
+    toast(t("Registro salvato in Download: {name}. Allegalo alla segnalazione.", { name: r.name }));
+  });
   // Elimina (delega: le righe della tabella si ricreano a ogni aggiornamento della libreria)
   $("k-table").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-del]");
@@ -1657,6 +1732,33 @@ function bindCalibration() {
     if (!window.confirm(t("Spostare nel Cestino il set «{name}» ({n} fotogrammi)? Le pile che lo indicano nel loro sequence.json non lo troveranno più.", { name, n: b.dataset.frames }))) return;
     act(b, async () => { calibView = await api("/api/calibration/delete", { name }); renderLibrary(); updateSummary(); }, t("Set spostato nel Cestino"));
   });
+  // selezione multipla: casella in testa = tutti / nessuno
+  $("k-table").addEventListener("change", (e) => {
+    const box = e.target.closest("input[data-sel]");
+    if (!box) return;
+    if (box.checked) libSel.add(box.dataset.sel); else libSel.delete(box.dataset.sel);
+    updateLibSel();
+  });
+  $("k-sel-all").onchange = (e) => {
+    libSel.clear();
+    if (e.target.checked && calibView) calibView.sets.forEach((s) => libSel.add(s.name));
+    $$("#k-table input[data-sel]").forEach((b) => (b.checked = libSel.has(b.dataset.sel)));
+    updateLibSel();
+  };
+  // eliminazione multipla: bisogna scrivere ELIMINA (nella lingua dell'app) per confermare
+  $("k-del-sel").onclick = (e) => {
+    const sets = (calibView ? calibView.sets : []).filter((s) => libSel.has(s.name));
+    if (!sets.length) return;
+    const word = t("ELIMINA");
+    const frames = sets.reduce((a, s) => a + (s.frames || 0), 0);
+    const typed = window.prompt(t("Spostare nel Cestino {n} set di calibrazione ({f} fotogrammi)? Le pile che li indicano nel loro sequence.json non li troveranno più.\n\nPer confermare scrivi {word}", { n: sets.length, f: frames, word }), "");
+    if (typed == null) return;
+    if (typed.trim().toUpperCase() !== word.toUpperCase()) { toast(t("Non hai scritto {word}: nessun set eliminato", { word })); return; }
+    act(e.target, async () => {
+      calibView = await api("/api/calibration/delete-many", { names: sets.map((s) => s.name) });
+      libSel.clear(); renderLibrary(); updateSummary();
+    }, t("{n} set spostati nel Cestino", { n: sets.length }));
+  };
   $("k-count").addEventListener("input", () => S && renderCalibration(S.camera, running()));
 }
 
@@ -1971,6 +2073,10 @@ function bind() {
     S.settings = await api("/api/settings", { hold_chunk_steps: Math.round(Number(e.target.value)) });
     render();
   }, t("Tratto aggiornato"));
+  $("opt-coil-hold").onchange = (e) => act(null, async () => {
+    S.settings = await api("/api/settings", { coil_hold_after_disconnect: e.target.checked });
+    render();
+  });
   $("opt-coil-seq").onchange = (e) => act(null, async () => {
     S.settings = await api("/api/settings", { coil_during_sequence: e.target.checked });
     render();

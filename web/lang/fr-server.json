@@ -295,10 +295,10 @@
   "Il pacchetto scaricato non ha la firma dello sviluppatore di Focus Stack": "Le paquet téléchargé n'est pas signé par le développeur de Focus Stack",
   "ISO {v}: questa fotocamera arriva al massimo a {top}.": "ISO {v} : cet appareil va au maximum jusqu'à {top}.",
   "Live view non spento: {exc}": "Visée en direct non désactivée : {exc}",
- "dalla catena {m}×": "d'après la chaîne optique {m}×",
- "Esiste già un profilo «{name}»": "Un profil «{name}» existe déjà",
- "Profilo ottico rinominato: «{old}» → «{new}»": "Profil optique renommé : «{old}» → «{new}»",
- "({n} set di calibrazione aggiornati)": "({n} séries de calibration mises à jour)",
+  "dalla catena {m}×": "d'après la chaîne optique {m}×",
+  "Esiste già un profilo «{name}»": "Un profil «{name}» existe déjà",
+  "Profilo ottico rinominato: «{old}» → «{new}»": "Profil optique renommé : «{old}» → «{new}»",
+  "({n} set di calibrazione aggiornati)": "({n} séries de calibration mises à jour)",
   "Autofocus già in corso": "Autofocus déjà en cours",
   "Autofocus…": "Autofocus…",
   "Movimento manuale rilevato ({actual} invece di {pos}): autofocus fermato": "Mouvement manuel détecté ({actual} au lieu de {pos}) : autofocus arrêté",
@@ -346,5 +346,8 @@
   "Conferma: fuoco a {pos} (col live view era {live})": "Confirmation : mise au point à {pos} (la visée en direct donnait {live})",
   "Modo non valido": "Mode non valide",
   "Escursione massima": "Excursion maximale",
-  "Scatti di conferma": "Prises de confirmation"
+  "Scatti di conferma": "Prises de confirmation",
+  "{n} set di calibrazione spostati nel Cestino: {names}": "{n} jeux de calibration placés dans la corbeille : {names}",
+  "lingua": "langue",
+  "non connesso": "non connecté"
 }

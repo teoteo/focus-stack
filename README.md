@@ -383,7 +383,8 @@ notes in the files) for the DRV8825 board, with: buttons, temperature probe, fli
 OLED display (Position, Target, Temp); buttons with continuous movement at increasing speed
 (`PB_SPEED*` in `focuserconfig.h`); acceleration and deceleration ramps for commanded moves (`MOVE_*`);
 command `:97#` returning the build number (`fsbuild.h`) and `:98#` returning the board
-(0 = myFocuserPro2, 1 = Ardufocus).
+(0 = myFocuserPro2, 1 = Ardufocus); `:99#` (build 8) switching the coils off while the motor is idle without
+changing the saved coil-power setting (the app sends it when disconnecting or quitting).
 
 **Ardufocus board:** with `ARDUFOCUSPCB` (a line in `focuserconfig.h`, or `-DARDUFOCUSPCB` as
 `build_release.sh` does for `firmware-ardufocus.hex`) the same firmware uses the wiring of the
