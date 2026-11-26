@@ -583,7 +583,7 @@ la lumière manque, restez à 400 et éclaircissez ensuite. Les ISO de 160 à 32
 temps plus longs : mieux vaut les éviter. Au-delà de 3200, l'appareil filtre déjà le bruit dans le RAW, et ces valeurs
 sont marquées comme pas fiables.</p>
 <p>Le résultat est enregistré comme <b>profil du capteur</b> de l'appareil, dans <code>_calibrazione/_sensore</code>. Le
-récapitulatif de la Calibration et celui de la séquence montrent la plage dynamique attendue à l'ISO réglé, avec le point
+récapitulatif de la Calibration et celui de la séquence (une fois ses détails ouverts) montrent la plage dynamique attendue à l'ISO réglé, avec le point
 sur le graphique ; chaque pile écrit dans son <code>sequence.json</code> les valeurs de son ISO (<code>"sensor"</code>),
 que Focus Fusion peut utiliser. Les images de l'analyse sont dans le même dossier, hors de la bibliothèque des jeux, et ne
 sont jamais choisies pour une pile. Refaites l'analyse si vous changez d'appareil ou en mettez à jour le firmware.</p>

@@ -980,5 +980,6 @@
  "la gamma più ampia, se la luce permette tempi {k}× più lunghi che a ISO {iso}": "la plage la plus large, si la lumière permet des temps {k}× plus longs qu'à ISO {iso}",
  "oltre {iso}": "au-delà de {iso}",
  "Consigliati: ISO {list}": "Conseillés : ISO {list}",
- "stop": "IL"
+ "stop": "IL",
+ "Profilo ottico, calibrazione e sensore": "Profil optique, calibration et capteur"
 }

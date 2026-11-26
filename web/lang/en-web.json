@@ -980,5 +980,6 @@
  "la gamma più ampia, se la luce permette tempi {k}× più lunghi che a ISO {iso}": "the widest range, if the light allows exposures {k}× longer than at ISO {iso}",
  "oltre {iso}": "above {iso}",
  "Consigliati: ISO {list}": "Recommended: ISO {list}",
- "stop": "stops"
+ "stop": "stops",
+ "Profilo ottico, calibrazione e sensore": "Optics profile, calibration and sensor"
 }

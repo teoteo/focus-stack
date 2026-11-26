@@ -563,7 +563,7 @@ cuatro veces más cortos. Por encima el ruido ya no baja y cada vez que se dupli
 conviene quedarse en 400 y aclarar después. Los ISO de 160 a 320 dan menos rango que ISO 400 con tiempos más largos: mejor
 evitarlos. Por encima de 3200 la cámara ya filtra el ruido en el RAW, y esos valores se marcan como no fiables.</p>
 <p>El resultado se guarda como <b>perfil del sensor</b> de la cámara, en <code>_calibrazione/_sensore</code>. El resumen de
-la Calibración y el de la secuencia muestran el rango dinámico esperado al ISO ajustado, con el punto en el gráfico; cada
+la Calibración y el de la secuencia (al abrir sus detalles) muestran el rango dinámico esperado al ISO ajustado, con el punto en el gráfico; cada
 pila escribe en su <code>sequence.json</code> los valores de su ISO (<code>"sensor"</code>), que Focus Fusion puede usar.
 Los fotogramas del análisis están en la misma carpeta, fuera de la biblioteca de conjuntos, y nunca se eligen para una
 pila. Repite el análisis si cambias de cámara o actualizas su firmware.</p>

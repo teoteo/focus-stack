@@ -663,7 +663,7 @@ label.set-row { cursor: pointer; }
 .sn-table tr.dim td { color: var(--text-2); }
 .sn-mini { width: 100%; height: auto; display: block; margin-top: 4px; }
 /* riepilogo della sequenza (Sessione): gamma dinamica attesa all'ISO impostato */
-.sum-dr { display: flex; align-items: center; gap: 12px; padding: 2px 0 10px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
-.sum-dr .sn-mini { width: 170px; flex: none; margin: 0; }
-.sum-dr b { font-size: 17px; }
+.sum-dr { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); }
+.sum-dr .sn-mini { width: 150px; flex: none; margin: 0; }
+.sum-dr b { color: var(--text); }
 .sum-dr .muted { color: var(--text-2); font-size: 13px; }

@@ -745,7 +745,7 @@ exposures four times shorter. Above that, noise no longer falls and every doubli
 short, stay at 400 and brighten later. ISO 160 to 320 give less range than ISO 400 with longer exposures: best avoided.
 Above 3200 the camera already filters noise in the RAW, and those values are marked as not reliable.</p>
 <p>The result is saved as the camera's <b>sensor profile</b>, in <code>_calibrazione/_sensore</code>. The Calibration
-summary and the sequence summary show the expected dynamic range at the current ISO, with the point on the chart; every
+summary and the sequence summary (once its details are opened) show the expected dynamic range at the current ISO, with the point on the chart; every
 stack writes the values for its ISO into its <code>sequence.json</code> (<code>"sensor"</code>), which Focus Fusion can use.
 The analysis frames live in the same folder, outside the library of sets, and are never chosen for a stack. Redo the
 analysis if you change camera or update its firmware.</p>

@@ -577,7 +577,7 @@ Verdopplung des ISO kostet eine Blendenstufe: Fehlt Licht, bleiben Sie bei 400 u
 geben weniger Umfang als ISO 400 bei längeren Zeiten: besser vermeiden. Über 3200 filtert die Kamera das Rauschen schon im
 RAW, und diese Werte sind als nicht verlässlich markiert.</p>
 <p>Das Ergebnis wird als <b>Sensorprofil</b> der Kamera in <code>_calibrazione/_sensore</code> gespeichert. Die Übersicht der
-Kalibrierung und die der Serie zeigen den erwarteten Dynamikumfang beim eingestellten ISO, mit dem Punkt im Diagramm;
+Kalibrierung und die der Serie (wenn man ihre Details öffnet) zeigen den erwarteten Dynamikumfang beim eingestellten ISO, mit dem Punkt im Diagramm;
 jeder Stapel schreibt die Werte seines ISO in seine <code>sequence.json</code> (<code>"sensor"</code>), die Focus Fusion
 nutzen kann. Die Bilder der Analyse liegen im selben Ordner, außerhalb der Bibliothek der Sätze, und werden nie für einen
 Stapel gewählt. Wiederholen Sie die Analyse, wenn Sie die Kamera wechseln oder ihre Firmware aktualisieren.</p>

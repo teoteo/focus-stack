@@ -555,7 +555,7 @@ quattro volte più brevi. Da lì in su il rumore non scende più e ogni raddoppi
 conviene restare a 400 e schiarire dopo. Gli ISO da 160 a 320 danno meno gamma di ISO 400 con tempi più lunghi: meglio
 evitarli. Oltre 3200 la fotocamera filtra il rumore già nel RAW, e quei valori sono segnati come non affidabili.</p>
 <p>Il risultato si salva come <b>profilo del sensore</b> della fotocamera, in <code>_calibrazione/_sensore</code>. Il riepilogo
-della Calibrazione e quello della sequenza mostrano la gamma dinamica attesa all'ISO impostato, con il punto sul grafico;
+della Calibrazione e quello della sequenza (aprendone i dettagli) mostrano la gamma dinamica attesa all'ISO impostato, con il punto sul grafico;
 ogni pila scrive nel suo <code>sequence.json</code> i valori del suo ISO (<code>"sensor"</code>), che Focus Fusion può usare.
 I fotogrammi dell'analisi stanno nella stessa cartella, fuori dalla libreria dei set, e non vengono mai scelti per una
 pila. Rifai l'analisi se cambi fotocamera o ne aggiorni il firmware.</p>

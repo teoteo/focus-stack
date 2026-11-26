@@ -761,7 +761,8 @@ function updateSummary() {
   // profilo ottico e calibrazione: a richiesta (si apre con un clic sul riepilogo; resta aperto fra un aggiornamento e l'altro)
   let more = `<span class="optics-line">${opticsSummary()}</span>`;
   if (p.capture_mode === "download") more += `<span class="optics-line">${calibrationSummary()}</span>`;
-  html = `<details id="s-sum-more"${summaryOpen ? " open" : ""}><summary title="${t("Profilo ottico e calibrazione")}">${html}</summary>${more}</details>`;
+  more += sensorSummaryRow();   // gamma dinamica attesa all'ISO impostato: solo nei dettagli, per non appesantire il riepilogo
+  html = `<details id="s-sum-more"${summaryOpen ? " open" : ""}><summary title="${t("Profilo ottico, calibrazione e sensore")}">${html}</summary>${more}</details>`;
   // controllo fine corsa lato interfaccia (il server ricontrolla comunque)
   const [lo, hi] = S.focuser.connected ? S.focuser.bounds : [S.settings.limit_min, S.settings.limit_max];
   const dir = p.end >= p.start ? 1 : -1;
@@ -772,7 +773,6 @@ function updateSummary() {
     ? t("⚠ La sequenza (con la compensazione del gioco) esce dai fine corsa {lo} – {hi}", lim)
     : t("⚠ La sequenza esce dai fine corsa {lo} – {hi}", lim)}</span>`;
   if (p.capture_mode === "trigger") html += `<span class="warn-text">${t("In modalità trigger imposta la destinazione su scheda.")}</span>`;
-  html = sensorSummaryRow() + html;
   $("s-summary").innerHTML = html;
   // sequenza ferma e mai avviata: il contatore segue i campi (prima si aggiornava solo all'arrivo dello stato)
   const q = S.sequence || {};
@@ -871,7 +871,7 @@ function sensorSummaryRow() {
   const prof = S && S.sensor_profile, iso = currentIso(), e = sensorEntry(prof, iso);
   if (!prof || !e) return "";
   const chart = sensorChart(prof.iso.filter((r) => r.iso <= (prof.recommended || {}).reliable_up_to_iso * 2 || r.reliable),
-    "dynamic_range_stops", { w: 170, h: 78, l: 6, t: 6, b: 18, min: Math.floor(Math.min(...prof.iso.filter((r) => r.reliable).map((r) => r.dynamic_range_stops)) - 0.5), max: Math.ceil(Math.max(...prof.iso.map((r) => r.dynamic_range_stops)) + 0.3), step: 1, sel: e.iso, reco: [(prof.recommended || {}).max_dynamic_range_iso, (prof.recommended || {}).low_noise_iso], mini: true, cls: "sn-mini", unit: t("stop") });
+    "dynamic_range_stops", { w: 150, h: 70, l: 6, t: 6, b: 18, min: Math.floor(Math.min(...prof.iso.filter((r) => r.reliable).map((r) => r.dynamic_range_stops)) - 0.5), max: Math.ceil(Math.max(...prof.iso.map((r) => r.dynamic_range_stops)) + 0.3), step: 1, sel: e.iso, reco: [(prof.recommended || {}).max_dynamic_range_iso, (prof.recommended || {}).low_noise_iso], mini: true, cls: "sn-mini", unit: t("stop") });
   const tip = sensorTip(prof, e);
   return `<div class="sum-dr">${chart}<div><b>${t("{dr} stop", { dr: fmtNum(e.dynamic_range_stops, 1) })}</b> ` +
     `<span class="muted">${t("di gamma dinamica attesa a ISO {iso}", { iso: e.iso })}</span><br>` +
