@@ -426,15 +426,19 @@ function renderSequence(f, c, q, run) {
   $("s-coil-warn").classList.toggle("hidden",
     !(f.connected && f.motor && f.motor.coil_power === false && S.settings.coil_during_sequence === false));
   $$("[data-mark]").forEach((b) => (b.disabled = !f.connected || run));
-  $("s-finder").disabled = !q.folder || run;
+  $("s-finder").classList.toggle("hidden", !q.folder || run);
   $$("#card-seq input, #card-seq select").forEach((el) => (el.disabled = run));
 
   const root = S.settings.output_root || "";
   const home = root.match(/^\/Users\/[^/]+/);
   const pretty = home ? "~" + root.slice(home[0].length) : root;
+  // cartella della prossima pila (ogni pila ne ha una nuova, anche con lo stesso nome)
   // il carattere \u200e mantiene corretto l'ordine dei caratteri con direction: rtl
-  $("s-root-label").textContent = "\u200e" + pretty + "\u200e";
-  $("s-root-label").title = root;
+  const nextName = (($("s-name").value.trim() || "stack").replace(/[^\p{L}\p{N}_-]/gu, "_"));
+  const sub = t("{name}_data-ora", { name: nextName });
+  const rootTxt = "\u200e" + pretty + "/" + sub + "\u200e";
+  if ($("s-root-label").textContent !== rootTxt) $("s-root-label").textContent = rootTxt;
+  $("s-root-label").title = t("Salva in {path}: ogni pila ha una cartella nuova, anche con lo stesso nome", { path: root + "/" + sub });
   $("s-folder").classList.toggle("inactive", $("s-mode").value !== "download");
   $("s-root-choose").disabled = run;
 
@@ -447,16 +451,12 @@ function renderSequence(f, c, q, run) {
   if (q.message) txt += (txt ? " · " : "") + q.message;
   if (q.folder && !run) txt += (txt ? " · " : "") + q.folder;
   $("s-progress").textContent = txt;
+  $("s-progress").classList.toggle("hidden", !txt);
 
   // nome della pila: dopo una pila finita (completata, interrotta o con errore) si prepara la successiva
   const finished = !run && (q.state !== "idle" || q.total > 0);
   $("s-new").classList.toggle("hidden", !finished);
   $("s-new").disabled = run;
-  const safeName = (($("s-name").value.trim() || "stack").replace(/[^\p{L}\p{N}_-]/gu, "_"));
-  const last = q.folder ? q.folder.split("/").pop() : "";
-  $("s-name-hint").textContent = finished && last
-    ? t("Ultima pila: {folder}. Con «Nuova pila» la prossima va in una cartella nuova, anche con lo stesso nome.", { folder: last })
-    : t("Cartella: {name}_data-ora", { name: safeName });
 }
 
 function renderLastShot() {

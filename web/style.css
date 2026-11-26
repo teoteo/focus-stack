@@ -669,3 +669,16 @@ label.set-row { cursor: pointer; }
 .sum-dr .muted { color: var(--text-2); font-size: 13px; }
 /* riepilogo della sequenza: pulsante che allinea il diaframma della fotocamera al profilo */
 .summary .sum-fix { margin: 6px 0 2px; padding: 3px 10px; font-size: 13px; display: inline-block; }
+/* sequenza compatta: cartella sotto il nome della pila, contatore e barra su una riga */
+.stack-name .folder-line { display: flex; align-items: center; gap: 8px; margin-top: 8px; min-width: 0; }
+.stack-name .folder-line .folder-icon { font-size: 16px; }
+.stack-name .folder-line .folder-path { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 500; color: var(--text-2); }
+.stack-name .folder-line .btn { min-height: 0; }
+.stack-name .folder-line.inactive .folder-path { opacity: .55; }
+.progress-box.compact { padding: 10px 14px; }
+.progress-box.compact .progress-head { align-items: center; gap: 12px; }
+.progress-box.compact .progress-count { font-size: 20px; flex: none; }
+.progress-box.compact .progress { flex: 1; margin-top: 0; }
+.progress-box.compact .progress-eta { flex: none; font-size: 14px; }
+.progress-box.compact .progress-eta:empty { display: none; }
+.progress-box.compact .progress-text { margin-top: 6px; min-height: 0; }

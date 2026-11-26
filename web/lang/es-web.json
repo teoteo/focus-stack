@@ -989,5 +989,7 @@
  "Imposta {f}": "Ajustar {f}",
  "{k} diversi dagli altri": "{k} distintos de los demás",
  "Fotogrammi {list} molto diversi dagli altri del set: conviene rifarlo": "Fotogramas {list} muy distintos del resto del conjunto: conviene repetirlo",
- "livello {v} % contro {ref} %": "nivel {v} % frente a {ref} %"
+ "livello {v} % contro {ref} %": "nivel {v} % frente a {ref} %",
+ "{name}_data-ora": "{name}_fecha-hora",
+ "Salva in {path}: ogni pila ha una cartella nuova, anche con lo stesso nome": "Guarda en {path}: cada pila tiene una carpeta nueva, incluso con el mismo nombre"
 }

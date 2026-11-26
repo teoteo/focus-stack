@@ -126,7 +126,12 @@
         <input type="text" id="s-name" autocomplete="off" spellcheck="false" maxlength="80" placeholder="es. ape_occhio">
         <button class="btn primary small hidden" id="s-new" title="Prepara la pila successiva: la sequenza torna «Pronta» e puoi cambiare il nome. Le immagini già salvate non si toccano">＋ Nuova pila</button>
       </div>
-      <p class="hint" id="s-name-hint"></p>
+      <div class="folder-line" id="s-folder">
+        <span class="folder-icon" aria-hidden="true">📁</span>
+        <span class="folder-path" id="s-root-label">—</span>
+        <button class="btn ghost small" id="s-root-choose" title="Scegli la cartella con il Finder">Scegli…</button>
+        <button class="btn ghost small" id="s-open" title="Apri nel Finder">Apri</button>
+      </div>
     </div>
 
     <div class="fields two seq-grid">
@@ -136,9 +141,8 @@
       <label>Fine
         <span class="field-with-btn"><input type="number" id="s-end" min="0"><button class="btn ghost small" data-mark="end" title="Usa la posizione attuale"><span class="ico" aria-hidden="true">⌖</span> qui</button></span>
       </label>
-      <label class="third">Passo (passi motore)<input type="number" id="s-step" min="1"></label>
-      <label class="third">Numero di scatti<input type="number" id="s-count" min="2" title="Modifica per ricalcolare il passo"></label>
-      <label class="third">Attesa dopo il movimento (ms)<input type="number" id="s-settle" min="0" step="100" title="Dopo ogni movimento, prima dello scatto: lascia smorzare le vibrazioni (1–3 s al microscopio)"></label>
+      <label>Passo (passi motore)<input type="number" id="s-step" min="1"></label>
+      <label>Numero di scatti<input type="number" id="s-count" min="2" title="Modifica per ricalcolare il passo"></label>
       <label class="span-all">Ottica e filtro (profilo)
         <span class="field-with-btn"><select id="s-optics"><option value="">Nessun profilo (nessun filtro)</option></select><button class="btn ghost small" id="s-optics-edit" title="Crea o modifica i profili nel tab Ottica">Modifica</button></span>
       </label>
@@ -146,19 +150,11 @@
 
     <div class="summary" id="s-summary"></div>
 
-    <div class="folder-row" id="s-folder">
-      <span class="folder-icon" aria-hidden="true">📁</span>
-      <div class="folder-text">
-        <span class="label">Salva in</span>
-        <span class="folder-path" id="s-root-label">—</span>
-      </div>
-      <button class="btn ghost small" id="s-root-choose" title="Scegli la cartella con il Finder">Scegli…</button>
-      <button class="btn ghost small" id="s-open" title="Apri nel Finder">Apri</button>
-    </div>
 
     <details class="more" id="s-more">
       <summary>Tempi, gioco e scatti per posizione</summary>
       <div class="fields two">
+        <label>Attesa dopo il movimento (ms)<input type="number" id="s-settle" min="0" step="100" title="Dopo ogni movimento, prima dello scatto: lascia smorzare le vibrazioni (1–3 s al microscopio)"></label>
         <label>Scatti per posizione<input type="number" id="s-repeats" min="1" max="32" step="1" title="Più scatti nella stessa posizione: il software di fusione ne fa la media per ridurre il rumore"></label>
         <label>Pausa dopo lo scatto, per scheda e flash (ms)<input type="number" id="s-post" min="0" step="100" title="Dopo ogni scatto, prima del movimento successivo: tempo per scrivere sulla scheda e ricaricare il flash"></label>
         <label>Compensazione gioco (passi)<input type="number" id="s-backlash" min="0"></label>
@@ -180,22 +176,20 @@
       </div>
     </details>
 
-    <div class="progress-box">
+    <div class="progress-box compact">
       <div class="progress-head">
         <span class="progress-count" id="s-count-label">0 / 0</span>
+        <div class="progress"><div id="s-bar"></div></div>
         <span class="progress-eta" id="s-eta"></span>
+        <button class="btn ghost small hidden" id="s-finder" title="Apre la cartella della pila con le immagini e sequence.json">Apri</button>
       </div>
-      <div class="progress"><div id="s-bar"></div></div>
-      <div class="progress-text" id="s-progress"></div>
+      <div class="progress-text hidden" id="s-progress"></div>
     </div>
 
     <div class="seq-actions">
       <button class="btn primary big" id="s-start-btn">▶  Avvia sequenza</button>
       <button class="btn ghost big" id="s-pause-btn">❚❚  Pausa</button>
       <button class="btn danger big" id="s-stop-btn">■  Interrompi</button>
-    </div>
-    <div class="row">
-      <button class="btn ghost small" id="s-finder" title="Apre la cartella della pila con le immagini e sequence.json">Apri nel Finder</button>
     </div>
   </section>
 

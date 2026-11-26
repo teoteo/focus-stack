@@ -989,5 +989,7 @@
  "Imposta {f}": "Set {f}",
  "{k} diversi dagli altri": "{k} unlike the others",
  "Fotogrammi {list} molto diversi dagli altri del set: conviene rifarlo": "Frames {list} very unlike the rest of the set: better to redo it",
- "livello {v} % contro {ref} %": "level {v} % vs {ref} %"
+ "livello {v} % contro {ref} %": "level {v} % vs {ref} %",
+ "{name}_data-ora": "{name}_date-time",
+ "Salva in {path}: ogni pila ha una cartella nuova, anche con lo stesso nome": "Saves to {path}: every stack gets a new folder, even with the same name"
 }

@@ -989,5 +989,7 @@
  "Imposta {f}": "Régler {f}",
  "{k} diversi dagli altri": "{k} différents des autres",
  "Fotogrammi {list} molto diversi dagli altri del set: conviene rifarlo": "Images {list} très différentes du reste du lot : mieux vaut le refaire",
- "livello {v} % contro {ref} %": "niveau {v} % contre {ref} %"
+ "livello {v} % contro {ref} %": "niveau {v} % contre {ref} %",
+ "{name}_data-ora": "{name}_date-heure",
+ "Salva in {path}: ogni pila ha una cartella nuova, anche con lo stesso nome": "Enregistre dans {path} : chaque pile a un nouveau dossier, même avec le même nom"
 }
