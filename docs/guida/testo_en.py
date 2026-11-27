@@ -533,7 +533,7 @@ add(f"""
     f"<b>{ui('Inizio')}</b> and <b>{ui('Fine')}</b> in steps. <span class='ui'>⌖ {ui('qui')}</span> copies the current position.",
     "<b>Step</b> between one shot and the next, in motor steps (chapter 11).",
     f"<b>Number of shots</b>. If you change {ui('Inizio')}, {ui('Fine')} or Step, the number of shots is recalculated; if you change the number of shots, the step is recalculated. When the step changes on its own it turns orange and shows <span class='ui'>↺ was …</span>: one click undoes the change.",
-    f"<b>{ui('Ottica e filtro (profilo)')}</b>: the objective, filter and illumination profile to record in the stack's data (7.2). <span class='ui'>{ui('Modifica')}</span> opens it in the {ui('Ottica')} tab. Without a profile the stack is recorded as “no filter”. With a macro profile that states the aperture, choosing it also sets the camera's aperture; if the two later differ, the summary says so.",
+    "<b>Optics and filter (profile)</b>: the objective, filter and illumination profile to record in the stack's data (7.2). <span class='ui'>Edit</span> opens it in the Optics tab, which switches by itself to the profile chosen here (unless it has unsaved changes). Without a profile the stack is recorded as “no filter”. Choosing a profile also sets the stack step saved in it (with “↺ was …” to go back) and, with a macro profile that states the aperture, the camera's aperture; if aperture or step later differ, the summary says so.",
     "<b>Summary</b>: shots, travel in steps and in µm, step in µm and estimated duration. One click on the summary (▶ on the right) also shows the optics profile used and the calibration that will be linked to the stack. If the sequence goes beyond the limits a red warning appears and the sequence won't start.",
     "<b>Settle time after move</b>, in the collapsible section: time for vibrations to die down before the shot (1–3 s on a microscope).",
     f"<b>{ui('Scatti per posizione')}</b>: how many photos to take at each position (default 1). With several shots the fusion software can average them and reduce noise (7.4).",
@@ -793,7 +793,7 @@ fly) with zoom and pan, and the camera's live view.</p>
     f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>): shows every new shot automatically. Like the next two buttons it is an icon, highlighted when on; it is on when the viewer opens.",
     f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>): keeps zoom and position when you change shot, to compare focus at the same spot. On when the viewer opens.",
     "<b>Composition guides</b> (<kbd>G</kbd>): each click switches between thirds, a cross at the centre, thirds and centre, none. 1-pixel lines that follow zoom and panning; they also work in live view.",
-    f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>): histograms, burnt-out and black pixels, values under the pointer (see below). Open when the viewer opens.",
+    "<b>Inspector</b> (<kbd>I</kbd>): in-focus areas, zebra and false colour, histogram, waveform, values under the pointer, flipped or single-channel view (see below). Open when the viewer opens.",
     "<b>Full screen</b> (<kbd>F</kbd>).",
     "<b>?</b>: this guide, at the viewer chapter.",
     "<b>Thumbnails</b>: click to open a shot. <i>P</i> = test shot, <i>C</i> = calibration frame, <i>E</i> = exposure photo, <i>AF</i> = autofocus shots, numbers are the sequence shots. The strip shows only the current or last sequence: it empties when a sequence starts, and the first test shot taken afterwards starts a new one. The files stay in the folder.",
@@ -865,17 +865,24 @@ curve (below 80 %), the app says so in orange: usually the backlash of the mecha
 Increase it in <span class="ui">Configuration › Autofocus</span>; it starts from the sequence's backlash compensation,
 but at least one peak width.</div>
 <p>All the values are in <span class="ui">Configuration › Autofocus</span>, chapter 12.</p>
-<h2>{ui('Ispettore')}</h2>
-<p>The <span class="ui">{ui('Ispettore')}</span> panel (<kbd>I</kbd> key) checks the exposure of a photo with the same
-rules as Focus Fusion. It is read-only: it does not modify the photos. It also works on live view, updated every half
-second.</p>
+<h2>Inspector</h2>
+<p>The <span class="ui">Inspector</span> panel (<kbd>I</kbd> key) gathers focus and exposure aids like those of video monitors. It is read-only: it does not modify the photos. It also works on live view: with in-focus areas, zebra or waveform switched on it updates five times a second.</p>
 {fig("ispettore", [
-    "<b>" + ui("Bruciati e neri") + "</b> pixels: percentage and rules used. <span class='ui'>" + ui("Evidenzia sull'immagine") + "</span> marks burnt-out pixels in red and black ones in blue; the two buttons show or hide them separately.",
-    "<b>Histograms</b> of red, green, blue and luminance. With the pointer over a level you can read how many pixels it has.",
-    f"<b>{ui('Sotto il puntatore:').rstrip(':')}</b>: the R, G, B values and the luminance of the pixel under the mouse.",
+    "<b>Blocks</b> (button at the top right): which blocks to show and in what order (tick boxes and ↑ ↓ arrows; <span class='ui'>Restore</span> goes back to the start). A hidden block does not change the image.",
+    "<b>View</b>: flip horizontally or vertically (with both the image is rotated 180°), for example to see it as in the eyepiece; a single R, G or B channel, in grey. Only the view changes: the files stay as they are.",
+    "<b>Focus</b>: <span class='ui'>Highlight in-focus areas</span> colours the sharp edges (focus peaking), with a sensitivity from 1 to 15, five colours and the image underneath in colour, grey, dark or black. <span class='ui'>Only in the autofocus area</span> limits everything to the box chosen with the <kbd>A</kbd> key.",
+    "<b>Sharpness</b>: the same measure as autofocus, with a bar against the highest value seen and <span class='ui'>Reset</span>.",
 ], layout="full")}
-<p>With RAW photos the {ui('Ispettore')} works on the converted preview; for the exact sensor level use
-<span class="ui">{ui('Esposizione dei light')}</span> (7.6), which measures the real RAW files.</p>
+<p>On live view, turn the focus until the bar reaches 100 %: that is the sharpest point for that framing. The maximum restarts by itself when you change area, resolution or channel, or switch between live view and shots, because those values cannot be compared. With the <span class="ui">Dark</span> image, during the sequence you see the in-focus band move shot after shot: if it jumps between two shots, the step is too large.</p>
+<div class="box tip"><span class="t">One channel and chromatic aberration</span>With a single channel the in-focus areas and the sharpness use that channel too. Focus on R, then on B: the difference in position is the axial chromatic aberration of the objective. When the view is flipped or on one channel, a label at the top right of the image says so, even with the Inspector closed; a click on the label brings the normal image back.</div>
+{fig("ispettore-esposizione", [
+    "<b>Mark on the image</b>, three ways: <i>Marks</i> (burnt-out pixels in red and black ones in blue, at full resolution), <i>Zebra</i> and <i>False colour</i>. The table below gives the percentage of burnt-out and black pixels with each rule.",
+    "<b>Zebra</b>: white and black stripes where the highest channel reaches the threshold (<span class='ui'>Highlights from</span>); optionally light-blue stripes on the <span class='ui'>Midtones</span>, value ± tolerance. <span class='ui'>= median</span> centres them on the image median: with a flat, the areas without stripes are the unevenly lit ones.",
+    "<b>Histograms</b> of red, green, blue and luminance. With the pointer over a level you can read how many pixels it has.",
+    "<b>Waveform</b>: horizontally the position in the image, as shown; vertically the level from 0 to 100 %. Luminance, RGB overlaid or side by side. Uneven lighting shows as a tilted or curved ridge.",
+    "<b>Under the pointer</b>: the R, G, B values and the luminance of the pixel under the mouse.",
+], layout="full")}
+<p><i>False colour</i> gives each brightness band a colour (legend in the panel): purple for black, blue for deep shadows, green for midtones, yellow for highlights, orange for nearly burnt-out, red for burnt-out; the rest stays grey. Zebra, false colour and waveform use the 8-bit image on screen, after the camera's tone curve: with RAW photos that is the converted preview. For the exact sensor level use <span class="ui">Light exposure</span> (7.6), which measures the real RAW files.</p>
 """)
 
 # 9
@@ -1086,7 +1093,9 @@ the sensor (objective × intermediate changer × adapter) and the sensor pixel o
     "<b>Overlap</b> between one sharp layer and the next; 20–30% is a good value.",
     "<b>Result</b>: depth of field, recommended step in µm and in motor steps.",
     f"<b>{ui('Usa come passo della sequenza')}</b>: copies the value in steps into the sequence's Step field.",
-], layout="side narrow")}
+    "<b>Stack step</b> in the profile, in motor steps: <span class='ui'>Recommended</span> writes the step calculated above, <span class='ui'>From Session</span> the sequence's one. It is saved with the profile; empty = the profile does not change the step.",
+], layout="full", anchors={4: "b"})}
+<p>The right step depends on the aperture and the magnification, that is on the profile: once saved in the profile, choosing the profile in Session sets aperture and step together. A sequence preset keeps its own step instead.</p>
 <h2>11.1 The formula</h2>
 <p>The app uses Berek's formula, the most widely used in microscopy:</p>
 <div class="formula">depth of field (µm) = {frac("λ · n", "NA²")} + {frac("n · e", "M · NA")}

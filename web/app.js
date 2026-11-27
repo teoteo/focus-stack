@@ -1309,7 +1309,7 @@ function loadOptics(o) {
   set("o-objective", o.objective); set("d-mag", o.objective_magnification ?? o.magnification); set("d-na", o.na);
   set("o-inter-name", inter.name); set("o-inter", inter.factor); set("o-relay-name", relay.name); set("o-relay", relay.factor);
   $("o-immersion").value = o.immersion || "";
-  set("d-px", o.sensor_pixel_um); set("o-pxcal", o.pixel_size_um); set("d-ov", o.dof_overlap ?? 30);
+  set("d-px", o.sensor_pixel_um); set("o-pxcal", o.pixel_size_um); set("d-ov", o.dof_overlap ?? 30); set("o-seqstep", o.sequence_step);
   set("o-fname", f.name); $("o-ftype").value = f.type || "bandpass";
   set("o-fcenter", f.center_nm); set("o-fwidth", f.bandwidth_nm); set("o-fedge", f.edge_nm);
   set("o-illum", il.type); set("o-level", il.level_percent); set("o-cct", il.color_temp_k); set("o-notes", o.notes);
@@ -1349,7 +1349,8 @@ function opticsForm() {
     relay: { name: $("o-relay-name").value.trim(), factor: optNum("o-relay") },
     na: optNum("d-na"),
     immersion: $("o-immersion").value, sensor_pixel_um: optNum("d-px"), pixel_size_um: Number.isNaN(pxMeasured()) ? null : pxMeasured(),
-    dof_overlap: optNum("d-ov") ?? 30, filter_mode: filterMode,
+    dof_overlap: optNum("d-ov") ?? 30, sequence_step: optNum("o-seqstep") > 0 ? Math.round(optNum("o-seqstep")) : null,
+    filter_mode: filterMode,
     filter: { name: $("o-fname").value.trim(), type: $("o-ftype").value, center_nm: optNum("o-fcenter"),
       bandwidth_nm: optNum("o-fwidth"), edge_nm: optNum("o-fedge") },
     illumination: { type: $("o-illum").value.trim(), level_percent: optNum("o-level"), color_temp_k: optNum("o-cct") },
@@ -1457,7 +1458,11 @@ function opticsText(o) {
 function opticsSummary() {
   const name = $("s-optics").value, o = opticsProfiles()[name];
   if (!o) return t("Nessun profilo ottico: in sequence.json il filtro risulterà «nessuno»");
-  return t("Profilo «{name}»: {txt}", { name: escapeHtml(name), txt: escapeHtml(opticsText(o)) });
+  let html = t("Profilo «{name}»: {txt}", { name: escapeHtml(name), txt: escapeHtml(opticsText(o)) });
+  const n = profileStep(name);
+  if (n) html += " · " + (num("s-step") === n ? t("passo {n} come nel profilo", { n: fmtInt(n) })
+    : t("il profilo dice passo {n}, ora {m}", { n: fmtInt(n), m: fmtInt(num("s-step")) }));
+  return html;
 }
 // Diaframma del profilo macro e fotocamera: scegliendo il profilo nella Sessione il diaframma salvato passa alla
 // fotocamera (la scelta più vicina fra quelle che offre, entro 1/3 di stop); se poi i due divergono, il riepilogo lo dice.
@@ -1478,16 +1483,41 @@ function profileAperture(name) {
   info.same = !info.manual && Math.abs(Math.log2(fNum(s.current) / n)) < 0.05;
   return info;
 }
-async function applyProfileAperture(name) {
+// lead: messaggio da mettere davanti (il passo appena preso dal profilo), così un avviso non copre l'altro
+async function applyProfileAperture(name, lead = "") {
   const a = profileAperture(name), run = S && S.sequence && ["running", "paused", "stopping"].includes(S.sequence.state);
-  if (!a || !a.connected || a.same || run) return;
-  if (a.manual) { toast(t("Obiettivo senza contatti: imposta {f} sulla ghiera, come nel profilo", { f: a.label })); return; }
-  if (!a.choice) { toast(t("La fotocamera non offre {f} con l'obiettivo di ora: imposta il diaframma a mano", { f: a.label }), true); return; }
+  const say = (msg, err = false) => toast(lead ? `${lead} · ${msg}` : msg, err);
+  if (!a || !a.connected || a.same || run) { if (lead) toast(lead); return; }
+  if (a.manual) { say(t("Obiettivo senza contatti: imposta {f} sulla ghiera, come nel profilo", { f: a.label })); return; }
+  if (!a.choice) { say(t("La fotocamera non offre {f} con l'obiettivo di ora: imposta il diaframma a mano", { f: a.label }), true); return; }
   try {
     await api("/api/camera/settings", { name: "aperture", value: a.choice });
     camSettingsSig = "";
-    toast(t("Diaframma della fotocamera impostato a {f}, come nel profilo «{name}»", { f: a.choice, name }));
-  } catch (err) { toast(err.message || String(err), true); }
+    say(t("Diaframma della fotocamera impostato a {f}, come nel profilo «{name}»", { f: a.choice, name }));
+  } catch (err) { say(err.message || String(err), true); }
+}
+// Passo della pila salvato nel profilo (in passi del motore, legato a diaframma e ingrandimento): scegliendo il profilo
+// nella Sessione passa al campo Passo, con «↺ era X» per tornare indietro. Restituisce il messaggio per l'avviso.
+const profileStep = (name) => { const v = (opticsProfiles()[name] || {}).sequence_step; return v > 0 ? Math.round(v) : 0; };
+function applyProfileStep(name) {
+  const n = profileStep(name), run = S && S.sequence && ["running", "paused", "stopping"].includes(S.sequence.state);
+  if (!n || run || num("s-step") === n) return "";
+  linkBegin("s-optics"); linkEdit.closed = true;
+  $("s-step").value = n;
+  syncCount(); linkMark(); linkDone(); updateSummary();
+  return t("Passo della sequenza: {n} passi, come nel profilo", { n: fmtInt(n) });
+}
+// profilo scelto nella Sessione (menu o preset): passo e diaframma; l'editor di Ottica passa allo stesso profilo
+function applyProfile(name) {
+  const lead = applyProfileStep(name);
+  applyProfileAperture(name, lead);
+  followProfileInOptics(name);
+}
+function followProfileInOptics(name) {
+  if (name === editingProfile) return;
+  // modifiche non salvate in Ottica: non si buttano, l'editor resta dov'è (lo dice la barra delle modifiche)
+  if ($("o-dirty").textContent) return;
+  editProfile(name);
 }
 const escapeHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -1678,7 +1708,7 @@ function bindOptics() {
       updateSummary();
     }, t("Profilo eliminato"));
   };
-  $("s-optics").addEventListener("change", () => { updateSummary(); applyProfileAperture($("s-optics").value); });
+  $("s-optics").addEventListener("change", () => { updateSummary(); applyProfile($("s-optics").value); });
   $("s-optics-edit").onclick = () => {
     switchTab("optics");
     if (!$("o-dirty").textContent) editProfile($("s-optics").value);
@@ -2509,7 +2539,8 @@ function bind() {
     if (p.return_to_start !== undefined) $("s-return").checked = p.return_to_start;
     if (p.sound_on_end !== undefined) $("s-sound").checked = p.sound_on_end;
     linkClear(); syncCount(); updateSummary();
-    if (p.optics_profile) applyProfileAperture(p.optics_profile);
+    // il passo del preset vale più di quello del profilo: dal profilo solo diaframma ed editor di Ottica
+    if (p.optics_profile) { applyProfileAperture(p.optics_profile); followProfileInOptics(p.optics_profile); }
   };
   $("s-preset-save").onclick = () => {
     const name = (window.prompt(t("Nome del preset (es. obiettivo 10×)"), $("s-preset").value || "") || "").trim();
@@ -2614,6 +2645,13 @@ function bind() {
   bindOptics();
   bindCalibration();
   bindRemote();
+  // passo della pila nel profilo: il consigliato dalla profondità di campo o quello scritto ora nella Sessione
+  $("o-seqstep-dof").onclick = () => {
+    dof();
+    if (!dofLast || !dofLast.steps) return toast(umPerStep() ? $("d-result").textContent : t("Configura prima la meccanica (µm per passo)"), true);
+    $("o-seqstep").value = dofLast.steps; updateOptics();
+  };
+  $("o-seqstep-seq").onclick = () => { $("o-seqstep").value = Math.max(1, Math.round(num("s-step") || 1)); updateOptics(); };
   $("d-apply").onclick = () => {
     if (!umPerStep()) return toast(t("Configura prima la meccanica (µm per passo)"), true);
     const step = dof();

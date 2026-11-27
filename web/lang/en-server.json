@@ -376,5 +376,6 @@
   "Fotogramma {i}: livello {v} % contro {ref} % degli altri: la luce è cambiata?": "Frame {i}: level {v} % vs {ref} % for the others: has the light changed?",
   "Fotogramma {i} più chiaro degli altri ({v} % contro {ref} %): entra luce? Controlla tappo e mirino": "Frame {i} brighter than the others ({v} % vs {ref} %): is light getting in? Check the cap and viewfinder",
   "Area che segue il soggetto: riferimento a {pos}": "Area follows the subject: reference at {pos}",
-  "Soggetto perso a {pos}: l'area non si ritrova più nell'immagine (correlazione {c}). Scegli un dettaglio più riconoscibile, un'area più grande, oppure «Area fissa»": "Subject lost at {pos}: the area can no longer be found in the image (correlation {c}). Choose a more recognizable detail, a larger area, or “Fixed area”"
+  "Soggetto perso a {pos}: l'area non si ritrova più nell'immagine (correlazione {c}). Scegli un dettaglio più riconoscibile, un'area più grande, oppure «Area fissa»": "Subject lost at {pos}: the area can no longer be found in the image (correlation {c}). Choose a more recognizable detail, a larger area, or “Fixed area”",
+  "Passo della pila: un numero intero di passi maggiore di zero": "Stack step: a whole number of steps greater than zero"
 }

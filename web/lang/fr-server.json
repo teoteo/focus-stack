@@ -376,5 +376,6 @@
   "Fotogramma {i}: livello {v} % contro {ref} % degli altri: la luce è cambiata?": "Image {i} : niveau {v} % contre {ref} % pour les autres : la lumière a-t-elle changé ?",
   "Fotogramma {i} più chiaro degli altri ({v} % contro {ref} %): entra luce? Controlla tappo e mirino": "Image {i} plus claire que les autres ({v} % contre {ref} %) : de la lumière entre-t-elle ? Vérifiez le bouchon et le viseur",
   "Area che segue il soggetto: riferimento a {pos}": "Zone qui suit le sujet : référence à {pos}",
-  "Soggetto perso a {pos}: l'area non si ritrova più nell'immagine (correlazione {c}). Scegli un dettaglio più riconoscibile, un'area più grande, oppure «Area fissa»": "Sujet perdu à {pos} : la zone n'est plus retrouvée dans l'image (corrélation {c}). Choisissez un détail plus reconnaissable, une zone plus grande, ou « Zone fixe »"
+  "Soggetto perso a {pos}: l'area non si ritrova più nell'immagine (correlazione {c}). Scegli un dettaglio più riconoscibile, un'area più grande, oppure «Area fissa»": "Sujet perdu à {pos} : la zone n'est plus retrouvée dans l'image (corrélation {c}). Choisissez un détail plus reconnaissable, une zone plus grande, ou « Zone fixe »",
+  "Passo della pila: un numero intero di passi maggiore di zero": "Pas de la pile : un nombre entier de pas supérieur à zéro"
 }

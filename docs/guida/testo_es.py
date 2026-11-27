@@ -351,7 +351,7 @@ add(f"""
     f"<b>{ui('Inizio')}</b> y <b>{ui('Fine')}</b> en pasos. <span class='ui'>⌖ {ui('qui')}</span> copia la posición actual.",
     "<b>Paso</b> entre una foto y la siguiente, en pasos del motor (cap. 11).",
     f"<b>{ui('Numero di scatti')}</b>. Si cambias {ui('Inizio')}, {ui('Fine')} o Paso, se recalcula el número de fotos; si cambias el número de fotos, se recalcula el paso. Cuando el paso cambia solo, se vuelve naranja y muestra <span class='ui'>↺ era …</span>: un clic deshace el cambio.",
-    f"<b>{ui('Ottica e filtro (profilo)')}</b>: el perfil de objetivo, filtro e iluminación que se escribe en los datos de la pila (7.2). <span class='ui'>{ui('Modifica')}</span> lo abre en la pestaña {ui('Ottica')}. Sin perfil, la pila figura como «{ui('nessun filtro')}». Con un perfil macro que indica el diafragma, elegirlo ajusta también el diafragma de la cámara; si después no coinciden, el resumen lo avisa.",
+    "<b>Óptica y filtro (perfil)</b>: el perfil de objetivo, filtro e iluminación que se escribe en los datos de la pila (7.2). <span class='ui'>Editar</span> lo abre en la pestaña Óptica, que pasa sola al perfil elegido aquí (si no tiene cambios sin guardar). Sin perfil la pila queda como «sin filtro». Elegir un perfil fija también el paso de la pila guardado en él (con «↺ era …» para volver atrás) y, con un perfil macro que indica el diafragma, el diafragma de la cámara; si luego diafragma o paso no coinciden, el resumen lo indica.",
     "<b>Resumen</b>: fotos, recorrido en pasos y µm, paso en µm y duración estimada. Un clic en el resumen (▶ a la derecha) muestra también el perfil óptico usado y la calibración que se vinculará a la pila. Si la secuencia sale de los límites, aparece un aviso rojo y no se inicia.",
     "<b>Espera tras el movimiento</b>, en la sección plegable: deja que se amortigüen las vibraciones antes del disparo (1–3 s en el microscopio).",
     f"<b>{ui('Scatti per posizione')}</b>: cuántas fotos se toman en cada posición (por defecto 1). Con varias, el software de fusión puede promediarlas y reducir el ruido (7.4).",
@@ -611,7 +611,7 @@ al vuelo) con zoom y desplazamiento, y la vista en vivo de la cámara.</p>
     f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>): muestra automáticamente cada foto nueva. Como los dos botones siguientes es un icono, resaltado cuando está activo; al abrir el visor está activo.",
     f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>): al cambiar de foto mantiene el zoom y la posición, para comparar el enfoque en el mismo punto. Activo al abrir el visor.",
     "<b>Guías de composición</b> (<kbd>G</kbd>): cada clic alterna tercios, cruz en el centro, tercios y centro, ninguna. Líneas de 1 píxel que siguen el zoom y el desplazamiento; funcionan también en la vista en vivo.",
-    f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>): histogramas, píxeles quemados y negros, valores bajo el puntero (mira más abajo). Abierto al abrir el visor.",
+    "<b>Inspector</b> (<kbd>I</kbd>): zonas enfocadas, cebra y falso color, histograma, forma de onda, valores bajo el puntero, vista volteada o de un solo canal (mira más abajo). Abierto al abrir el visor.",
     "<b>Pantalla completa</b> (<kbd>F</kbd>).",
     "<b>?</b>: esta guía, en el capítulo del visor.",
     "<b>Miniaturas</b>: un clic abre la foto. <i>P</i> = foto de prueba, <i>C</i> = fotograma de calibración, <i>E</i> = foto para la exposición, <i>AF</i> = tomas del autoenfoque, los números son las fotos de la secuencia. La tira muestra solo la secuencia en curso o la última: se vacía al arrancar una secuencia, y la primera foto de prueba hecha después empieza una nueva. Los archivos se quedan en la carpeta.",
@@ -686,17 +686,24 @@ que el máximo de la curva (por debajo del 80 %), la app lo indica en naranja: n
 mayor que el sobrerrecorrido. Auméntalo en <span class="ui">Configuración › Autoenfoque</span>; al principio vale la
 compensación de holgura de la secuencia, pero al menos una anchura del pico.</div>
 <p>Todos los valores están en <span class="ui">Configuración › Autoenfoque</span>, capítulo 12.</p>
-<h2>{ui('Ispettore')}</h2>
-<p>El panel <span class="ui">{ui('Ispettore')}</span> (tecla <kbd>I</kbd>) comprueba la exposición de una foto con las
-mismas reglas que Focus Fusion. Es de solo lectura: no modifica las fotos. Funciona también sobre la vista en vivo,
-actualizado cada medio segundo.</p>
+<h2>Inspector</h2>
+<p>El panel <span class="ui">Inspector</span> (tecla <kbd>I</kbd>) reúne las ayudas para el enfoque y la exposición, como las de los monitores de vídeo. Es de solo lectura: no modifica las fotos. También funciona con la vista en vivo: con zonas enfocadas, cebra o forma de onda activadas se actualiza cinco veces por segundo.</p>
 {fig("ispettore", [
-    f'''<b>Píxeles quemados y negros</b>: porcentaje y reglas usadas. <span class='ui'>{ui("Evidenzia sull'immagine")}</span> marca en rojo los quemados y en azul los negros; los dos botones los muestran u ocultan por separado.''',
-    "<b>Histogramas</b> del rojo, el verde, el azul y la luminancia. Con el puntero sobre un nivel se lee cuántos píxeles hay.",
-    "<b>Bajo el puntero</b>: los valores R, G, B y la luminancia del píxel sobre el que está el ratón.",
+    "<b>Bloques</b> (botón arriba a la derecha): qué bloques mostrar y en qué orden (casillas y flechas ↑ ↓; <span class='ui'>Restablecer</span> vuelve al inicio). Un bloque oculto no cambia la imagen.",
+    "<b>Vista</b>: voltear en horizontal o en vertical (con ambos la imagen queda girada 180°), por ejemplo para verla como en el ocular; un solo canal R, G o B, en gris. Solo cambia la vista: los archivos quedan como están.",
+    "<b>Enfoque</b>: <span class='ui'>Resaltar las zonas enfocadas</span> colorea los bordes nítidos (focus peaking), con sensibilidad de 1 a 15, cinco colores y la imagen debajo en color, gris, oscura o negra. <span class='ui'>Solo en el área del autofocus</span> limita todo al recuadro elegido con la tecla <kbd>A</kbd>.",
+    "<b>Nitidez</b>: la misma medida que el autoenfoque, con una barra respecto al máximo visto y <span class='ui'>Reiniciar</span>.",
 ], layout="full")}
-<p>Con las fotos RAW el {ui('Ispettore')} trabaja sobre la previsualización convertida; para el nivel exacto del sensor usa
-<span class="ui">{ui('Esposizione dei light')}</span> (7.6), que mide los RAW reales.</p>
+<p>Con la vista en vivo, gira el enfoque hasta que la barra llegue al 100 %: es el punto más nítido para ese encuadre. El máximo vuelve a empezar solo cuando cambias de área, resolución o canal, o pasas de la vista en vivo a las tomas, porque esos valores no son comparables. Con la imagen <span class="ui">Oscura</span>, durante la secuencia se ve la franja enfocada avanzar toma tras toma: si salta entre dos tomas, el paso es demasiado grande.</p>
+<div class="box tip"><span class="t">Un solo canal y aberración cromática</span>Con un solo canal, también las zonas enfocadas y la nitidez usan ese canal. Enfoca en R y luego en B: la diferencia de posición es la aberración cromática axial del objetivo. Cuando la vista está volteada o en un solo canal, una etiqueta arriba a la derecha de la imagen lo dice, incluso con el Inspector cerrado; un clic en ella devuelve la imagen normal.</div>
+{fig("ispettore-esposizione", [
+    "<b>Marcar en la imagen</b>, de tres formas: <i>Marcas</i> (quemados en rojo y negros en azul, a resolución completa), <i>Cebra</i> y <i>Falso color</i>. La tabla de abajo da el porcentaje de píxeles quemados y negros con cada regla.",
+    "<b>Cebra</b>: rayas blancas y negras donde el canal más alto llega al umbral (<span class='ui'>Luces desde</span>); si se quiere, rayas celestes en los <span class='ui'>Tonos medios</span>, valor ± tolerancia. <span class='ui'>= mediana</span> los centra en la mediana de la imagen: con un flat, las zonas sin rayas son las iluminadas de otra forma.",
+    "<b>Histogramas</b> de rojo, verde, azul y luminancia. Con el puntero sobre un nivel se lee cuántos píxeles tiene.",
+    "<b>Forma de onda</b>: en horizontal la posición en la imagen, tal como se ve; en vertical el nivel de 0 a 100 %. Luminosidad, RGB superpuestos o en paralelo. Una luz no uniforme forma una cresta inclinada o curva.",
+    "<b>Bajo el puntero</b>: los valores R, G, B y la luminancia del píxel bajo el ratón.",
+], layout="full")}
+<p>El <i>Falso color</i> da un color a cada franja de luminosidad (leyenda en el panel): violeta el negro, azul las sombras profundas, verde los tonos medios, amarillo las luces, naranja las casi quemadas, rojo lo quemado; el resto queda gris. La cebra, el falso color y la forma de onda usan la imagen de 8 bits mostrada, tras la curva de la cámara: con las fotos RAW es la vista previa convertida. Para el nivel exacto del sensor usa <span class="ui">Exposición de los lights</span> (7.6), que mide los RAW reales.</p>
 """)
 
 # 9
@@ -911,7 +918,9 @@ un poco de solapamiento.</p>
     "<b>Solapamiento</b> entre una capa nítida y la siguiente; un 20–30% es un buen valor.",
     "<b>Resultado</b>: profundidad de campo, paso recomendado en µm y en pasos del motor.",
     f"<b>{ui('Usa come passo della sequenza')}</b>: copia el valor en pasos en el campo Paso de la secuencia.",
-], layout="side narrow")}
+    "<b>Paso de la pila</b> en el perfil, en pasos del motor: <span class='ui'>Recomendado</span> escribe el paso calculado arriba, <span class='ui'>Desde Sesión</span> el de la secuencia. Se guarda con el perfil; vacío = el perfil no cambia el paso.",
+], layout="full", anchors={4: "b"})}
+<p>El paso correcto depende del diafragma y del aumento, es decir del perfil: guardado en el perfil, elegir el perfil en Sesión fija a la vez diafragma y paso. Un preajuste de la secuencia, en cambio, conserva su propio paso.</p>
 <h2>11.1 La fórmula</h2>
 <p>La app usa la fórmula de Berek, la más empleada en microscopía:</p>
 <div class="formula">profundidad de campo (µm) = {frac("λ · n", "NA²")} + {frac("n · e", "M · NA")}

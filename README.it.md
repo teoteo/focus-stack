@@ -11,14 +11,17 @@ microscopio e una fotocamera **Sony / Nikon / Canon** via USB, eseguendo sequenz
 ![La scheda Sessione: focheggiatore, sequenza e fotocamera, con l'ultimo scatto](docs/img/session.jpg)
 *La scheda Sessione: a sinistra posizione e fine corsa del focheggiatore, al centro la sequenza con la cartella della pila, il riepilogo (▶ mostra profilo ottico e calibrazione) e l'avanzamento, a destra le impostazioni della fotocamera e l'ultimo scatto.*
 
-![Il visualizzatore con un fotogramma RAW della pila a piena risoluzione, il contatore della pila, l'Ispettore e la striscia dei fotogrammi](docs/img/viewer.jpg)
-*Il visualizzatore segue la pila scatto per scatto: avanzamento e dati dello scatto in alto, RAW a piena risoluzione, la striscia della pila in corso sotto, guide di composizione (terzi, centro o entrambi) e l'Ispettore con pixel bruciati e neri, istogramma e valori.*
+![Il visualizzatore con un fotogramma della pila: le zone a fuoco in rosso sull'immagine scurita, e l'Ispettore con i blocchi Vista e Fuoco](docs/img/viewer.jpg)
+*Il visualizzatore segue la pila scatto per scatto. L'Ispettore colora le zone a fuoco (focus peaking) e misura la nitidezza con la stessa misura dell'autofocus; può anche capovolgere la vista o mostrare un solo canale.*
+
+![Gli aiuti per l'esposizione dell'Ispettore: zebra sulle luci, istogramma, forma d'onda e valori sotto il puntatore](docs/img/inspector-exposure.jpg)
+*Aiuti per l'esposizione, come in un monitor da ripresa: zebra (luci e toni medi), falsi colori, istogramma e forma d'onda. I blocchi del pannello si possono nascondere e riordinare.*
 
 ![L'autofocus su un punto nel visualizzatore: l'area scelta sull'immagine, il pannello con la curva della nitidezza e il fuoco trovato](docs/img/autofocus.jpg)
 *Autofocus su un punto: clic sul dettaglio, la curva della nitidezza si riempie scatto per scatto e il focheggiatore torna sul picco, con uno scatto di verifica. L'area resta fissa o segue il soggetto quando l'immagine scorre (macro); il pannello si trascina dove non copre il soggetto.*
 
 ![La scheda Ottica: indice a sinistra, il profilo dell'obiettivo macro al centro, ingrandimento, scala e profondità di campo a destra](docs/img/optics.jpg)
-*Ottica: un profilo per ogni obiettivo da microscopio o obiettivo macro (obiettivi dal database Lensfun, lenti addizionali, tubi di prolunga). Il riepilogo a destra calcola ingrandimento, µm per pixel sul campione, profondità di campo e passo consigliato.*
+*Ottica: un profilo per ogni obiettivo da microscopio o obiettivo macro (obiettivi dal database Lensfun, lenti addizionali, tubi di prolunga). Il riepilogo a destra calcola ingrandimento, µm per pixel sul campione, profondità di campo e passo consigliato, che si può salvare nel profilo insieme al diaframma.*
 
 ![La scheda Calibrazione: esposizione dei light, frame di calibrazione e riepilogo, con la libreria sotto](docs/img/calibration.jpg)
 *Calibrazione: esposizione della luce misurata sui RAW, dark e flat scattati in automatico (un fotogramma diverso dagli altri viene segnalato subito), i set che userà la prossima pila, una libreria che collega ogni pila alla calibrazione giusta e l'analisi del sensore.*
@@ -230,11 +233,11 @@ spostare su un secondo monitor. Se il live view è acceso, il visualizzatore si 
 | **●&nbsp;Live** | <kbd>L</kbd> | live view della fotocamera con zoom, 100% e spostamento; ◀ ▶ o una miniatura tornano agli scatti |
 | **Segui&nbsp;ultimo** | <kbd>U</kbd> | mostra automaticamente ogni nuovo scatto |
 | **Blocca&nbsp;vista** | <kbd>K</kbd> | mantiene zoom e posizione cambiando scatto, utile per confrontare la messa a fuoco nello stesso punto |
-| **Ispettore** | <kbd>I</kbd> | pannello laterale in sola lettura: istogrammi R, G, B e luminosità, pixel bruciati (canali a 255) e neri (canali a 0) secondo una regola a scelta, segni rossi/blu sull'immagine, valori sotto il puntatore e min/max/media/mediana dell'immagine intera. Funziona anche sul live view (aggiornato due volte al secondo) |
+| **Ispettore** | <kbd>I</kbd> | pannello laterale in sola lettura, a blocchi che si possono nascondere e riordinare: **Vista** (capovolgi in orizzontale/verticale, un solo canale R, G o B), **Fuoco** (zone a fuoco colorate con sensibilità, colore e immagine scurita, anche solo nell'area dell'autofocus; nitidezza con la stessa misura dell'autofocus e il massimo visto), **Bruciati e neri** (segni, zebra o falsi colori; percentuali secondo una regola a scelta), istogramma, **forma d'onda** (luminosità, RGB sovrapposti o affiancati), valori sotto il puntatore e min/max/media/mediana dell'immagine intera. Funziona anche sul live view (cinque volte al secondo con gli aiuti sull'immagine accesi) |
 | **⌖&nbsp;Autofocus** | <kbd>A</kbd>,&nbsp;<kbd>[</kbd>&nbsp;<kbd>]</kbd>,&nbsp;<kbd>Esc</kbd> | autofocus su un punto: clic sul dettaglio, poi Avvia. Il focheggiatore scorre nella direzione della pila, la curva della nitidezza (gradiente di Sobel nell'area) si riempie scatto per scatto e il focheggiatore torna sulla posizione più nitida dalla stessa parte (sovracorsa per il gioco), con uno scatto di verifica. Modi: Veloce (live view), Preciso (live view, poi 3 scatti veri di conferma; predefinito) e Scatti veri, ognuno con i suoi parametri; non si allontana dalla partenza più dell'escursione massima; ricerca ampia quando tutto è sfocato; l'area resta fissa o segue il soggetto se l'immagine scorre durante la scansione (macro); il pannello si sposta dove serve; impostazioni in Configurazione › Autofocus |
 | Schermo&nbsp;intero | <kbd>F</kbd> | — |
 
-L'Ispettore misura l'immagine a 8 bit mostrata a schermo: per uno scatto RAW è la conversione per lo schermo,
+L'Ispettore misura l'immagine a 8 bit mostrata a schermo (zone a fuoco, zebra e forma d'onda si calcolano su una copia di al massimo 2048 pixel sul lato lungo): per uno scatto RAW è la conversione per lo schermo,
 e il RAW ha più margine nelle luci e nelle ombre (il pannello lo ricorda).
 
 Gli scatti RAW vengono convertiti in JPEG con `sips` di macOS, prima un'anteprima e poi la piena risoluzione.
@@ -429,7 +432,7 @@ build_release.sh     costruzione e pubblicazione dell'app universale
 firmware/            sorgente del firmware del focheggiatore
 web/index.html …     interfaccia principale (PWA, nessuna dipendenza esterna)
 web/viewer.*         visualizzatore con zoom e pan
-web/inspector.js     Ispettore del visualizzatore (istogrammi, pixel bruciati e neri)
+web/inspector.js     Ispettore del visualizzatore (zone a fuoco, zebra, falsi colori, istogrammi, forma d'onda)
 backend/optics.py    ingrandimento (microscopio, macro) e ottica del manifesto
 web/data/            database obiettivi (Lensfun, CC BY-SA 3.0) e ottiche macro aggiuntive
 tools/lensfun_import.py rigenera web/data/lenses-lensfun.json da una copia di Lensfun

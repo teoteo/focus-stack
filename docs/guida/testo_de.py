@@ -360,7 +360,7 @@ add(f"""
     f"<b>{ui('Inizio')}</b> und <b>{ui('Fine')}</b> in Schritten. <span class='ui'>⌖ {ui('qui')}</span> übernimmt die aktuelle Position.",
     "<b>Schrittweite</b> zwischen zwei Aufnahmen, in Motorschritten (Kapitel 11).",
     f"<b>{ui('Numero di scatti')}</b>. Ändern Sie {ui('Inizio')}, {ui('Fine')} oder die Schrittweite, wird die Anzahl der Aufnahmen neu berechnet; ändern Sie die Anzahl der Aufnahmen, wird die Schrittweite neu berechnet. Ändert sich die Schrittweite von selbst, wird sie orange und zeigt <span class='ui'>↺ war …</span>: Ein Klick macht die Änderung rückgängig.",
-    f"<b>{ui('Ottica e filtro (profilo)')}</b>: das Profil für Objektiv, Filter und Beleuchtung, das in die Daten des Stapels geschrieben wird (7.2). <span class='ui'>{ui('Modifica')}</span> öffnet es im Bereich {ui('Ottica')}. Ohne Profil wird der Stapel als „{ui('nessun filtro')}“ vermerkt. Bei einem Makroprofil mit Blendenangabe stellt die Auswahl auch die Blende der Kamera ein; weichen die beiden später ab, weist die Übersicht darauf hin.",
+    "<b>Optik und Filter (Profil)</b>: das Profil aus Objektiv, Filter und Beleuchtung, das in die Daten des Stapels geschrieben wird (7.2). <span class='ui'>Bearbeiten</span> öffnet es im Reiter Optik, der von selbst zum hier gewählten Profil wechselt (wenn er keine ungespeicherten Änderungen hat). Ohne Profil wird der Stapel als „kein Filter“ gespeichert. Die Wahl eines Profils setzt auch den darin gespeicherten Stapelschritt (mit „↺ war …“ zum Zurückgehen) und, bei einem Makroprofil mit Blende, die Blende der Kamera; weichen Blende oder Schritt später ab, meldet es die Zusammenfassung.",
     "<b>Übersicht</b>: Aufnahmen, Bereich in Schritten und µm, Schrittweite in µm und geschätzte Dauer. Ein Klick auf die Übersicht (▶ rechts) zeigt auch das verwendete Optikprofil und die Kalibrierung, die mit dem Stapel verknüpft wird. Liegt die Serie außerhalb der Grenzen, erscheint ein roter Hinweis und sie startet nicht.",
     "<b>Wartezeit nach Bewegung</b>, im einklappbaren Abschnitt: zum Abklingen der Vibrationen vor der Aufnahme (1–3 s am Mikroskop).",
     f"<b>{ui('Scatti per posizione')}</b>: wie viele Fotos an jeder Position entstehen (Standard 1). Bei mehreren Aufnahmen kann die Fusionssoftware sie mitteln und so das Rauschen verringern (7.4).",
@@ -627,7 +627,7 @@ Auflösung (auch RAW-Dateien, die direkt umgewandelt werden) mit Zoom und Versch
     f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>): zeigt jede neue Aufnahme automatisch an. Wie die beiden folgenden Schaltflächen ist es ein Symbol, hervorgehoben, wenn es aktiv ist; beim Öffnen ist es aktiv.",
     f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>): behält Zoom und Position beim Wechsel der Aufnahme bei, um die Schärfe an derselben Stelle zu vergleichen. Beim Öffnen aktiv.",
     "<b>Kompositionshilfen</b> (<kbd>G</kbd>): jeder Klick wechselt zwischen Drittel, Kreuz in der Mitte, Drittel und Mitte, keine. Linien von 1 Pixel, die Zoom und Verschieben folgen; sie funktionieren auch im Live-View.",
-    f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>): Histogramme, ausgebrannte und schwarze Pixel, Werte unter dem Zeiger (siehe unten). Beim Öffnen des Betrachters geöffnet.",
+    "<b>Inspektor</b> (<kbd>I</kbd>): scharfe Bereiche, Zebra und Falschfarben, Histogramm, Wellenform, Werte unter dem Zeiger, gespiegelte Ansicht oder nur ein Kanal (siehe unten). Beim Öffnen des Betrachters geöffnet.",
     "<b>Vollbild</b> (<kbd>F</kbd>).",
     "<b>?</b>: diese Anleitung, beim Kapitel über den Betrachter.",
     f"<b>Miniaturen</b>: Ein Klick öffnet die Aufnahme. <i>{ui('P')}</i> = Testaufnahme, <i>{ui('C')}</i> = Kalibrierungsbild, <i>{ui('E')}</i> = Foto für die Belichtung, <i>AF</i> = Autofokus-Aufnahmen, die Zahlen sind die Aufnahmen der Serie. Der Streifen zeigt nur die laufende oder die letzte Serie: Er leert sich beim Start einer Serie, und die erste Testaufnahme danach beginnt einen neuen. Die Dateien bleiben im Ordner.",
@@ -703,17 +703,24 @@ als das Maximum der Kurve (unter 80 %), meldet die App es in Orange: Meist ist d
 Überfahrweg. Erhöhen Sie ihn unter <span class="ui">Konfiguration › Autofokus</span>; anfangs gilt der Spielausgleich
 der Sequenz, mindestens aber eine Spitzenbreite.</div>
 <p>Alle Werte stehen unter <span class="ui">Konfiguration › Autofokus</span>, Kapitel 12.</p>
-<h2>{ui('Ispettore')}</h2>
-<p>Das Feld <span class="ui">{ui('Ispettore')}</span> (Taste <kbd>I</kbd>) prüft die Belichtung eines Fotos nach denselben
-Regeln wie Focus Fusion. Es ist schreibgeschützt: Die Fotos werden nicht verändert. Es funktioniert auch mit dem
-Live-View, das jede halbe Sekunde aktualisiert wird.</p>
+<h2>Inspektor</h2>
+<p>Das Feld <span class="ui">Inspektor</span> (Taste <kbd>I</kbd>) bündelt Hilfen für Schärfe und Belichtung, wie bei Videomonitoren. Es ist schreibgeschützt: Es verändert die Fotos nicht. Es funktioniert auch mit dem Live-View: Mit scharfen Bereichen, Zebra oder Wellenform aktualisiert es sich fünfmal pro Sekunde.</p>
 {fig("ispettore", [
-    f"<b>{ui('Bruciati e neri')}</b>: Anteil in Prozent und verwendete Regeln. <span class='ui'>{EVIDENZIA}</span> markiert ausgebrannte Pixel rot und schwarze blau; die beiden Tasten blenden sie getrennt ein oder aus.",
-    "<b>Histogramme</b> für Rot, Grün, Blau und Luminanz. Mit dem Zeiger auf einer Stufe lesen Sie ab, wie viele Pixel es dort gibt.",
+    "<b>Blöcke</b> (Schaltfläche oben rechts): welche Blöcke in welcher Reihenfolge erscheinen (Kästchen und Pfeile ↑ ↓; <span class='ui'>Wiederherstellen</span> stellt den Anfangszustand her). Ein ausgeblendeter Block verändert das Bild nicht.",
+    "<b>Ansicht</b>: horizontal oder vertikal spiegeln (mit beiden ist das Bild um 180° gedreht), etwa um es wie im Okular zu sehen; nur ein Kanal R, G oder B, in Grau. Nur die Ansicht ändert sich: die Dateien bleiben unverändert.",
+    "<b>Fokus</b>: <span class='ui'>Scharfe Bereiche hervorheben</span> färbt scharfe Kanten ein (Focus Peaking), mit Empfindlichkeit von 1 bis 15, fünf Farben und dem Bild darunter farbig, grau, dunkel oder schwarz. <span class='ui'>Nur im Autofokus-Bereich</span> beschränkt alles auf das mit der Taste <kbd>A</kbd> gewählte Feld.",
+    "<b>Schärfe</b>: dasselbe Maß wie beim Autofokus, mit einem Balken gegenüber dem höchsten gesehenen Wert und <span class='ui'>Zurücksetzen</span>.",
+], layout="full")}
+<p>Im Live-View den Fokus drehen, bis der Balken 100 % erreicht: Das ist der schärfste Punkt für diesen Bildausschnitt. Das Maximum beginnt von selbst neu, wenn Bereich, Auflösung oder Kanal wechseln oder zwischen Live-View und Aufnahmen gewechselt wird, weil diese Werte nicht vergleichbar sind. Mit dem Bild <span class="ui">Dunkel</span> sieht man während der Sequenz das scharfe Band von Aufnahme zu Aufnahme wandern: Springt es zwischen zwei Aufnahmen, ist der Schritt zu groß.</p>
+<div class="box tip"><span class="t">Ein Kanal und chromatische Aberration</span>Mit nur einem Kanal nutzen auch scharfe Bereiche und Schärfe diesen Kanal. Auf R scharfstellen, dann auf B: Der Positionsunterschied ist die axiale chromatische Aberration des Objektivs. Ist die Ansicht gespiegelt oder auf einen Kanal beschränkt, zeigt ein Etikett oben rechts im Bild das an, auch bei geschlossenem Inspektor; ein Klick darauf bringt das normale Bild zurück.</div>
+{fig("ispettore-esposizione", [
+    "<b>Im Bild markieren</b>, auf drei Arten: <i>Markierungen</i> (Ausgebranntes rot, Schwarzes blau, in voller Auflösung), <i>Zebra</i> und <i>Falschfarben</i>. Die Tabelle darunter gibt den Anteil ausgebrannter und schwarzer Pixel für jede Regel an.",
+    "<b>Zebra</b>: weiße und schwarze Streifen, wo der höchste Kanal die Schwelle erreicht (<span class='ui'>Lichter ab</span>); auf Wunsch hellblaue Streifen auf den <span class='ui'>Mitteltönen</span>, Wert ± Toleranz. <span class='ui'>= Median</span> zentriert sie auf den Median des Bildes: Bei einem Flat sind die Bereiche ohne Streifen die ungleichmäßig beleuchteten.",
+    "<b>Histogramme</b> von Rot, Grün, Blau und Luminanz. Mit dem Zeiger über einer Stufe liest man, wie viele Pixel sie hat.",
+    "<b>Wellenform</b>: waagerecht die Position im Bild, wie angezeigt; senkrecht der Pegel von 0 bis 100 %. Helligkeit, RGB überlagert oder nebeneinander. Ungleichmäßiges Licht ergibt einen schrägen oder gebogenen Kamm.",
     "<b>Unter dem Zeiger</b>: die Werte R, G, B und die Luminanz des Pixels unter der Maus.",
 ], layout="full")}
-<p>Bei RAW-Fotos arbeitet der Inspektor mit der umgewandelten Vorschau; für den genauen Pegel des Sensors verwenden Sie
-<span class="ui">{ui('Esposizione dei light')}</span> (7.6), das die echten RAWs misst.</p>
+<p><i>Falschfarben</i> geben jedem Helligkeitsbereich eine Farbe (Legende im Feld): Violett für Schwarz, Blau für tiefe Schatten, Grün für Mitteltöne, Gelb für Lichter, Orange für fast ausgebrannt, Rot für ausgebrannt; der Rest bleibt grau. Zebra, Falschfarben und Wellenform nutzen das angezeigte 8-Bit-Bild nach der Tonkurve der Kamera: Bei RAW-Fotos ist das die umgewandelte Vorschau. Für den genauen Sensorpegel <span class="ui">Belichtung der Lights</span> (7.6) verwenden, die die echten RAW-Dateien misst.</p>
 """)
 
 # 9
@@ -930,7 +937,9 @@ Vergrößerung auf dem Sensor (Objektiv × Zwischenvergrößerung × Adapter) un
     f"<b>{ui('Sovrapposizione (%)')}</b> zwischen einer scharfen Schicht und der nächsten; 20–30 % ist ein guter Wert.",
     "<b>Ergebnis</b>: Schärfentiefe, empfohlene Schrittweite in µm und in Motorschritten.",
     f"<b>{ui('Usa come passo della sequenza')}</b>: übernimmt den Wert in Schritten in das Feld Schrittweite der Serie.",
-], layout="side narrow")}
+    "<b>Stapelschritt</b> im Profil, in Motorschritten: <span class='ui'>Empfohlen</span> trägt den oben berechneten Schritt ein, <span class='ui'>Aus Sitzung</span> den der Sequenz. Er wird mit dem Profil gespeichert; leer = das Profil ändert den Schritt nicht.",
+], layout="full", anchors={4: "b"})}
+<p>Der richtige Schritt hängt von Blende und Abbildungsmaßstab ab, also vom Profil: Im Profil gespeichert, setzt die Wahl des Profils in der Sitzung Blende und Schritt zusammen. Ein Preset der Sequenz behält dagegen seinen eigenen Schritt.</p>
 <h2>11.1 Die Formel</h2>
 <p>Die App verwendet die Formel nach Berek, die in der Mikroskopie am weitesten verbreitet ist:</p>
 <div class="formula">Schärfentiefe (µm) = {frac("λ · n", "NA²")} + {frac("n · e", "M · NA")}

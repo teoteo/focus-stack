@@ -376,5 +376,6 @@
   "Fotogramma {i}: livello {v} % contro {ref} % degli altri: la luce è cambiata?": "Fotograma {i}: nivel {v} % frente a {ref} % de los demás: ¿ha cambiado la luz?",
   "Fotogramma {i} più chiaro degli altri ({v} % contro {ref} %): entra luce? Controlla tappo e mirino": "Fotograma {i} más claro que los demás ({v} % frente a {ref} %): ¿entra luz? Revisa la tapa y el visor",
   "Area che segue il soggetto: riferimento a {pos}": "Área que sigue al sujeto: referencia en {pos}",
-  "Soggetto perso a {pos}: l'area non si ritrova più nell'immagine (correlazione {c}). Scegli un dettaglio più riconoscibile, un'area più grande, oppure «Area fissa»": "Sujeto perdido en {pos}: el área ya no se encuentra en la imagen (correlación {c}). Elige un detalle más reconocible, un área más grande o «Área fija»"
+  "Soggetto perso a {pos}: l'area non si ritrova più nell'immagine (correlazione {c}). Scegli un dettaglio più riconoscibile, un'area più grande, oppure «Area fissa»": "Sujeto perdido en {pos}: el área ya no se encuentra en la imagen (correlación {c}). Elige un detalle más reconocible, un área más grande o «Área fija»",
+  "Passo della pila: un numero intero di passi maggiore di zero": "Paso de la pila: un número entero de pasos mayor que cero"
 }

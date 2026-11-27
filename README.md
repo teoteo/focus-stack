@@ -13,14 +13,17 @@ The app and its PDF user guide are available in **Italian, English, French, Germ
 ![The Session tab: focuser, sequence and camera cards, with the latest shot](docs/img/session.jpg)
 *The Session tab: focuser position and limits on the left, the sequence with the stack folder, the summary (▶ shows the optics profile and calibration) and progress in the middle, camera settings and the latest shot on the right.*
 
-![The viewer showing a full-resolution RAW frame of the stack, with the stack counter, the Inspector and the strip of frames](docs/img/viewer.jpg)
-*The viewer follows the stack shot by shot: progress and data of the shot at the top, full-resolution RAW, the strip of the current stack below, composition guides (thirds, centre or both) and the Inspector with clipped pixels, histogram and values.*
+![The viewer with a frame of the stack: the in-focus areas in red over the darkened image, and the Inspector with the View and Focus blocks](docs/img/viewer.jpg)
+*The viewer follows the stack shot by shot. The Inspector colours the in-focus areas (focus peaking) and measures sharpness with the same metric as autofocus; it can also flip the view or show a single channel.*
+
+![The Inspector's exposure aids: zebra on the highlights, histogram, waveform and values under the pointer](docs/img/inspector-exposure.jpg)
+*Exposure aids, as on a video monitor: zebra (highlights and midtones), false colour, histogram and waveform. The blocks of the panel can be hidden and reordered.*
 
 ![Autofocus on a point in the viewer: the chosen area on the image, the panel with the sharpness curve and the focus found](docs/img/autofocus.jpg)
 *Autofocus on a point: click the detail, the sharpness curve fills in shot by shot and the focuser returns to the peak, with a check shot. The area stays fixed or follows the subject when the image drifts (macro); drag the panel wherever it doesn't cover the subject.*
 
 ![The Optics tab: index on the left, the macro lens profile in the middle, magnification, scale and depth of field on the right](docs/img/optics.jpg)
-*Optics: one profile per microscope objective or macro lens (lenses from the Lensfun database, close-up lenses, extension tubes). The summary on the right computes magnification, µm per pixel on the specimen, depth of field and the recommended step.*
+*Optics: one profile per microscope objective or macro lens (lenses from the Lensfun database, close-up lenses, extension tubes). The summary on the right computes magnification, µm per pixel on the specimen, depth of field and the recommended step, which can be saved in the profile together with the aperture.*
 
 ![The Calibration tab: light exposure, calibration frames and summary, with the library below](docs/img/calibration.jpg)
 *Calibration: light exposure measured on the RAWs, darks and flats taken automatically (a frame unlike the others is flagged right away), the sets the next stack will use, a library that links each stack to the right calibration set, and the sensor analysis.*
@@ -228,11 +231,11 @@ second monitor. If the live view is on, the viewer opens straight on the live vi
 | **●&nbsp;Live** | <kbd>L</kbd> | camera live view with zoom, 100% and pan; ◀ ▶ or a thumbnail go back to the shots |
 | **Follow&nbsp;latest** | <kbd>U</kbd> | show every new shot automatically |
 | **Lock&nbsp;view** | <kbd>K</kbd> | keep zoom and position when changing shot, to compare focus at the same spot |
-| **Inspector** | <kbd>I</kbd> | side panel, read only: R, G, B and brightness histograms, burnt (channels at 255) and black (channels at 0) pixels under a chosen rule, red/blue marks on the image, values under the pointer and min/max/mean/median of the whole image. It also works on the live view (updated twice a second) |
+| **Inspector** | <kbd>I</kbd> | side panel, read only, in blocks you can hide and reorder: **View** (flip horizontally/vertically, a single R, G or B channel), **Focus** (in-focus areas coloured by sensitivity, colour and dimmed image, optionally only in the autofocus area; sharpness with the same metric as autofocus and peak hold), **Burnt and black** (marks, zebra or false colour; percentages under a chosen rule), histogram, **waveform** (luminance, RGB overlaid or parade), values under the pointer and min/max/mean/median of the whole image. It also works on the live view (five times a second with the image aids on) |
 | **⌖&nbsp;Autofocus** | <kbd>A</kbd>,&nbsp;<kbd>[</kbd>&nbsp;<kbd>]</kbd>,&nbsp;<kbd>Esc</kbd> | autofocus on a point: click the detail, then Start. The focuser scans in the direction of the stack, the sharpness curve (Sobel gradient in the area) fills in shot by shot, and the focuser returns to the sharpest position from the same side (backlash overshoot) and takes a check shot. Modes: Fast (live view), Precise (live view, then 3 real confirmation shots; default) and Real shots, each with its own settings; it never moves further from the start than the maximum excursion; wide search when everything is blurred; the area stays fixed or follows the subject when the image drifts during the scan (macro); the panel can be dragged anywhere; settings in Configuration › Autofocus |
 | Full&nbsp;screen | <kbd>F</kbd> | — |
 
-The Inspector measures the 8-bit image on screen: for a RAW shot that is the conversion for the screen,
+The Inspector measures the 8-bit image on screen (focus areas, zebra and waveform are computed on a copy of at most 2048 pixels on the long side): for a RAW shot that is the conversion for the screen,
 and the RAW itself has more headroom in highlights and shadows (the panel says so).
 
 RAW shots are converted to JPEG with macOS `sips`, first a preview and then full resolution.
@@ -422,7 +425,7 @@ build_release.sh       build and publish the universal app
 firmware/              focuser firmware source
 web/index.html …       main interface (PWA, no external dependencies)
 web/viewer.*           viewer with zoom and pan
-web/inspector.js       viewer Inspector (histograms, burnt/black pixels)
+web/inspector.js       viewer Inspector (focus peaking, zebra, false colour, histograms, waveform)
 backend/optics.py      magnification (microscope, macro) and the manifest's optics
 web/data/              lens database (Lensfun, CC BY-SA 3.0) and extra macro lenses
 tools/lensfun_import.py rebuilds web/data/lenses-lensfun.json from a Lensfun checkout

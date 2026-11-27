@@ -109,7 +109,8 @@ SAMPLE_DIR = Path(__file__).parent / "campione"
 SAMPLES = sorted(f for f in SAMPLE_DIR.glob("calluna_*.jpg") if f.stem[-4:].isdigit())
 SAMPLE_LIVE = SAMPLE_DIR / "calluna_live.jpg"
 # figure con una foto dentro: in JPEG (le foto in PNG pesano 5-10 volte tanto); le altre restano PNG, più nitide sul testo
-PHOTO_FIGS = {"sessione", "ultimo-scatto", "live", "visualizzatore", "ispettore", "visualizzatore-live", "smartphone-pagina",
+PHOTO_FIGS = {"sessione", "ultimo-scatto", "live", "visualizzatore", "ispettore", "ispettore-esposizione", "visualizzatore-live",
+              "smartphone-pagina",
               "visualizzatore-autofocus"}
 
 
@@ -387,9 +388,13 @@ with sync_playwright() as p:
     # profondità di campo: profilo senza Optovar (come gli esempi del capitolo 11)
     page.select_option("#o-profile", PROFILE); page.dispatch_event("#o-profile", "change")
     page.wait_for_timeout(300)
+    page.click("#o-seqstep-dof")   # passo della pila nel profilo: il consigliato (poi si annulla, il profilo resta com'era)
+    page.wait_for_timeout(200)
     shot(page, "profondita", "#opt-dof", m(
-        (1, "#d-ov", "l"), (2, "#d-result", "l"), (3, "#d-apply", "r")), pad=6)
+        (1, "#d-ov", "l"), (2, "#d-result", "l"), (3, "#d-apply", "r"), (4, "#o-seqstep", "l")), pad=6)
     notes["profondita"]["text"] = page.inner_text("#d-result")
+    page.click("#o-undo")
+    page.wait_for_timeout(200)
     # profilo macro: lo stesso esempio del capitolo 7.3 (90 mm a 1:2, f/8, Raynox +8 diottrie)
     page.select_option("#o-profile", PROFILE_MACRO); page.dispatch_event("#o-profile", "change")
     page.wait_for_timeout(500)
@@ -499,17 +504,44 @@ with sync_playwright() as p:
         (1, "#prev", "l"), (2, "#v-count", "l"), (3, "#liveview", "l"), (4, "#z-out", "l"), (5, "#z-fit", "l"),
         (6, "#follow", "l"), (7, "#lock", "l"), (8, "#guides", "l"), (9, "#insp-btn", "l"),
         (10, "#fs", "l"), (11, "#guide-btn", "r"), (12, "#strip", "l"), (13, "#clear", "l")))
-    vw.set_viewport_size({"width": 1500, "height": 1250})   # il pannello dell'Ispettore intero, fino ai valori sotto il puntatore
+    # Ispettore, prima figura: zone a fuoco sull'immagine scura, blocchi Vista e Fuoco, pannello dei blocchi aperto
+    vw.set_viewport_size({"width": 1500, "height": 1060})
     vw.click("#z-fit")
     vw.click("#insp-btn")
     vw.wait_for_timeout(1500)
+    vw.check("#insp-peak")
+    vw.click("[data-pbg=dim]")
+    vw.wait_for_timeout(800)
+    readme_shot(vw, "viewer")   # README e note: il visualizzatore con le zone a fuoco
+    vw.click("#insp-cfg")
+    vw.wait_for_timeout(400)
+    shot(vw, "ispettore", "body", m((1, "#insp-cfg", "l"), (2, '[data-block="view"] > summary', "l"),
+                                    (3, "#insp-peak", "l"), (4, "#insp-sharp", "l")))
+    # seconda figura: esposizione (zebra), istogramma, forma d'onda e valori; Vista e Fuoco nascosti col pannello dei blocchi
+    for blk in ("view", "focus"):
+        vw.locator("#insp-cfg-list li").nth(["view", "focus", "expo", "hist", "wave", "values"].index(blk)).locator("input").uncheck()
+    vw.click("#insp-cfg")
+    vw.set_viewport_size({"width": 1500, "height": 1400})   # fino ai valori sotto il puntatore
     vw.check("#insp-marks")
+    vw.click("[data-expo=zebra]")
+    vw.fill("#insp-zhi", "85")
+    vw.dispatch_event("#insp-zhi", "input")
     box = vw.locator("#stage").bounding_box() or {"x": 300, "y": 300, "width": 400, "height": 300}
     for dx in (0.38, 0.4):   # due movimenti: i valori sotto il puntatore si aggiornano al movimento
         vw.mouse.move(box["x"] + box["width"] * dx, box["y"] + box["height"] * 0.3)
         vw.wait_for_timeout(400)
     vw.wait_for_timeout(1000)
-    shot(vw, "ispettore", "body", m((1, "#insp-marks", "l"), (2, "#insp-hist", "l"), (3, "#insp-px", "l")))
+    shot(vw, "ispettore-esposizione", "body", m((1, "#insp-marks", "l"), (2, "#insp-zhi", "l"), (3, "#insp-hist", "l"),
+                                                (4, "#insp-wave", "l"), (5, "#insp-px", "l")))
+    readme_shot(vw, "inspector-exposure")
+    # di nuovo come all'inizio: tutti i blocchi, niente segni, Ispettore chiuso
+    vw.click("#insp-cfg")
+    vw.click("#insp-cfg-reset")
+    vw.click("#insp-cfg")
+    vw.click("[data-expo=marks]")
+    vw.uncheck("#insp-marks")
+    vw.click("[data-pbg=color]")
+    vw.uncheck("#insp-peak")
     vw.click("#insp-btn")
     vw.wait_for_timeout(300)
     vw.set_viewport_size({"width": 1500, "height": 860})

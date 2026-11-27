@@ -366,7 +366,7 @@ add(f"""
     f"<b>{ui('Inizio')}</b> et <b>{ui('Fine')}</b> en pas. <span class='ui'>⌖ {ui('qui')}</span> copie la position actuelle.",
     "<b>Pas</b> entre deux photos, en pas moteur (chapitre 11).",
     f"<b>{ui('Numero di scatti')}</b>. Si vous modifiez {ui('Inizio')}, {ui('Fine')} ou Pas, le nombre de photos est recalculé ; si vous modifiez le nombre de photos, c'est le pas qui est recalculé. Quand le pas change tout seul, il devient orange et affiche <span class='ui'>↺ était …</span> : un clic annule la modification.",
-    f"<b>{ui('Ottica e filtro (profilo)')}</b> : le profil d'objectif, de filtre et d'éclairage à écrire dans les données de la pile (7.2). <span class='ui'>{ui('Modifica')}</span> l'ouvre dans l'onglet {ui('Ottica')}. Sans profil, la pile est notée « aucun filtre ». Avec un profil macro qui indique le diaphragme, le choisir règle aussi le diaphragme de l'appareil ; si les deux diffèrent ensuite, le récapitulatif le signale.",
+    "<b>Optique et filtre (profil)</b> : le profil d'objectif, de filtre et d'éclairage à inscrire dans les données de la pile (7.2). <span class='ui'>Modifier</span> l'ouvre dans l'onglet Optique, qui passe tout seul au profil choisi ici (s'il n'a pas de modifications non enregistrées). Sans profil, la pile est enregistrée comme « aucun filtre ». Choisir un profil règle aussi le pas de la pile enregistré dans le profil (avec « ↺ était … » pour revenir en arrière) et, avec un profil macro qui indique le diaphragme, le diaphragme de l'appareil ; si ensuite diaphragme ou pas ne correspondent plus, le résumé le signale.",
     "<b>Récapitulatif</b> : photos, course en pas et en µm, pas en µm et durée estimée. Un clic sur le récapitulatif (▶ à droite) affiche aussi le profil optique utilisé et la calibration qui sera associée à la pile. Si la séquence sort des limites, un avertissement rouge apparaît et elle ne démarre pas.",
     "<b>Attente après le mouvement</b>, dans la section repliable : laisse les vibrations s'amortir avant la photo (1 à 3 s au microscope).",
     f"<b>{ui('Scatti per posizione')}</b> : combien de photos prendre à chaque position (1 par défaut). Avec plusieurs prises, le logiciel de fusion peut en faire la moyenne et réduire le bruit (7.4).",
@@ -633,7 +633,7 @@ les RAW, convertis à la volée) avec zoom et déplacement, ainsi que la visée 
     f"<b>{ui('Segui ultimo')}</b> (<kbd>U</kbd>) : affiche automatiquement chaque nouvelle photo. Comme les deux boutons suivants, c'est une icône, en surbrillance quand elle est active ; il est actif à l'ouverture.",
     f"<b>{ui('Blocca vista')}</b> (<kbd>K</kbd>) : conserve le zoom et la position quand vous changez de photo, pour comparer la mise au point au même endroit. Actif à l'ouverture.",
     "<b>Guides de composition</b> (<kbd>G</kbd>) : à chaque clic, tiers, croix au centre, tiers et centre, aucun. Lignes de 1 pixel qui suivent le zoom et le déplacement ; elles fonctionnent aussi en visée en direct.",
-    f"<b>{ui('Ispettore')}</b> (<kbd>I</kbd>) : histogrammes, pixels brûlés et noirs, valeurs sous le pointeur (voir ci-dessous). Ouvert à l'ouverture de la visionneuse.",
+    "<b>Inspecteur</b> (<kbd>I</kbd>) : zones nettes, zébra et fausses couleurs, histogramme, forme d'onde, valeurs sous le pointeur, vue retournée ou sur un seul canal (voir ci-dessous). Ouvert à l'ouverture de la visionneuse.",
     "<b>Plein écran</b> (<kbd>F</kbd>).",
     "<b>?</b> : ce guide, au chapitre de la visionneuse.",
     f"<b>Vignettes</b> : un clic ouvre la photo. <i>{ui('P')}</i> = photo test, <i>{ui('C')}</i> = image de calibration, <i>{ui('E')}</i> = photo pour l'exposition, <i>AF</i> = prises de l'autofocus, les numéros sont les photos de la séquence. La bande montre seulement la séquence en cours ou la dernière : elle se vide au démarrage d'une séquence, et la première photo test prise ensuite en commence une nouvelle. Les fichiers restent dans le dossier.",
@@ -709,17 +709,24 @@ que le maximum de la courbe (moins de 80 %), l'app le signale en orange : en gé
 grand que le dépassement. Augmentez-le dans <span class="ui">Configuration › Autofocus</span> ; au départ il vaut la
 compensation du jeu de la séquence, mais au moins une largeur du pic.</div>
 <p>Toutes les valeurs sont dans <span class="ui">Configuration › Autofocus</span>, chapitre 12.</p>
-<h2>{ui('Ispettore')}</h2>
-<p>Le panneau <span class="ui">{ui('Ispettore')}</span> (touche <kbd>I</kbd>) contrôle l'exposition d'une photo avec les
-mêmes règles que Focus Fusion. Il est en lecture seule : il ne modifie pas les photos. Il fonctionne aussi sur la visée
-en direct, mis à jour toutes les demi-secondes.</p>
+<h2>Inspecteur</h2>
+<p>Le panneau <span class="ui">Inspecteur</span> (touche <kbd>I</kbd>) réunit les aides à la mise au point et à l'exposition, comme celles des moniteurs vidéo. Il est en lecture seule : il ne modifie pas les photos. Il fonctionne aussi sur la visée en direct : avec les zones nettes, le zébra ou la forme d'onde activés, il se met à jour cinq fois par seconde.</p>
 {fig("ispettore", [
-    f"<b>Pixels brûlés et noirs</b> : pourcentage et règles utilisées. <span class='ui'>{EVID}</span> marque en rouge les pixels brûlés et en bleu les noirs ; les deux boutons les affichent ou les masquent séparément.",
+    "<b>Blocs</b> (bouton en haut à droite) : quels blocs afficher et dans quel ordre (cases et flèches ↑ ↓ ; <span class='ui'>Rétablir</span> revient au départ). Un bloc masqué ne modifie pas l'image.",
+    "<b>Vue</b> : retourner horizontalement ou verticalement (avec les deux, l'image est tournée de 180°), par exemple pour la voir comme dans l'oculaire ; un seul canal R, V ou B, en gris. Seule la vue change : les fichiers restent tels quels.",
+    "<b>Mise au point</b> : <span class='ui'>Mettre en évidence les zones nettes</span> colore les contours nets (focus peaking), avec une sensibilité de 1 à 15, cinq couleurs et l'image dessous en couleur, grise, sombre ou noire. <span class='ui'>Seulement dans la zone de l'autofocus</span> limite tout au cadre choisi avec la touche <kbd>A</kbd>.",
+    "<b>Netteté</b> : la même mesure que l'autofocus, avec une barre par rapport au maximum vu et <span class='ui'>Réinitialiser</span>.",
+], layout="full")}
+<p>En visée en direct, tournez la mise au point jusqu'à ce que la barre atteigne 100 % : c'est le point le plus net pour ce cadrage. Le maximum repart tout seul quand vous changez de zone, de résolution ou de canal, ou passez de la visée en direct aux prises de vue, car ces valeurs ne sont pas comparables. Avec l'image <span class="ui">Sombre</span>, pendant la séquence on voit la bande nette avancer prise après prise : si elle saute entre deux prises, le pas est trop grand.</p>
+<div class="box tip"><span class="t">Un seul canal et aberration chromatique</span>Avec un seul canal, les zones nettes et la netteté utilisent aussi ce canal. Faites la mise au point sur R, puis sur B : la différence de position est l'aberration chromatique axiale de l'objectif. Quand la vue est retournée ou sur un seul canal, une étiquette en haut à droite de l'image l'indique, même avec l'Inspecteur fermé ; un clic dessus rétablit l'image normale.</div>
+{fig("ispettore-esposizione", [
+    "<b>Signaler sur l'image</b>, de trois façons : <i>Marques</i> (brûlés en rouge et noirs en bleu, en pleine résolution), <i>Zébra</i> et <i>Fausses couleurs</i>. Le tableau dessous donne le pourcentage de pixels brûlés et noirs selon chaque règle.",
+    "<b>Zébra</b> : rayures blanches et noires là où le canal le plus haut atteint le seuil (<span class='ui'>Hautes lumières dès</span>) ; au choix, rayures bleu clair sur les <span class='ui'>Tons moyens</span>, valeur ± tolérance. <span class='ui'>= médiane</span> les centre sur la médiane de l'image : avec un flat, les zones sans rayures sont celles éclairées différemment.",
     "<b>Histogrammes</b> du rouge, du vert, du bleu et de la luminance. En plaçant le pointeur sur un niveau, on lit combien de pixels il contient.",
+    "<b>Forme d'onde</b> : horizontalement la position dans l'image, telle qu'affichée ; verticalement le niveau de 0 à 100 %. Luminosité, RVB superposés ou côte à côte. Un éclairage non uniforme donne une crête inclinée ou courbe.",
     "<b>Sous le pointeur</b> : les valeurs R, G, B et la luminance du pixel sur lequel se trouve la souris.",
 ], layout="full")}
-<p>Avec les photos RAW, l'Inspecteur travaille sur l'aperçu converti ; pour le niveau exact du capteur, utilisez
-<span class="ui">{ui('Esposizione dei light')}</span> (7.6), qui mesure les vrais RAW.</p>
+<p>Les <i>Fausses couleurs</i> donnent une couleur à chaque plage de luminosité (légende dans le panneau) : violet pour le noir, bleu pour les ombres profondes, vert pour les tons moyens, jaune pour les hautes lumières, orange pour le presque brûlé, rouge pour le brûlé ; le reste reste gris. Le zébra, les fausses couleurs et la forme d'onde utilisent l'image 8 bits affichée, après la courbe de l'appareil : avec les photos RAW, c'est l'aperçu converti. Pour le niveau exact du capteur, utilisez <span class="ui">Exposition des lights</span> (7.6), qui mesure les vrais RAW.</p>
 """)
 
 # 9
@@ -939,7 +946,9 @@ capteur (objectif × changeur intermédiaire × adaptateur) et le pixel du capte
     f"<b>{ui('Sovrapposizione (%)')}</b> entre une tranche nette et la suivante ; 20 à 30 % est une bonne valeur.",
     "<b>Résultat</b> : profondeur de champ, pas conseillé en µm et en pas moteur.",
     f"<b>{ui('Usa come passo della sequenza')}</b> : copie la valeur en pas dans le champ Pas de la séquence.",
-], layout="side narrow")}
+    "<b>Pas de la pile</b> dans le profil, en pas moteur : <span class='ui'>Conseillé</span> y inscrit le pas calculé ci-dessus, <span class='ui'>Depuis Session</span> celui de la séquence. Il est enregistré avec le profil ; vide = le profil ne change pas le pas.",
+], layout="full", anchors={4: "b"})}
+<p>Le bon pas dépend du diaphragme et du grandissement, c'est-à-dire du profil : une fois enregistré dans le profil, choisir le profil dans Session règle ensemble diaphragme et pas. Un préréglage de séquence garde en revanche son propre pas.</p>
 <h2>11.1 La formule</h2>
 <p>L'app utilise la formule de Berek, la plus utilisée en microscopie :</p>
 <div class="formula">profondeur de champ (µm) = {frac("λ · n", "ON²")} + {frac("n · e", "M · ON")}

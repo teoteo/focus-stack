@@ -566,7 +566,16 @@
           </div>
           <p class="result" id="d-result"></p>
           <div class="set-actions"><button class="btn ghost small" id="d-apply">Usa come passo della sequenza</button></div>
-          <p class="set-note">Non fa parte del profilo: serve a scegliere il passo della pila.</p>
+          <div class="set-rows">
+            <div class="set-row">
+              <span class="set-lbl">Passo della pila</span>
+              <span class="set-ctl"><input type="number" class="num" id="o-seqstep" step="1" min="1" placeholder="—" aria-label="Passo della pila nel profilo (passi)"><span class="unit">passi</span>
+                <button type="button" class="btn ghost small" id="o-seqstep-dof" title="Il passo consigliato qui sopra, in passi del motore">Consigliato</button>
+                <button type="button" class="btn ghost small" id="o-seqstep-seq" title="Il passo scritto ora nella Sessione">Dalla Sessione</button>
+                <span class="set-help">salvato nel profilo: scegliendo il profilo nella Sessione il passo va nella sequenza, insieme al diaframma. Vuoto = il profilo non cambia il passo</span></span>
+            </div>
+          </div>
+          <p class="set-note">La sovrapposizione e il passo della pila si salvano nel profilo.</p>
         </div>
       </section>
     </div>

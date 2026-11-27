@@ -63,7 +63,8 @@ DEFAULTS: dict = {
     # nome -> {objective, objective_magnification, intermediate {name, factor} (cambio d'ingrandimento,
     #          es. Optovar), relay {name, factor} (adattatore / oculare di proiezione), na,
     #          immersion (air|water|oil|glycerol|silicone),
-    #          sensor_pixel_um, pixel_size_um (misurato, ha la precedenza), dof_overlap,
+    #          sensor_pixel_um, pixel_size_um (misurato, ha la precedenza), dof_overlap, sequence_step (passi del
+    #          motore fra due scatti con questo profilo e diaframma; None = la sequenza tiene il suo),
     #          filter_mode (unknown|none|filter), filter {name, type, center_nm, bandwidth_nm, edge_nm},
     #          illumination {type, level_percent}, notes}. None/"" = non indicato.
     #          kind (microscope|macro), macro {lens {maker, model, focal_mm, max_aperture, source},

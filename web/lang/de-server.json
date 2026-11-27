@@ -376,5 +376,6 @@
   "Fotogramma {i}: livello {v} % contro {ref} % degli altri: la luce è cambiata?": "Aufnahme {i}: Pegel {v} % statt {ref} % wie bei den übrigen: hat sich das Licht geändert?",
   "Fotogramma {i} più chiaro degli altri ({v} % contro {ref} %): entra luce? Controlla tappo e mirino": "Aufnahme {i} heller als die übrigen ({v} % statt {ref} %): dringt Licht ein? Deckel und Sucher prüfen",
   "Area che segue il soggetto: riferimento a {pos}": "Bereich folgt dem Motiv: Referenz bei {pos}",
-  "Soggetto perso a {pos}: l'area non si ritrova più nell'immagine (correlazione {c}). Scegli un dettaglio più riconoscibile, un'area più grande, oppure «Area fissa»": "Motiv bei {pos} verloren: der Bereich ist im Bild nicht mehr auffindbar (Korrelation {c}). Wählen Sie ein deutlicheres Detail, einen größeren Bereich oder „Fester Bereich“"
+  "Soggetto perso a {pos}: l'area non si ritrova più nell'immagine (correlazione {c}). Scegli un dettaglio più riconoscibile, un'area più grande, oppure «Area fissa»": "Motiv bei {pos} verloren: der Bereich ist im Bild nicht mehr auffindbar (Korrelation {c}). Wählen Sie ein deutlicheres Detail, einen größeren Bereich oder „Fester Bereich“",
+  "Passo della pila: un numero intero di passi maggiore di zero": "Stapelschritt: eine ganze Zahl von Schritten größer als null"
 }

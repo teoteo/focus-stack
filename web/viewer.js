@@ -25,8 +25,16 @@ const DPR = () => window.devicePixelRatio || 1;
 const MIN_ZOOM = 0.5, MAX_ZOOM_DEVICE = 16;              // min metà di 'adatta', max 1600% in pixel reali
 
 // ---------------- trasformazione ----------------
+// Vista capovolta (Ispettore › Vista): lo specchio si fa nei pixel dell'immagine, dopo traslazione e scala, così zoom
+// e trascinamento restano quelli di sempre. Le coordinate «mostrate» (u, v) diventano quelle dell'immagine con imgX/imgY.
+function flipCss() {
+  const f = Inspector.flip;
+  return (f.h ? ` translate(${natW}px, 0) scale(-1, 1)` : "") + (f.v ? ` translate(0, ${natH}px) scale(1, -1)` : "");
+}
+const imgX = (u) => (Inspector.flip.h ? natW - u : u);
+const imgY = (v) => (Inspector.flip.v ? natH - v : v);
 function apply() {
-  img.style.transform = `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`;
+  img.style.transform = `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})${flipCss()}`;
   // % riferita alla piena risoluzione e ai pixel fisici dello schermo
   const ratio = fullW && natW ? natW / fullW : 1;
   const devicePct = view.scale * ratio * DPR() * 100;
@@ -190,7 +198,7 @@ function inspectorInfo(shot, el, isFull) {
   let note = "";
   if (RAW_EXT.test(shot.file)) note = t("Conversione del RAW per lo schermo: il RAW ha più margine nelle luci e nelle ombre.");
   else if (files.some((f) => RAW_EXT.test(f))) note = t("JPEG della fotocamera: il RAW salvato insieme ha più margine nelle luci e nelle ombre.");
-  return { basis, note };
+  return { basis, note, prelim: !isFull };
 }
 
 function renderMeta(shot) {
@@ -433,17 +441,20 @@ function checkLiveFrame() {
   else { view.scale *= oldW / natW; apply(); }   // la fotocamera ha cambiato risoluzione
 }
 
-// Ispettore sul live view: i numeri del fotogramma corrente, ricalcolati due volte al secondo
-let liveInspTimer = 0;
+// Ispettore sul live view: i numeri del fotogramma corrente, ricalcolati due volte al secondo; con zone a fuoco,
+// zebra o falsi colori sull'immagine cinque volte al secondo, perché seguano la messa a fuoco senza ritardo
+let liveInspTimer = 0, liveInspLast = 0;
 function liveInspect() {
   clearInterval(liveInspTimer);
   if (!liveOn) return;
   liveInspTimer = setInterval(() => {
     if (!liveOn || !Inspector.open || !img.naturalWidth || seqLivePaused) return;
+    if (!Inspector.overlays && performance.now() - liveInspLast < 450) return;
+    liveInspLast = performance.now();
     Inspector.analyze(img, { live: true,
       basis: t("Fotogramma del live view ({w} × {h}), aggiornato di continuo", { w: img.naturalWidth, h: img.naturalHeight }),
       note: t("Il live view è un'anteprima compressa della fotocamera: controlla l'esposizione anche su uno scatto di prova.") });
-  }, 500);
+  }, 200);
 }
 
 function renderLiveView() {
@@ -518,7 +529,7 @@ function afRoiRect(roi = afRoi) {
 function afPlace(clientX, clientY) {
   if (!natW) return;
   const r = stage.getBoundingClientRect();
-  const ix = (clientX - r.left - view.tx) / view.scale, iy = (clientY - r.top - view.ty) / view.scale;
+  const ix = imgX((clientX - r.left - view.tx) / view.scale), iy = imgY((clientY - r.top - view.ty) / view.scale);
   if (ix < 0 || iy < 0 || ix > natW || iy > natH) return;
   afRoi = { cx: ix / natW, cy: iy / natH, s: Math.min(0.9, afSizePx / refW()) };
   renderAf();
@@ -550,9 +561,13 @@ function drawAfRoi() {
   const rect = running ? afState.roi : afRoiRect();
   const show = (afPanelOpen || running) && rect && natW > 0 && img.style.visibility !== "hidden";
   box.classList.toggle("hidden", !show);
+  Inspector.setArea(rect && natW > 0 ? rect : null);   // «Solo nell'area dell'autofocus» dell'Ispettore
   if (!show) return;
   box.classList.toggle("running", running);
-  const [x0, y0, x1, y1] = rect;
+  // rettangolo come si vede (con la vista capovolta i lati si scambiano)
+  const f = Inspector.flip;
+  const [x0, x1] = f.h ? [1 - rect[2], 1 - rect[0]] : [rect[0], rect[2]];
+  const [y0, y1] = f.v ? [1 - rect[3], 1 - rect[1]] : [rect[1], rect[3]];
   box.style.transform = `translate(${view.tx + x0 * natW * view.scale}px, ${view.ty + y0 * natH * view.scale}px)`;
   box.style.width = `${(x1 - x0) * natW * view.scale}px`;
   box.style.height = `${(y1 - y0) * natH * view.scale}px`;
@@ -1006,7 +1021,7 @@ stage.addEventListener("pointermove", (e) => {
   if (!drag) {
     if (!Inspector.open || !natW) return;
     const r = stage.getBoundingClientRect();
-    Inspector.pointer(Math.floor((e.clientX - r.left - view.tx) / view.scale), Math.floor((e.clientY - r.top - view.ty) / view.scale));
+    Inspector.pointer(Math.floor(imgX((e.clientX - r.left - view.tx) / view.scale)), Math.floor(imgY((e.clientY - r.top - view.ty) / view.scale)));
     return;
   }
   if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 4) drag.moved = true;
@@ -1091,6 +1106,7 @@ window.addEventListener("hashchange", () => {
 Inspector.bind({
   // aperto o chiuso: lo spazio dell'immagine cambia; sul live view riparte il calcolo periodico
   onToggle: () => { if (view.mode === "fit") requestAnimationFrame(fit); if (liveOn) liveInspect(); },
+  onView: () => apply(),   // capovolgimento cambiato o blocco Vista nascosto
 });
 // barra che va a capo: un separatore rimasto in fondo alla riga (il gruppo dopo è sceso sotto) si nasconde.
 // visibility e non display: lo spazio resta, così nascondendolo la barra non cambia di nuovo il modo di andare a capo

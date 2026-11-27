@@ -344,7 +344,7 @@ add(f"""
     "<b>Inizio</b> e <b>Fine</b> in passi. <span class='ui'>⌖ qui</span> copia la posizione attuale.",
     "<b>Passo</b> fra uno scatto e il successivo, in passi del motore (capitolo 11).",
     "<b>Numero di scatti</b>. Se cambi Inizio, Fine o Passo si ricalcola il numero di scatti; se cambi il numero di scatti si ricalcola il passo. Quando il passo cambia da solo diventa arancione e mostra <span class='ui'>↺ era …</span>: un clic annulla la modifica.",
-    "<b>Ottica e filtro (profilo)</b>: il profilo di obiettivo, filtro e illuminazione da scrivere nei dati della pila (7.2). <span class='ui'>Modifica</span> lo apre nella scheda Ottica. Senza profilo la pila risulta «nessun filtro». Con un profilo macro che indica il diaframma, sceglierlo imposta anche il diaframma della fotocamera; se poi i due non coincidono, il riepilogo lo segnala.",
+    "<b>Ottica e filtro (profilo)</b>: il profilo di obiettivo, filtro e illuminazione da scrivere nei dati della pila (7.2). <span class='ui'>Modifica</span> lo apre nella scheda Ottica, che passa da sola al profilo scelto qui (se non ha modifiche non salvate). Senza profilo la pila risulta «nessun filtro». Scegliere un profilo imposta anche il passo della pila salvato nel profilo (con «↺ era …» per tornare indietro) e, con un profilo macro che indica il diaframma, il diaframma della fotocamera; se poi diaframma o passo non coincidono, il riepilogo lo segnala.",
     "<b>Riepilogo</b>: scatti, escursione in passi e in µm, passo in µm e durata stimata. Un clic sul riepilogo (▶ a destra) mostra anche il profilo ottico usato e la calibrazione che verrà collegata alla pila. Se la sequenza esce dai fine corsa compare un avviso rosso e la sequenza non parte.",
     "<b>Attesa dopo il movimento</b>, nel riquadro richiudibile: tempo per far smorzare le vibrazioni prima dello scatto (1–3 s al microscopio).",
     "<b>Scatti per posizione</b>: quante foto fare a ogni posizione (predefinito 1). Con più scatti il software di fusione può farne la media e ridurre il rumore (7.4).",
@@ -603,7 +603,7 @@ al volo) con zoom e spostamento, e il live view della fotocamera.</p>
     "<b>Segui ultimo</b> (<kbd>U</kbd>): mostra da solo ogni nuovo scatto. Come i due pulsanti seguenti è un'icona, evidenziata quando è attiva; all'apertura è attivo.",
     "<b>Blocca vista</b> (<kbd>K</kbd>): cambiando scatto mantiene zoom e posizione, per confrontare la messa a fuoco nello stesso punto. Attivo all'apertura.",
     "<b>Guide di composizione</b> (<kbd>G</kbd>): a ogni clic terzi, incrocio al centro, terzi e centro, nessuna. Linee di 1 pixel che seguono zoom e spostamento; funzionano anche nel live view.",
-    "<b>Ispettore</b> (<kbd>I</kbd>): istogrammi, pixel bruciati e neri, valori sotto il puntatore (vedi sotto). Aperto all'apertura del visualizzatore.",
+    "<b>Ispettore</b> (<kbd>I</kbd>): zone a fuoco, zebra e falsi colori, istogramma, forma d'onda, valori sotto il puntatore, vista capovolta o su un solo canale (vedi sotto). Aperto all'apertura del visualizzatore.",
     "<b>Schermo intero</b> (<kbd>F</kbd>).",
     "<b>?</b>: questa guida, al capitolo del visualizzatore.",
     "<b>Miniature</b>: un clic apre lo scatto. <i>P</i> = scatto di prova, <i>C</i> = frame di calibrazione, <i>E</i> = foto per l'esposizione, <i>AF</i> = scatti dell'autofocus, i numeri sono gli scatti della sequenza. La striscia mostra solo la sequenza in corso o l'ultima: all'avvio di una sequenza si svuota, e il primo scatto di prova fatto dopo ne inizia una nuova. I file restano nella cartella.",
@@ -677,16 +677,23 @@ sovracorsa. Aumentala in <span class="ui">Configurazione › Autofocus</span>; i
 della sequenza, ma almeno una larghezza del picco.</div>
 <p>Tutti i valori sono in <span class="ui">Configurazione › Autofocus</span>, capitolo 12.</p>
 <h2>Ispettore</h2>
-<p>Il pannello <span class="ui">Ispettore</span> (tasto <kbd>I</kbd>) controlla l'esposizione di una foto con le stesse
-regole di Focus Fusion. È di sola lettura: non modifica le foto. Funziona anche sul live view, aggiornato ogni mezzo
-secondo.</p>
+<p>Il pannello <span class="ui">Ispettore</span> (tasto <kbd>I</kbd>) raccoglie gli aiuti per la messa a fuoco e per l'esposizione, come quelli dei monitor da ripresa. È di sola lettura: non modifica le foto. Funziona anche sul live view: con zone a fuoco, zebra o forma d'onda accese si aggiorna cinque volte al secondo.</p>
 {fig("ispettore", [
-    "<b>Pixel bruciati e neri</b>: percentuale e regole usate. <span class='ui'>Evidenzia sull'immagine</span> segna in rosso i bruciati e in blu i neri; i due pulsanti li mostrano o nascondono separatamente.",
+    "<b>Blocchi</b> (pulsante in alto a destra): quali blocchi mostrare e in che ordine (caselle e frecce ↑ ↓; <span class='ui'>Ripristina</span> torna all'inizio). Un blocco nascosto non cambia l'immagine.",
+    "<b>Vista</b>: capovolgi in orizzontale o in verticale (con entrambi l'immagine è ruotata di 180°), per esempio per vederla come nell'oculare; un solo canale R, G o B, in grigio. Cambia solo la vista: i file restano come sono.",
+    "<b>Fuoco</b>: <span class='ui'>Evidenzia le zone a fuoco</span> colora i contorni netti (focus peaking), con sensibilità da 1 a 15, cinque colori e l'immagine sotto a colori, grigia, scura o nera. <span class='ui'>Solo nell'area dell'autofocus</span> limita tutto al riquadro scelto col tasto <kbd>A</kbd>.",
+    "<b>Nitidezza</b>: la stessa misura dell'autofocus, con la barra rispetto al massimo visto e <span class='ui'>Azzera</span>.",
+], layout="full")}
+<p>Con il live view gira la messa a fuoco finché la barra arriva al 100 %: è il punto più nitido per quell'inquadratura. Il massimo riparte da solo quando cambi area, risoluzione o canale, o passi dal live agli scatti, perché quei valori non sono confrontabili. Con l'immagine <span class="ui">Scura</span>, durante la sequenza si vede la fascia a fuoco avanzare scatto dopo scatto: se fra due scatti salta, il passo è troppo grande.</p>
+<div class="box tip"><span class="t">Un solo canale e aberrazione cromatica</span>Con un solo canale anche le zone a fuoco e la nitidezza usano quel canale. Metti a fuoco su R, poi su B: la differenza di posizione è l'aberrazione cromatica assiale dell'obiettivo. Quando la vista è capovolta o su un solo canale, un'etichetta in alto a destra sull'immagine lo dice, anche a Ispettore chiuso; un clic sull'etichetta riporta l'immagine normale.</div>
+{fig("ispettore-esposizione", [
+    "<b>Evidenzia sull'immagine</b>, in tre modi: <i>Segni</i> (bruciati in rosso e neri in blu, alla piena risoluzione), <i>Zebra</i> e <i>Falsi colori</i>. La tabella sotto dà la percentuale di pixel bruciati e neri con ogni regola.",
+    "<b>Zebra</b>: righe bianche e nere dove il canale più alto arriva alla soglia (<span class='ui'>Luci da</span>); a richiesta righe azzurre sui <span class='ui'>Toni medi</span>, valore ± tolleranza. <span class='ui'>= mediana</span> li centra sulla mediana dell'immagine: con un flat, le zone senza righe sono quelle illuminate diversamente.",
     "<b>Istogrammi</b> di rosso, verde, blu e luminanza. Con il puntatore su un livello si legge quanti pixel ci sono.",
+    "<b>Forma d'onda</b>: in orizzontale la posizione nell'immagine, come si vede; in verticale il livello da 0 a 100 %. Luminosità, RGB sovrapposti o affiancati. Una luce non uniforme fa una cresta inclinata o curva.",
     "<b>Sotto il puntatore</b>: i valori R, G, B e la luminanza del pixel su cui si trova il mouse.",
 ], layout="full")}
-<p>Con le foto RAW l'Ispettore lavora sull'anteprima convertita; per il livello esatto del sensore usa
-<span class="ui">Esposizione dei light</span> (7.6), che misura i RAW veri.</p>
+<p>I <i>Falsi colori</i> danno un colore a ogni fascia di luminosità (legenda nel pannello): viola il nero, blu le ombre profonde, verde i toni medi, giallo le luci, arancione le luci quasi bruciate, rosso il bruciato; il resto resta grigio. Zebra, falsi colori e forma d'onda usano l'immagine a 8 bit mostrata, dopo la curva della fotocamera: con le foto RAW è l'anteprima convertita. Per il livello esatto del sensore usa <span class="ui">Esposizione dei light</span> (7.6), che misura i RAW veri.</p>
 """)
 
 # 9
@@ -901,7 +908,9 @@ cambio intermedio × adattatore) e il pixel del sensore del profilo aperto (capi
     "<b>Sovrapposizione</b> fra uno strato nitido e il successivo; il 20–30% è un buon valore.",
     "<b>Risultato</b>: profondità di campo, passo consigliato in µm e in passi del motore.",
     "<b>Usa come passo della sequenza</b>: copia il valore in passi nel campo Passo della sequenza.",
-], layout="side narrow")}
+    "<b>Passo della pila</b> nel profilo, in passi del motore: <span class='ui'>Consigliato</span> ci scrive il passo calcolato qui sopra, <span class='ui'>Dalla Sessione</span> quello della sequenza. Si salva col profilo; vuoto = il profilo non cambia il passo.",
+], layout="full", anchors={4: "b"})}
+<p>Il passo giusto dipende dal diaframma e dall'ingrandimento, cioè dal profilo: salvato nel profilo, scegliere il profilo nella Sessione imposta insieme diaframma e passo. Un preset della sequenza invece tiene il suo passo.</p>
 <h2>11.1 La formula</h2>
 <p>L'app usa la formula di Berek, la più usata in microscopia:</p>
 <div class="formula">profondità di campo (µm) = {frac("λ · n", "NA²")} + {frac("n · e", "M · NA")}

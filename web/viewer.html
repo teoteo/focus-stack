@@ -62,6 +62,10 @@
   .vmain { display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 0; }
   .stage canvas.clipmask { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; will-change: transform; }
   .stage canvas.clipmask.pixelated { image-rendering: pixelated; }
+  /* vista capovolta o su un solo canale (Ispettore › Vista): etichetta in alto a destra, clic = immagine normale */
+  .stage .view-badge { position: absolute; top: 12px; right: 12px; z-index: 4; font: inherit; font-size: 12.5px; font-weight: 600;
+    padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.25); background: rgba(0,0,0,.62); color: #fff; cursor: pointer; }
+  .stage .view-badge:hover { background: rgba(0,0,0,.8); }
   /* guide di composizione: linee di 1 pixel fisico, in «differenza» così restano visibili su chiaro e su scuro */
   .stage canvas.guides { position: absolute; left: 0; top: 0; pointer-events: none; mix-blend-mode: difference; }
   .btn.vb.guides-btn, .btn.vb.icon-btn { padding: 6px 10px; display: inline-flex; align-items: center; justify-content: center; }
@@ -96,6 +100,34 @@
   .insp td.warn-n { color: #7fb0ff; font-weight: 650; }
   :root[data-theme="light"] .insp td.warn-n { color: #1f5fd1; }
   .insp label.check { font-size: 13.5px; margin: 4px 0; }
+  .insp .insp-row { display: grid; grid-template-columns: auto 1fr 3.2em; align-items: center; gap: 8px; margin: 6px 0; font-size: 12.5px; color: var(--muted); }
+  .insp .insp-row b { color: var(--text); font-variant-numeric: tabular-nums; text-align: right; font-weight: 600; }
+  .insp .insp-row input[type=range] { width: 100%; }
+  .insp .chips .lbl { font-size: 12.5px; color: var(--muted); align-self: center; margin-right: 2px; }
+  .insp .chip-btn i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: 0;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.45); }
+  .insp .mid-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 12.5px; color: var(--muted); margin: 2px 0 4px; }
+  .insp .mid-row input.num { width: 4.2em; font: inherit; padding: 2px 4px; background: var(--bg-2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 6px; text-align: right; }
+  .insp .mid-row input:disabled { opacity: .5; }
+  .insp .sharp-head { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; }
+  .insp .sharp-head span:first-child { font-size: 12.5px; color: var(--muted); }
+  .insp .sharp-head b { font-size: 20px; font-variant-numeric: tabular-nums; }
+  .insp .sharp-bar { height: 8px; border-radius: 4px; background: var(--bg-2); border: 1px solid var(--line); overflow: hidden; margin: 6px 0 2px; }
+  .insp .sharp-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+  .insp .sharp-bar i.top { background: var(--ok, #3fb950); }
+  .insp .insp-cfg-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 26px; padding: 0;
+    border-radius: 7px; border: 1px solid var(--line); background: var(--bg-2); color: var(--muted); cursor: pointer; }
+  .insp .insp-cfg-btn:hover, .insp .insp-cfg-btn[aria-expanded="true"] { color: var(--text); border-color: var(--accent); }
+  .insp .insp-cfg { border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px 10px; margin: 6px 0 8px; background: var(--bg-2); }
+  .insp .insp-cfg ul { list-style: none; margin: 4px 0 8px; padding: 0; }
+  .insp .insp-cfg li { display: flex; align-items: center; gap: 4px; padding: 2px 0; }
+  .insp .insp-cfg li label { flex: 1; margin: 0; }
+  .insp .insp-cfg .mv { padding: 1px 8px; }
+  .insp canvas.wave { width: 100%; height: 150px; display: block; border: 1px solid var(--line); border-radius: 8px; margin: 6px 0 4px; background: #0c0f14; }
+  .insp .fc-legend { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; font-size: 12.5px; margin: 6px 0; }
+  .insp .fc-legend i { display: inline-block; width: 12px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .insp .fc-legend em { font-style: normal; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
   .insp canvas.hist { width: 100%; height: 140px; display: block; background: var(--bg-2); border: 1px solid var(--line);
     border-radius: 8px; margin: 6px 0 4px; cursor: crosshair; }
   .insp .hover { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 10px; font-variant-numeric: tabular-nums; font-size: 12.5px; }
@@ -244,10 +276,18 @@
 <div class="stage" id="stage">
   <img id="img" alt="" draggable="false">
   <canvas class="clipmask hidden" id="clipmask" aria-hidden="true"></canvas>
+  <canvas class="clipmask hidden" id="inspview" aria-hidden="true"></canvas>
   <canvas class="guides hidden" id="guides-canvas" aria-hidden="true"></canvas>
   <div class="msg" id="msg">In attesa del primo scatto…</div>
   <div class="loading hidden" id="loading">Caricamento piena risoluzione…</div>
   <span class="live-badge hidden" id="live-badge">LIVE</span>
+  <button class="view-badge hidden" id="view-badge" title="Vista cambiata nell'Ispettore (blocco Vista). Clic: torna all'immagine normale"></button>
+  <!-- un solo canale in grigio (Ispettore › Vista): filtri SVG usati dal CSS dell'immagine -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <filter id="insp-ch-r" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1 0 0 0 0  1 0 0 0 0  1 0 0 0 0  0 0 0 1 0"/></filter>
+    <filter id="insp-ch-g" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 1 0 0 0  0 1 0 0 0  0 1 0 0 0  0 0 0 1 0"/></filter>
+    <filter id="insp-ch-b" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 1 0 0  0 0 1 0 0  0 0 1 0 0  0 0 0 1 0"/></filter>
+  </svg>
   <div class="notice hidden" id="notice" role="status"></div>
   <div class="help">Trascina per spostare · rotella o pinch per lo zoom · doppio clic: adatta ↔ 100%</div>
   <div class="af-roi hidden" id="af-roi" aria-hidden="true"></div>
@@ -300,17 +340,95 @@
 </div>
 
 <aside class="insp hidden" id="insp" aria-label="Ispettore">
-  <h3>Ispettore <small>sola lettura</small><span class="grow"></span><small class="hidden" id="insp-busy">calcolo…</small></h3>
+  <h3>Ispettore <small>sola lettura</small><span class="grow"></span><small class="hidden" id="insp-busy">calcolo…</small>
+    <button class="insp-cfg-btn" id="insp-cfg" aria-expanded="false" aria-controls="insp-cfg-panel" aria-label="Blocchi dell'Ispettore" title="Scegli quali blocchi mostrare e in che ordine">
+      <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+        <path d="M3 5h9M15 5h2M3 10h3M9 10h8M3 15h7M13 15h4"/><circle cx="13.5" cy="5" r="1.6"/><circle cx="7.5" cy="10" r="1.6"/><circle cx="11.5" cy="15" r="1.6"/>
+      </svg>
+    </button>
+  </h3>
+  <div class="insp-cfg hidden" id="insp-cfg-panel">
+    <p class="muted">Blocchi da mostrare e loro ordine. Un blocco nascosto non cambia l'immagine.</p>
+    <ul id="insp-cfg-list"></ul>
+    <button class="chip-btn" id="insp-cfg-reset" title="Tutti i blocchi, nell'ordine iniziale">Ripristina</button>
+  </div>
   <p class="muted" id="insp-basis"></p>
   <p class="warn-note hidden" id="insp-note"></p>
 
-  <details open>
+  <div id="insp-body">
+  <details open data-block="view">
+    <summary>Vista</summary>
+    <div class="chips" role="group" aria-label="Capovolgi l'immagine">
+      <span class="lbl">Capovolgi</span>
+      <button class="chip-btn" id="insp-fliph" aria-pressed="false" title="Specchia l'immagine da sinistra a destra, per esempio per vederla come nell'oculare. Solo la vista: i file restano come sono">⇋ Orizzontale</button>
+      <button class="chip-btn" id="insp-flipv" aria-pressed="false" title="Specchia l'immagine dall'alto in basso. Con entrambi è ruotata di 180°. Solo la vista: i file restano come sono">⇵ Verticale</button>
+    </div>
+    <div class="chips" role="group" aria-label="Canale mostrato">
+      <span class="lbl">Canale</span>
+      <button class="chip-btn" data-chan="all" title="Tutti i canali, a colori">Tutti</button>
+      <button class="chip-btn r" data-chan="r" title="Solo il rosso, in grigio">R</button>
+      <button class="chip-btn g" data-chan="g" title="Solo il verde, in grigio">G</button>
+      <button class="chip-btn b" data-chan="b" title="Solo il blu, in grigio">B</button>
+    </div>
+    <p class="muted">Con un solo canale anche le zone a fuoco e la nitidezza usano quel canale: confrontando R e B si vede l'aberrazione cromatica.</p>
+  </details>
+
+  <details open data-block="focus">
+    <summary>Fuoco</summary>
+    <label class="check" title="Colora i contorni netti, come il focus peaking delle fotocamere: la zona colorata è quella a fuoco"><input type="checkbox" id="insp-peak"> Evidenzia le zone a fuoco</label>
+    <div class="insp-row" title="Più alta: si colorano anche i dettagli deboli (e, con poca luce, il rumore). Più bassa: solo i contorni più netti">
+      <span>Sensibilità</span><input type="range" id="insp-sens" min="1" max="15" step="1" aria-label="Sensibilità"><b id="insp-sens-v"></b>
+    </div>
+    <div class="chips" role="group" aria-label="Colore delle zone a fuoco">
+      <button class="chip-btn" data-pcolor="red"><i style="background:#ff2020"></i>Rosso</button>
+      <button class="chip-btn" data-pcolor="yellow"><i style="background:#ffe600"></i>Giallo</button>
+      <button class="chip-btn" data-pcolor="green"><i style="background:#28ff5a"></i>Verde</button>
+      <button class="chip-btn" data-pcolor="blue"><i style="background:#3282ff"></i>Blu</button>
+      <button class="chip-btn" data-pcolor="white"><i style="background:#fff"></i>Bianco</button>
+    </div>
+    <div class="chips" role="group" aria-label="Immagine sotto le zone a fuoco">
+      <span class="lbl">Immagine</span>
+      <button class="chip-btn" data-pbg="color" title="L'immagine com'è">A colori</button>
+      <button class="chip-btn" data-pbg="mono" title="In bianco e nero: il colore resta solo alle zone a fuoco">Grigia</button>
+      <button class="chip-btn" data-pbg="dim" title="In grigio scuro: si vede soprattutto la fascia a fuoco">Scura</button>
+      <button class="chip-btn" data-pbg="black" title="Nera: solo le zone a fuoco">Nera</button>
+    </div>
+    <label class="check" title="Zone a fuoco e nitidezza solo nell'area scelta con l'autofocus (tasto A)"><input type="checkbox" id="insp-parea"> Solo nell'area dell'autofocus</label>
+    <div class="sharp-head" title="Tenengrad normalizzato: la stessa misura dell'autofocus. Ha senso confrontarlo sulla stessa inquadratura, non fra soggetti diversi">
+      <span>Nitidezza</span><b id="insp-sharp">—</b><span class="grow"></span>
+      <button class="chip-btn" id="insp-sharp-reset" title="Azzera il massimo: riparte dal valore di adesso">Azzera</button>
+    </div>
+    <div class="sharp-bar" aria-hidden="true"><i id="insp-sharp-bar"></i></div>
+    <p class="muted" id="insp-sharp-txt"></p>
+  </details>
+
+  <details open data-block="expo">
     <summary>Bruciati e neri</summary>
     <label class="check"><input type="checkbox" id="insp-marks"> Evidenzia sull'immagine</label>
-    <div class="chips">
+    <div class="chips" role="group" aria-label="Come evidenziare l'esposizione">
+      <button class="chip-btn" data-expo="marks" title="Segni pieni sui pixel neri (blu) e bruciati (rosso), alla piena risoluzione">Segni</button>
+      <button class="chip-btn" data-expo="zebra" title="Righe oblique sulle luci sopra una soglia e, a richiesta, sui toni medi">Zebra</button>
+      <button class="chip-btn" data-expo="false" title="Ogni fascia di luminosità ha un colore">Falsi colori</button>
+    </div>
+    <div class="chips" id="insp-marks-chips">
       <button class="chip-btn" id="insp-lo" title="Mostra o nasconde i segni blu dei pixel neri">Neri (blu)</button>
       <button class="chip-btn" id="insp-hi" title="Mostra o nasconde i segni rossi dei pixel bruciati">Bruciati (rosso)</button>
     </div>
+    <div id="insp-zebra" class="hidden">
+      <div class="insp-row" title="Righe bianche e nere dove il canale più alto del pixel (R, G o B) arriva alla soglia">
+        <span>Luci da</span><input type="range" id="insp-zhi" min="70" max="100" step="1" aria-label="Soglia della zebra delle luci"><b id="insp-zhi-v"></b>
+      </div>
+      <label class="check" title="Righe azzurre dove la luminosità è intorno al valore scelto"><input type="checkbox" id="insp-zmid"> Toni medi</label>
+      <div class="mid-row">
+        <input type="number" class="num" id="insp-zmidv" min="1" max="99" step="1" aria-label="Valore dei toni medi (%)"> % ±
+        <input type="number" class="num" id="insp-zmidt" min="1" max="25" step="1" aria-label="Tolleranza dei toni medi (%)"> %
+        <button class="chip-btn" id="insp-zmed" title="Centra i toni medi sulla mediana della luminosità di questa immagine: con un flat, le zone senza righe sono quelle che si scostano dal resto">= mediana</button>
+      </div>
+    </div>
+    <div id="insp-false" class="hidden">
+      <div class="fc-legend" id="insp-fc"></div>
+    </div>
+    <p class="muted">Zebra e falsi colori usano l'immagine a 8 bit mostrata, dopo la curva della fotocamera: non i valori del RAW.</p>
     <table id="insp-rules">
       <thead><tr><th title="Quali pixel contano come neri (canali a 0) o bruciati (canali a 255). Clic su una riga per sceglierla">Regola</th><th>neri</th><th>bruciati</th></tr></thead>
       <tbody>
@@ -324,7 +442,7 @@
     <p class="muted" id="insp-count"></p>
   </details>
 
-  <details open>
+  <details open data-block="hist">
     <summary>Istogramma</summary>
     <div class="chips">
       <button class="chip-btn r" data-ch="0" title="Mostra o nasconde questo canale nell'istogramma">R</button>
@@ -345,7 +463,18 @@
     <div class="hover" id="insp-hover"><span class="r"></span><span class="g"></span><span class="b"></span><span class="l"></span></div>
   </details>
 
-  <details open>
+  <details open data-block="wave">
+    <summary>Forma d'onda</summary>
+    <div class="chips" role="group" aria-label="Canali della forma d'onda">
+      <button class="chip-btn" data-wf="luma" title="Luminosità: 0,21 R + 0,72 G + 0,07 B">Luminosità</button>
+      <button class="chip-btn" data-wf="rgb" title="Rosso, verde e blu sovrapposti">RGB</button>
+      <button class="chip-btn" data-wf="parade" title="Rosso, verde e blu uno accanto all'altro (parade)">RGB affiancati</button>
+    </div>
+    <canvas class="wave" id="insp-wave" aria-label="Forma d'onda"></canvas>
+    <p class="muted">In orizzontale la posizione nell'immagine, come si vede; in verticale il livello (0–100 %). Una luce non uniforme fa una cresta inclinata o curva.</p>
+  </details>
+
+  <details open data-block="values">
     <summary>Valori</summary>
     <p class="muted">Sotto il puntatore: <span id="insp-px-place"></span></p>
     <table><thead><tr><th class="r">R</th><th class="g">G</th><th class="b">B</th><th class="l">L</th></tr></thead>
@@ -361,6 +490,7 @@
       </tbody>
     </table>
   </details>
+  </div>
 </aside>
 </div>
 

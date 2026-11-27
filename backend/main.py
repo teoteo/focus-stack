@@ -2004,6 +2004,7 @@ class OpticsBody(BaseModel):
     sensor_pixel_um: float | None = None
     pixel_size_um: float | None = None
     dof_overlap: float = 30
+    sequence_step: int | None = None        # passo della pila (passi del motore) per questo profilo, None = non lo cambia
     filter_mode: str = "unknown"
     filter: FilterBody = FilterBody()
     illumination: IlluminationBody = IlluminationBody()
@@ -2089,6 +2090,8 @@ def clean_optics(body: OpticsBody) -> dict:
                   body.filter.bandwidth_nm, body.filter.edge_nm):
         if value is not None and value <= 0:
             raise ValueError(tr("I valori dell'ottica devono essere positivi"))
+    if body.sequence_step is not None and not 1 <= body.sequence_step <= 1_000_000:
+        raise ValueError(tr("Passo della pila: un numero intero di passi maggiore di zero"))
     if body.na is not None and not 0 < body.na <= 1.7:
         raise ValueError(tr("Apertura numerica non valida (0–1,7)"))
     if body.illumination.color_temp_k is not None and not 1000 <= body.illumination.color_temp_k <= 20000:
